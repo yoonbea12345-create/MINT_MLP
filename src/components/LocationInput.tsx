@@ -106,7 +106,7 @@ export default function LocationInput({ locations, onChange }: Props) {
       } catch {
         update(index, { loading: false });
       }
-    }, 300);
+    }, 200);
   }
 
   function selectPlace(index: number, place: KakaoPlace) {

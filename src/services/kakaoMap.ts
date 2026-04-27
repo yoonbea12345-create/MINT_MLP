@@ -1,5 +1,3 @@
-const REST_KEY = import.meta.env.VITE_KAKAO_REST_API_KEY;
-
 export interface KakaoPlace {
   id: string;
   place_name: string;
@@ -12,22 +10,43 @@ export interface KakaoPlace {
   y: string; // lat
 }
 
-export async function searchKakaoKeyword(
+declare global {
+  interface Window { kakao: any }
+}
+
+const cache = new Map<string, KakaoPlace[]>();
+
+export function searchKakaoKeyword(
   keyword: string,
   options?: { x?: string; y?: string; radius?: number }
 ): Promise<KakaoPlace[]> {
-  const params = new URLSearchParams({ query: keyword, size: '5' });
-  if (options?.x) params.append('x', options.x);
-  if (options?.y) params.append('y', options.y);
-  if (options?.radius) params.append('radius', String(options.radius));
+  const cacheKey = keyword + JSON.stringify(options ?? {});
+  if (cache.has(cacheKey)) return Promise.resolve(cache.get(cacheKey)!);
 
-  const res = await fetch(
-    `/api/kakao/v2/local/search/keyword.json?${params}`,
-    { headers: { Authorization: `KakaoAK ${REST_KEY}` } }
-  );
-  if (!res.ok) throw new Error('카카오 검색 실패');
-  const data = await res.json();
-  return (data.documents ?? []) as KakaoPlace[];
+  return new Promise((resolve, reject) => {
+    const ps = new window.kakao.maps.services.Places();
+    const opts: Record<string, unknown> = { size: 5 };
+    if (options?.x) opts.x = Number(options.x);
+    if (options?.y) opts.y = Number(options.y);
+    if (options?.radius) opts.radius = options.radius;
+
+    ps.keywordSearch(
+      keyword,
+      (results: KakaoPlace[], status: string) => {
+        const { OK, ZERO_RESULT } = window.kakao.maps.services.Status;
+        if (status === OK) {
+          cache.set(cacheKey, results);
+          resolve(results);
+        } else if (status === ZERO_RESULT) {
+          cache.set(cacheKey, []);
+          resolve([]);
+        } else {
+          reject(new Error('카카오 장소 검색 실패'));
+        }
+      },
+      opts
+    );
+  });
 }
 
 export async function searchAddress(keyword: string): Promise<KakaoPlace[]> {
