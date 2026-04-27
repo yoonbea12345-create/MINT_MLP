@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { searchAddress } from '../services/kakaoMap';
 import type { KakaoPlace } from '../services/kakaoMap';
 
@@ -20,6 +21,48 @@ interface InputState {
   selected: boolean;
 }
 
+// Rendered via portal to escape the stacking context created by animate-fade-in-up (transform)
+function SuggestionDropdown({
+  suggestions,
+  anchorEl,
+  onSelect,
+}: {
+  suggestions: KakaoPlace[];
+  anchorEl: HTMLDivElement | null;
+  onSelect: (place: KakaoPlace) => void;
+}) {
+  if (!suggestions.length || !anchorEl) return null;
+
+  const rect = anchorEl.getBoundingClientRect();
+
+  return createPortal(
+    <div
+      style={{
+        position: 'fixed',
+        top: rect.bottom + 4,
+        left: rect.left,
+        width: rect.width,
+        zIndex: 9999,
+      }}
+      className="bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden"
+    >
+      {suggestions.map((place) => (
+        <button
+          key={place.id}
+          onMouseDown={() => onSelect(place)}
+          className="w-full text-left px-4 py-3 hover:bg-[#E8F8F5] transition-colors border-b border-gray-100 last:border-0"
+        >
+          <div className="text-sm font-medium text-gray-800">{place.place_name}</div>
+          <div className="text-xs text-gray-400 mt-0.5">
+            {place.road_address_name || place.address_name}
+          </div>
+        </button>
+      ))}
+    </div>,
+    document.body
+  );
+}
+
 export default function LocationInput({ locations, onChange }: Props) {
   const [inputs, setInputs] = useState<InputState[]>(
     locations.length >= 2
@@ -30,6 +73,7 @@ export default function LocationInput({ locations, onChange }: Props) {
         ]
   );
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
+  const wrapperRefs = useRef<(HTMLDivElement | null)[]>([]);
 
   function update(index: number, partial: Partial<InputState>) {
     setInputs((prev) => {
@@ -62,7 +106,7 @@ export default function LocationInput({ locations, onChange }: Props) {
       } catch {
         update(index, { loading: false });
       }
-    }, 350);
+    }, 300);
   }
 
   function selectPlace(index: number, place: KakaoPlace) {
@@ -89,8 +133,11 @@ export default function LocationInput({ locations, onChange }: Props) {
         <p className="text-sm text-gray-500">각자 출발하는 동네나 역을 입력해요</p>
       </div>
       {inputs.map((inp, i) => (
-        <div key={i} className="relative animate-fade-in-up">
-          <div className="flex items-center gap-2">
+        <div key={i} className="animate-fade-in-up">
+          <div
+            ref={(el) => { wrapperRefs.current[i] = el; }}
+            className="flex items-center gap-2"
+          >
             <div className="flex-1 relative">
               <div className="absolute inset-y-0 left-3 flex items-center">
                 <span className="text-[#3CDBC0] text-sm font-bold">{i + 1}</span>
@@ -126,21 +173,11 @@ export default function LocationInput({ locations, onChange }: Props) {
               </button>
             )}
           </div>
-
-          {inp.suggestions.length > 0 && (
-            <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden">
-              {inp.suggestions.map((place) => (
-                <button
-                  key={place.id}
-                  onMouseDown={() => selectPlace(i, place)}
-                  className="w-full text-left px-4 py-3 hover:bg-[#E8F8F5] transition-colors border-b border-gray-100 last:border-0"
-                >
-                  <div className="text-sm font-medium text-gray-800">{place.place_name}</div>
-                  <div className="text-xs text-gray-400 mt-0.5">{place.road_address_name || place.address_name}</div>
-                </button>
-              ))}
-            </div>
-          )}
+          <SuggestionDropdown
+            suggestions={inp.suggestions}
+            anchorEl={wrapperRefs.current[i] ?? null}
+            onSelect={(place) => selectPlace(i, place)}
+          />
         </div>
       ))}
 
