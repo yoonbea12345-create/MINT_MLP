@@ -89,21 +89,6 @@ export default function SharedResult() {
           </div>
         )}
 
-        {result.secondPlace && (
-          <div className="bg-white rounded-2xl border-2 border-gray-200 p-4 mb-4 animate-fade-in-up">
-            <div className="flex items-center gap-2 mb-2">
-              <span className="text-xs font-bold text-[#3CDBC0] bg-[#E8F8F5] px-2 py-0.5 rounded-full">2차</span>
-              <span className="text-sm font-bold text-gray-800">{result.secondPlace.placeName}</span>
-            </div>
-            <p className="text-xs text-gray-500 mb-1">{result.secondPlace.description}</p>
-            <div className="flex items-center gap-3 text-xs text-gray-400">
-              <span>🚶 도보 {result.secondPlace.walkingMinutes}분</span>
-              <span>·</span>
-              <span>{result.secondPlace.category}</span>
-            </div>
-          </div>
-        )}
-
         <a
           href="/"
           className="block w-full py-4 rounded-2xl bg-[#3CDBC0] text-white font-black text-base text-center shadow-lg shadow-[#3CDBC0]/30 hover:bg-[#2AB5A0] transition-colors"

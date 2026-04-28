@@ -2,15 +2,7 @@ import { useEffect, useRef } from 'react';
 
 declare global {
   interface Window {
-    kakao: {
-      maps: {
-        load: (cb: () => void) => void;
-        Map: new (el: HTMLElement, opts: object) => KakaoMapInstance;
-        LatLng: new (lat: number, lng: number) => KakaoLatLng;
-        Marker: new (opts: object) => KakaoMarker;
-        InfoWindow: new (opts: object) => KakaoInfoWindow;
-      };
-    };
+    kakao: any;
   }
 }
 
