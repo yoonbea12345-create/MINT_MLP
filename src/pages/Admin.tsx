@@ -21,8 +21,15 @@ function formatDate(iso: string) {
 
 export default function Admin() {
   const [records, setRecords] = useState<ReservationRecord[]>(loadReservations);
-  const analytics = getAnalytics();
-  const conversionRate = getConversionRate();
+  const [analytics, setAnalytics] = useState(getAnalytics);
+  const [conversionRate, setConversionRate] = useState(getConversionRate);
+
+  function handleClearAnalytics() {
+    if (!confirm('분석 데이터(랜딩 조회, CTA 클릭 등)를 초기화할까요?')) return;
+    localStorage.removeItem('mint_analytics');
+    setAnalytics({ landingViews: 0, ctaClicks: 0, reservationAttempts: 0 });
+    setConversionRate('0.0');
+  }
 
   function handleDelete(id: string) {
     const updated = records.filter((r) => r.id !== id);
@@ -63,7 +70,15 @@ export default function Admin() {
 
         {/* ── 전환율 대시보드 ── */}
         <div className="mb-8">
-          <h2 className="text-sm font-black text-gray-600 mb-3">📊 전환율 현황</h2>
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-sm font-black text-gray-600">📊 전환율 현황</h2>
+            <button
+              onClick={handleClearAnalytics}
+              className="text-xs text-red-400 border border-red-200 px-2.5 py-1 rounded-full hover:bg-red-50 transition-colors"
+            >
+              초기화
+            </button>
+          </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="bg-white rounded-2xl border border-gray-100 p-4 shadow-sm">
               <div className="text-xs text-gray-400 mb-1">랜딩 조회</div>
