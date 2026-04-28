@@ -10,8 +10,8 @@ import ResultCard from '../components/ResultCard';
 import Reserve from './Reserve';
 import { calcMidpoint, findNearestAreas } from '../services/midpoint';
 import { getMultiAreaCongestion } from '../services/seoulData';
-import { getAIRecommendation } from '../services/ai';
-import type { PlaceRecommendation, UserInput } from '../services/ai';
+import { getAIRecommendation, getCourseRecommendation } from '../services/ai';
+import type { PlaceRecommendation, UserInput, CourseRecommendation } from '../services/ai';
 
 type Step = 0 | 1 | 2 | 3;
 type View = 'steps' | 'result' | 'reserve';
@@ -31,11 +31,15 @@ export default function Home() {
   const [groupSize, setGroupSize] = useState<UserInput['groupSize'] | null>(null);
   const [purpose, setPurpose] = useState<UserInput['purpose'] | null>(null);
   const [vibe, setVibe] = useState<Partial<VibeAnswers>>({});
-  const [withCourse, setWithCourse] = useState(false);
   const [loading, setLoading] = useState(false);
   const [loadingMsg, setLoadingMsg] = useState(0);
   const [result, setResult] = useState<PlaceRecommendation | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  const [courseVisible, setCourseVisible] = useState(false);
+  const [courseData, setCourseData] = useState<CourseRecommendation | null>(null);
+  const [courseLoading, setCourseLoading] = useState(false);
+  const [courseError, setCourseError] = useState<string | null>(null);
 
   function canNext(): boolean {
     if (step === 0) return locations.length >= 2;
@@ -74,7 +78,6 @@ export default function Home() {
         groupSize: groupSize!,
         purpose: purpose!,
         vibe: vibe as VibeAnswers,
-        withCourse,
       };
 
       const recommendation = await getAIRecommendation(input, midpoint, congestionData);
@@ -86,6 +89,42 @@ export default function Home() {
       clearInterval(msgInterval);
       setLoading(false);
     }
+  }
+
+  async function handleToggleCourse() {
+    if (courseVisible) {
+      setCourseVisible(false);
+      return;
+    }
+    if (courseData) {
+      setCourseVisible(true);
+      return;
+    }
+    setCourseVisible(true);
+    setCourseLoading(true);
+    setCourseError(null);
+    try {
+      const input: UserInput = {
+        locations,
+        groupSize: groupSize!,
+        purpose: purpose!,
+        vibe: vibe as VibeAnswers,
+      };
+      const course = await getCourseRecommendation(input, result!);
+      setCourseData(course);
+    } catch (e) {
+      setCourseError((e as Error).message || '코스 추천을 가져오지 못했어요.');
+      setCourseVisible(false);
+    } finally {
+      setCourseLoading(false);
+    }
+  }
+
+  function handleRetry() {
+    setCourseData(null);
+    setCourseVisible(false);
+    setCourseError(null);
+    handleSubmit();
   }
 
   function handleShare() {
@@ -164,12 +203,12 @@ export default function Home() {
           </div>
           <ResultCard
             result={result}
-            withCourse={withCourse}
-            onToggleCourse={() => {
-              setWithCourse((prev) => !prev);
-              handleSubmit();
-            }}
-            onRetry={handleSubmit}
+            courseVisible={courseVisible}
+            courseLoading={courseLoading}
+            courseData={courseData}
+            courseError={courseError}
+            onToggleCourse={handleToggleCourse}
+            onRetry={handleRetry}
             onShare={handleShare}
             onReserve={() => setView('reserve')}
           />

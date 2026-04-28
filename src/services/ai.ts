@@ -16,7 +16,6 @@ export interface UserInput {
     pace: '빠르게 한잔' | '오래 즐기기';
     novelty: '새로운 곳' | '검증된 곳';
   };
-  withCourse: boolean;
 }
 
 export interface PlaceRecommendation {
@@ -28,19 +27,26 @@ export interface PlaceRecommendation {
   address: string;
   area: string;
   congestionLevel: string;
-  openingHours?: string; // "11:00 ~ 23:00"
+  openingHours?: string;
   kakaoPlaceId?: string;
   lat?: number;
   lng?: number;
-  secondPlace?: {
-    placeName: string;
-    category: string;
-    description: string;
-    walkingMinutes: number;
-    address: string;
-    lat?: number;
-    lng?: number;
-  };
+}
+
+export interface CoursePlace {
+  placeName: string;
+  category: string;
+  description: string;
+  vibeTags: string[];
+  address: string;
+  walkingMinutes: number;
+  lat?: number;
+  lng?: number;
+}
+
+export interface CourseRecommendation {
+  places: CoursePlace[];
+  totalMinutes: number;
 }
 
 const placeSchema = `{
@@ -55,29 +61,6 @@ const placeSchema = `{
   "openingHours": "영업시간 (예: 11:00 ~ 23:00 또는 17:00 ~ 02:00)",
   "lat": 37.5xxx,
   "lng": 127.0xxx
-}`;
-
-const courseSchema = `{
-  "placeName": "실제 식당/카페 이름",
-  "category": "카테고리",
-  "description": "한줄 설명 (20자 내외)",
-  "priceRange": "1인 예상 가격대",
-  "vibeTags": ["바이브 태그 3개"],
-  "address": "도로명 주소",
-  "area": "지역명",
-  "congestionLevel": "혼잡도",
-  "openingHours": "영업시간 (예: 11:00 ~ 23:00)",
-  "lat": 37.5xxx,
-  "lng": 127.0xxx,
-  "secondPlace": {
-    "placeName": "2차 장소명",
-    "category": "카테고리",
-    "description": "한줄 설명",
-    "walkingMinutes": 5,
-    "address": "도로명 주소",
-    "lat": 37.5xxx,
-    "lng": 127.0xxx
-  }
 }`;
 
 export async function getAIRecommendation(
@@ -99,7 +82,6 @@ export async function getAIRecommendation(
 - 인원: ${input.groupSize}
 - 목적: ${input.purpose}
 - 바이브: ${input.vibe.noise}, ${input.vibe.pace}, ${input.vibe.novelty}
-- 코스 추천 여부: ${input.withCourse ? '2차까지 추천 필요' : '1차만'}
 - 현재 시각: ${currentTime}
 
 ## 현재 실시간 혼잡도
@@ -116,7 +98,7 @@ ${congestionSummary}
 8. openingHours는 실제 그 장소의 영업시간 형식으로 정확히 기재
 
 ## 응답 형식 (JSON만 반환, 다른 텍스트 없이)
-${input.withCourse ? courseSchema : placeSchema}`;
+${placeSchema}`;
 
   const message = await client.messages.create({
     model: 'claude-opus-4-7',
@@ -129,4 +111,78 @@ ${input.withCourse ? courseSchema : placeSchema}`;
   if (!jsonMatch) throw new Error('AI 응답 파싱 실패');
 
   return JSON.parse(jsonMatch[0]) as PlaceRecommendation;
+}
+
+const purposeFlowGuide: Record<string, string> = {
+  '밥+술': '1차는 밥집, 2차는 분위기 좋은 술집으로 연결',
+  '밥': '1차는 밥집, 2차는 근처 디저트 카페 또는 야경 명소',
+  '술': '1차는 술집, 2차는 다른 분위기의 바 또는 칵테일 바',
+  '카페': '1차는 카페, 2차는 분위기 다른 카페 또는 디저트 가게',
+};
+
+export async function getCourseRecommendation(
+  input: UserInput,
+  firstPlace: PlaceRecommendation
+): Promise<CourseRecommendation> {
+  const courseSchema = `{
+  "places": [
+    {
+      "placeName": "${firstPlace.placeName}",
+      "category": "${firstPlace.category}",
+      "description": "1차 장소 한줄 설명 (20자 내외)",
+      "vibeTags": ["바이브 태그 3개"],
+      "address": "${firstPlace.address || firstPlace.area}",
+      "walkingMinutes": 0,
+      "lat": ${firstPlace.lat ?? 'null'},
+      "lng": ${firstPlace.lng ?? 'null'}
+    },
+    {
+      "placeName": "2차 실제 장소명",
+      "category": "카테고리",
+      "description": "한줄 설명 (20자 내외)",
+      "vibeTags": ["바이브 태그 3개"],
+      "address": "도로명 주소",
+      "walkingMinutes": 도보분(숫자),
+      "lat": 37.5xxx,
+      "lng": 127.0xxx
+    }
+  ],
+  "totalMinutes": 총소요시간_분(숫자)
+}`;
+
+  const prompt = `당신은 서울 코스 큐레이터입니다. 1차 장소를 기준으로 최적의 2차 코스를 추천해주세요.
+
+## 1차 장소 정보
+- 장소명: ${firstPlace.placeName}
+- 카테고리: ${firstPlace.category}
+- 주소: ${firstPlace.address || firstPlace.area}
+${firstPlace.lat ? `- 좌표: 위도 ${firstPlace.lat}, 경도 ${firstPlace.lng}` : ''}
+
+## 모임 정보
+- 출발지: ${input.locations.map((l) => l.name).join(', ')}
+- 인원: ${input.groupSize}
+- 목적: ${input.purpose}
+- 바이브: ${input.vibe.noise}, ${input.vibe.pace}, ${input.vibe.novelty}
+
+## 코스 구성 가이드
+- ${purposeFlowGuide[input.purpose] ?? '자유로운 코스로 구성'}
+- 2차 장소는 1차에서 도보 10분 이내 위치
+- 실제 서울에 존재하는 장소만 추천
+- 바이브 연속성을 유지하되 적절한 분위기 변화를 줄 것
+- totalMinutes: 1차 체류(60~90분) + 이동 + 2차 체류(60~90분) 합산
+
+## 응답 형식 (JSON만 반환, 다른 텍스트 없이)
+${courseSchema}`;
+
+  const message = await client.messages.create({
+    model: 'claude-opus-4-7',
+    max_tokens: 1024,
+    messages: [{ role: 'user', content: prompt }],
+  });
+
+  const text = message.content[0].type === 'text' ? message.content[0].text : '';
+  const jsonMatch = text.match(/\{[\s\S]*\}/);
+  if (!jsonMatch) throw new Error('코스 추천 응답 파싱 실패');
+
+  return JSON.parse(jsonMatch[0]) as CourseRecommendation;
 }
