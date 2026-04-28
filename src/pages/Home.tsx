@@ -144,7 +144,7 @@ export default function Home() {
       '이젠, MINT로 우리 모임 장소 정해봐요!',
     ].join('\n');
     if (navigator.share) {
-      navigator.share({ title: 'MINT 추천 장소', text: shareText });
+      navigator.share({ text: shareText });
     } else {
       window.open(
         `https://sharer.kakao.com/talk/friends/picker/link?app_key=${import.meta.env.VITE_KAKAO_JS_API_KEY}`,
