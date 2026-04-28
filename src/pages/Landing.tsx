@@ -84,7 +84,7 @@ export default function Landing() {
               <div className="text-xs text-gray-400 mt-0.5">선택 피로 제로</div>
             </div>
           </div>
-          <PhoneMockup src="/images/step1.png" alt="출발지 입력 화면" />
+          <PhoneMockup src="/image/step1.png" alt="출발지 입력 화면" />
         </section>
 
         {/* ── PROBLEM ── */}
@@ -158,7 +158,7 @@ export default function Landing() {
               <span className="inline-block bg-[#36CFA0] text-white text-xs font-bold px-3 py-1 rounded-full mb-3">STEP 1</span>
               <h3 className="text-lg font-black text-gray-800 mb-1">각자 출발지를 입력해요</h3>
               <p className="text-sm text-gray-400 mb-5">동네나 역 이름만 치면 중간 지점을 자동으로 계산합니다</p>
-              <PhoneMockup src="/images/step1.png" alt="출발지 입력" />
+              <PhoneMockup src="/image/step1.png" alt="출발지 입력" />
             </div>
             <div className="w-0.5 h-8 bg-gradient-to-b from-[#36CFA0] to-transparent my-2" />
 
@@ -168,8 +168,8 @@ export default function Landing() {
               <h3 className="text-lg font-black text-gray-800 mb-1">인원 · 목적 · 바이브 선택</h3>
               <p className="text-sm text-gray-400 mb-5">밥? 술? 카페? 오늘 분위기에 맞는 조건을 골라요</p>
               <div className="flex gap-3 justify-center">
-                <PhoneMockup src="/images/step3.png" alt="목적 선택" width="w-36" />
-                <PhoneMockup src="/images/step4.png" alt="바이브 선택" width="w-36" />
+                <PhoneMockup src="/image/step3.png" alt="목적 선택" width="w-36" />
+                <PhoneMockup src="/image/step4.png" alt="바이브 선택" width="w-36" />
               </div>
             </div>
             <div className="w-0.5 h-8 bg-gradient-to-b from-[#36CFA0] to-transparent my-2" />
@@ -179,7 +179,7 @@ export default function Landing() {
               <span className="inline-block bg-[#36CFA0] text-white text-xs font-bold px-3 py-1 rounded-full mb-3">STEP 3</span>
               <h3 className="text-lg font-black text-gray-800 mb-1">AI가 딱 하나 골라줍니다</h3>
               <p className="text-sm text-gray-400 mb-5">실시간 혼잡도 + 1차→2차 코스까지<br />카카오톡으로 바로 공유!</p>
-              <PhoneMockup src="/images/step5.png" alt="AI 추천 결과" />
+              <PhoneMockup src="/image/step5.png" alt="AI 추천 결과" />
             </div>
           </div>
         </section>
@@ -247,7 +247,7 @@ export default function Landing() {
               </div>
             ))}
           </div>
-          <PhoneMockup src="/images/step5.png" alt="카카오톡 공유" />
+          <PhoneMockup src="/image/step5.png" alt="카카오톡 공유" />
           <p className="text-sm text-gray-400 text-center mt-6 leading-relaxed">
             더 이상 '어디로 갈까' 단톡방 폭격 없이,<br />
             <strong className="text-gray-600">한 명이 정하고 모두가 편한</strong> 약속.
