@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import type { ReservationRecord } from './Reserve';
+import { getAnalytics, getConversionRate } from '../utils/analytics';
 
 function loadReservations(): ReservationRecord[] {
   try {
@@ -20,6 +21,8 @@ function formatDate(iso: string) {
 
 export default function Admin() {
   const [records, setRecords] = useState<ReservationRecord[]>(loadReservations);
+  const analytics = getAnalytics();
+  const conversionRate = getConversionRate();
 
   function handleDelete(id: string) {
     const updated = records.filter((r) => r.id !== id);
@@ -36,6 +39,7 @@ export default function Admin() {
   return (
     <div className="min-h-screen bg-[#F5FBF8]">
       <div className="max-w-3xl mx-auto px-4 pt-8 pb-16">
+
         {/* 헤더 */}
         <div className="flex items-center justify-between mb-6">
           <div>
@@ -57,11 +61,39 @@ export default function Admin() {
           </div>
         </div>
 
+        {/* ── 전환율 대시보드 ── */}
+        <div className="mb-8">
+          <h2 className="text-sm font-black text-gray-600 mb-3">📊 전환율 현황</h2>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="bg-white rounded-2xl border border-gray-100 p-4 shadow-sm">
+              <div className="text-xs text-gray-400 mb-1">랜딩 조회</div>
+              <div className="text-3xl font-black text-[#36CFA0]">{analytics.landingViews}</div>
+              <div className="text-xs text-gray-300 mt-1">회</div>
+            </div>
+            <div className="bg-white rounded-2xl border border-gray-100 p-4 shadow-sm">
+              <div className="text-xs text-gray-400 mb-1">CTA 클릭</div>
+              <div className="text-3xl font-black text-[#36CFA0]">{analytics.ctaClicks}</div>
+              <div className="text-xs text-gray-300 mt-1">회</div>
+            </div>
+            <div className="bg-white rounded-2xl border-2 border-[#36CFA0] bg-teal-50 p-4 shadow-sm">
+              <div className="text-xs text-[#36CFA0] font-bold mb-1">전환율</div>
+              <div className="text-3xl font-black text-[#36CFA0]">{conversionRate}%</div>
+              <div className="text-xs text-teal-300 mt-1">랜딩 → MVP</div>
+            </div>
+            <div className="bg-white rounded-2xl border border-gray-100 p-4 shadow-sm">
+              <div className="text-xs text-gray-400 mb-1">예약 시도</div>
+              <div className="text-3xl font-black text-[#36CFA0]">{analytics.reservationAttempts}</div>
+              <div className="text-xs text-gray-300 mt-1">건</div>
+            </div>
+          </div>
+        </div>
+
+        {/* ── 예약 목록 ── */}
         {records.length === 0 ? (
           <div className="text-center py-20">
             <div className="text-4xl mb-3">📋</div>
             <p className="text-gray-400">아직 예약 요청이 없어요.</p>
-            <a href="/" className="inline-block mt-4 text-sm text-[#3CDBC0] underline">
+            <a href="/app" className="inline-block mt-4 text-sm text-[#3CDBC0] underline">
               MINT로 장소 추천받기 →
             </a>
           </div>
@@ -89,8 +121,8 @@ export default function Admin() {
                       <span className="font-bold text-gray-700">{r.guestName}</span>
                     </div>
                     <div className="flex items-center gap-1">
-                      <span className="text-gray-400">도착</span>
-                      <span className="font-bold text-gray-700">{r.arrivalTime}</span>
+                      <span className="text-gray-400">인원</span>
+                      <span className="font-bold text-gray-700">{r.people}명</span>
                     </div>
                   </div>
                   <div className="text-xs text-gray-400 mt-2">요청: {formatDate(r.createdAt)}</div>
@@ -106,7 +138,7 @@ export default function Admin() {
                     <th className="px-4 py-3 font-bold text-[#2AB5A0]">장소명</th>
                     <th className="px-4 py-3 font-bold text-[#2AB5A0]">주소</th>
                     <th className="px-4 py-3 font-bold text-[#2AB5A0]">예약자</th>
-                    <th className="px-4 py-3 font-bold text-[#2AB5A0]">도착 예정</th>
+                    <th className="px-4 py-3 font-bold text-[#2AB5A0]">인원</th>
                     <th className="px-4 py-3 font-bold text-[#2AB5A0]">요청시간</th>
                     <th className="px-4 py-3"></th>
                   </tr>
@@ -122,7 +154,7 @@ export default function Admin() {
                       <td className="px-4 py-3 font-medium text-gray-700">{r.guestName}</td>
                       <td className="px-4 py-3">
                         <span className="bg-[#E8F8F5] text-[#2AB5A0] font-bold px-2 py-0.5 rounded-full text-xs">
-                          {r.arrivalTime}
+                          {r.people}명
                         </span>
                       </td>
                       <td className="px-4 py-3 text-gray-400 text-xs">{formatDate(r.createdAt)}</td>
