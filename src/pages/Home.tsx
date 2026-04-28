@@ -129,7 +129,20 @@ export default function Home() {
 
   function handleShare() {
     if (!result) return;
-    const shareText = `🌿 MINT가 추천하는 오늘의 장소\n\n📍 ${result.placeName}\n${result.description}\n💰 ${result.priceRange}\n\n MINT로 우리 모임 장소 정해봐요!\n${window.location.origin}`;
+    const kakaoMapUrl = `https://map.kakao.com/link/search/${encodeURIComponent(result.placeName)}`;
+    const shareText = [
+      '🍀 MINT의 추천 장소🍀',
+      '',
+      `장소명: ${result.placeName || '정보 없음'}`,
+      `혼잡도: ${result.congestionLevel || '정보 없음'}`,
+      `바이브: ${result.vibeTags?.length ? result.vibeTags.join(', ') : '정보 없음'}`,
+      `가격대: ${result.priceRange || '정보 없음'}`,
+      '',
+      '카카오맵에서 보기:',
+      kakaoMapUrl,
+      '',
+      '이젠, MINT로 우리 모임 장소 정해봐요!',
+    ].join('\n');
     if (navigator.share) {
       navigator.share({ title: 'MINT 추천 장소', text: shareText });
     } else {
