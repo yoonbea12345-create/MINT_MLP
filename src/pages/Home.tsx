@@ -129,7 +129,37 @@ export default function Home() {
 
   function handleShare() {
     if (!result) return;
+    const mlpUrl = window.location.origin;
     const kakaoMapUrl = `https://map.kakao.com/link/search/${encodeURIComponent(result.placeName)}`;
+
+    // Kakao Share SDK — 카카오톡에 MINT 링크 카드로 공유
+    if (window.Kakao?.Share) {
+      if (!window.Kakao.isInitialized()) {
+        window.Kakao.init(import.meta.env.VITE_KAKAO_JS_API_KEY);
+      }
+      window.Kakao.Share.sendDefault({
+        objectType: 'feed',
+        content: {
+          title: `🍀 MINT 추천: ${result.placeName || '정보 없음'}`,
+          description: [
+            `혼잡도: ${result.congestionLevel || '정보 없음'}`,
+            `바이브: ${result.vibeTags?.length ? result.vibeTags.join(', ') : '정보 없음'}`,
+            `가격대: ${result.priceRange || '정보 없음'}`,
+          ].join('\n'),
+          imageUrl: `${mlpUrl}/image/step5.png`,
+          link: { mobileWebUrl: mlpUrl, webUrl: mlpUrl },
+        },
+        buttons: [
+          {
+            title: '이젠, MINT로 우리 모임 장소 정해봐요!',
+            link: { mobileWebUrl: mlpUrl, webUrl: mlpUrl },
+          },
+        ],
+      });
+      return;
+    }
+
+    // fallback — 텍스트 공유 (MLP URL을 마지막에 넣어 카카오톡 링크 미리보기가 MINT로 뜨도록)
     const shareText = [
       '🍀 MINT의 추천 장소🍀',
       '',
@@ -142,14 +172,12 @@ export default function Home() {
       kakaoMapUrl,
       '',
       '이젠, MINT로 우리 모임 장소 정해봐요!',
+      mlpUrl,
     ].join('\n');
     if (navigator.share) {
       navigator.share({ text: shareText });
     } else {
-      window.open(
-        `https://sharer.kakao.com/talk/friends/picker/link?app_key=${import.meta.env.VITE_KAKAO_JS_API_KEY}`,
-        '_blank'
-      );
+      navigator.clipboard?.writeText(shareText).then(() => alert('공유 내용이 복사되었습니다!'));
     }
   }
 

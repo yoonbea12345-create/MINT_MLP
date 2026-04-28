@@ -11,7 +11,7 @@ export interface KakaoPlace {
 }
 
 declare global {
-  interface Window { kakao: any }
+  interface Window { kakao: any; Kakao: any }
 }
 
 const cache = new Map<string, KakaoPlace[]>();
