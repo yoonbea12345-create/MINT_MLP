@@ -1,5 +1,14 @@
 const ANALYTICS_KEY = 'mint_analytics';
 
+declare global {
+  interface Window { dataLayer: Record<string, unknown>[] }
+}
+
+function pushDataLayer(event: string) {
+  window.dataLayer = window.dataLayer || [];
+  window.dataLayer.push({ event });
+}
+
 interface AnalyticsEvent {
   type: 'landing_view' | 'cta_click' | 'reservation_attempt';
   timestamp: string;
@@ -11,6 +20,7 @@ export function trackEvent(type: AnalyticsEvent['type']): void {
     const events: AnalyticsEvent[] = raw ? JSON.parse(raw) : [];
     events.push({ type, timestamp: new Date().toISOString() });
     localStorage.setItem(ANALYTICS_KEY, JSON.stringify(events));
+    pushDataLayer(type);
   } catch {
     // localStorage 실패 시 무시
   }
