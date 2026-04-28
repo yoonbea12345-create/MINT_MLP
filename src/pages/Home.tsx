@@ -189,7 +189,7 @@ export default function Home() {
 
         <StepProgress current={step} total={4} />
 
-        <div className="mt-6 pb-32">
+        <div className="mt-6">
           {step === 0 && (
             <div className="animate-fade-in-up">
               <div className="text-center mb-6 px-4">
@@ -231,28 +231,26 @@ export default function Home() {
           </div>
         )}
 
-        <div className="fixed bottom-0 left-0 right-0 px-4 pb-6 pt-3 bg-gradient-to-t from-[#F5FBF8] to-transparent">
-          <div className="max-w-md mx-auto flex gap-3">
-            {step > 0 && (
-              <button
-                onClick={handleBack}
-                className="w-14 py-4 rounded-2xl border-2 border-gray-200 bg-white text-gray-500 font-bold text-lg hover:border-gray-300 transition-all active:scale-95"
-              >
-                ←
-              </button>
-            )}
+        <div className="px-4 pb-10 pt-4 flex gap-3">
+          {step > 0 && (
             <button
-              onClick={handleNext}
-              disabled={!canNext()}
-              className={`flex-1 py-4 rounded-2xl font-black text-base transition-all duration-300 active:scale-95 ${
-                canNext()
-                  ? 'bg-[#3CDBC0] text-white shadow-lg shadow-[#3CDBC0]/30 hover:bg-[#2AB5A0]'
-                  : 'bg-gray-200 text-gray-400 cursor-not-allowed'
-              }`}
+              onClick={handleBack}
+              className="w-14 py-4 rounded-2xl border-2 border-gray-200 bg-white text-gray-500 font-bold text-lg hover:border-gray-300 transition-all active:scale-95"
             >
-              {step === 3 ? '✨ 장소 추천받기' : '다음'}
+              ←
             </button>
-          </div>
+          )}
+          <button
+            onClick={handleNext}
+            disabled={!canNext()}
+            className={`flex-1 py-4 rounded-2xl font-black text-base transition-all duration-300 active:scale-95 ${
+              canNext()
+                ? 'bg-[#3CDBC0] text-white shadow-lg shadow-[#3CDBC0]/30 hover:bg-[#2AB5A0]'
+                : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+            }`}
+          >
+            {step === 3 ? '✨ 장소 추천받기' : '다음'}
+          </button>
         </div>
       </div>
     </div>

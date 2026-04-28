@@ -74,6 +74,11 @@ export default function LocationInput({ locations, onChange }: Props) {
   );
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
   const wrapperRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
+
+  function handleFocus(index: number) {
+    inputRefs.current[index]?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
 
   function update(index: number, partial: Partial<InputState>) {
     setInputs((prev) => {
@@ -143,9 +148,11 @@ export default function LocationInput({ locations, onChange }: Props) {
                 <span className="text-[#3CDBC0] text-sm font-bold">{i + 1}</span>
               </div>
               <input
+                ref={(el) => { inputRefs.current[i] = el; }}
                 type="text"
                 value={inp.value}
                 onChange={(e) => handleChange(i, e.target.value)}
+                onFocus={() => handleFocus(i)}
                 placeholder={i === 0 ? '예: 성수역, 합정역...' : '예: 강남역, 이태원...'}
                 className={`w-full pl-8 pr-10 py-3.5 rounded-xl border-2 text-sm outline-none transition-all duration-200 bg-white ${
                   inp.selected
