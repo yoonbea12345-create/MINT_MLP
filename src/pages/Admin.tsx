@@ -1,14 +1,7 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { supabase } from '../utils/supabase';
+import { getAnalytics } from '../utils/analytics';
 import type { ReservationRecord } from './Reserve';
-import { getAnalytics, getConversionRate } from '../utils/analytics';
-
-function loadReservations(): ReservationRecord[] {
-  try {
-    return JSON.parse(localStorage.getItem('mint_reservations') ?? '[]');
-  } catch {
-    return [];
-  }
-}
 
 function formatDate(iso: string) {
   const d = new Date(iso);
@@ -19,28 +12,63 @@ function formatDate(iso: string) {
   return `${mm}/${dd} ${hh}:${min}`;
 }
 
+async function fetchReservations(): Promise<ReservationRecord[]> {
+  const { data } = await supabase
+    .from('reservations')
+    .select('*')
+    .order('created_at', { ascending: false });
+  if (!data) return [];
+  return data.map((r) => ({
+    id: r.id,
+    placeName: r.place_name,
+    address: r.address,
+    guestName: r.guest_name,
+    people: r.people,
+    arrivalTime: r.arrival_time,
+    createdAt: r.created_at,
+  }));
+}
+
 export default function Admin() {
-  const [records, setRecords] = useState<ReservationRecord[]>(loadReservations);
-  const [analytics, setAnalytics] = useState(getAnalytics);
-  const [conversionRate, setConversionRate] = useState(getConversionRate);
+  const [records, setRecords] = useState<ReservationRecord[]>([]);
+  const [analytics, setAnalytics] = useState({ landingViews: 0, ctaClicks: 0, reservationAttempts: 0 });
+  const [loading, setLoading] = useState(true);
 
-  function handleClearAnalytics() {
-    if (!confirm('분석 데이터(랜딩 조회, CTA 클릭 등)를 초기화할까요?')) return;
-    localStorage.removeItem('mint_analytics');
-    setAnalytics({ landingViews: 0, ctaClicks: 0, reservationAttempts: 0 });
-    setConversionRate('0.0');
+  const conversionRate = analytics.landingViews === 0
+    ? '0.0'
+    : ((analytics.ctaClicks / analytics.landingViews) * 100).toFixed(1);
+
+  useEffect(() => {
+    Promise.all([getAnalytics(), fetchReservations()]).then(([a, r]) => {
+      setAnalytics(a);
+      setRecords(r);
+      setLoading(false);
+    });
+  }, []);
+
+  async function handleDelete(id: string) {
+    await supabase.from('reservations').delete().eq('id', id);
+    setRecords((prev) => prev.filter((r) => r.id !== id));
   }
 
-  function handleDelete(id: string) {
-    const updated = records.filter((r) => r.id !== id);
-    localStorage.setItem('mint_reservations', JSON.stringify(updated));
-    setRecords(updated);
-  }
-
-  function handleClear() {
+  async function handleClear() {
     if (!confirm('전체 예약 내역을 삭제할까요?')) return;
-    localStorage.removeItem('mint_reservations');
+    await supabase.from('reservations').delete().not('id', 'is', null);
     setRecords([]);
+  }
+
+  async function handleClearAnalytics() {
+    if (!confirm('분석 데이터(랜딩 조회, CTA 클릭 등)를 초기화할까요?')) return;
+    await supabase.from('events').delete().not('id', 'is', null);
+    setAnalytics({ landingViews: 0, ctaClicks: 0, reservationAttempts: 0 });
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#F5FBF8] flex items-center justify-center">
+        <p className="text-gray-400">불러오는 중...</p>
+      </div>
+    );
   }
 
   return (

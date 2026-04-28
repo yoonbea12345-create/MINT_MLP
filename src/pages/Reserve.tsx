@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { trackEvent } from '../utils/analytics';
+import { supabase } from '../utils/supabase';
 
 export interface ReservationRecord {
   id: string;
@@ -42,13 +43,15 @@ export default function Reserve({ placeName, address, openingHours, onBack }: Pr
       arrivalTime: '-',
       createdAt: new Date().toISOString(),
     };
-    try {
-      const existing = JSON.parse(localStorage.getItem('mint_reservations') ?? '[]');
-      existing.push(record);
-      localStorage.setItem('mint_reservations', JSON.stringify(existing));
-    } catch {
-      // 저장 실패 무시
-    }
+    supabase.from('reservations').insert({
+      id: record.id,
+      place_name: record.placeName,
+      address: record.address,
+      guest_name: record.guestName,
+      people: record.people,
+      arrival_time: record.arrivalTime,
+      created_at: record.createdAt,
+    }).then(() => {});
 
     // 트래킹
     trackEvent('reservation_attempt');
