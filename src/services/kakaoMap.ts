@@ -16,25 +16,12 @@ declare global {
 
 const cache = new Map<string, KakaoPlace[]>();
 
-function waitForKakao(timeout = 8000): Promise<void> {
-  return new Promise((resolve, reject) => {
-    if (window.kakao?.maps?.services) { resolve(); return; }
-    const start = Date.now();
-    const id = setInterval(() => {
-      if (window.kakao?.maps?.services) { clearInterval(id); resolve(); }
-      else if (Date.now() - start > timeout) { clearInterval(id); reject(new Error('카카오 지도 SDK 로드 실패')); }
-    }, 100);
-  });
-}
-
-export async function searchKakaoKeyword(
+export function searchKakaoKeyword(
   keyword: string,
   options?: { x?: string; y?: string; radius?: number }
 ): Promise<KakaoPlace[]> {
   const cacheKey = keyword + JSON.stringify(options ?? {});
-  if (cache.has(cacheKey)) return cache.get(cacheKey)!;
-
-  await waitForKakao();
+  if (cache.has(cacheKey)) return Promise.resolve(cache.get(cacheKey)!);
 
   return new Promise((resolve, reject) => {
     const ps = new window.kakao.maps.services.Places();
