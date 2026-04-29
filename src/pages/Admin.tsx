@@ -29,7 +29,41 @@ async function fetchReservations(): Promise<ReservationRecord[]> {
   }));
 }
 
+function PasswordGate({ onUnlock }: { onUnlock: () => void }) {
+  const [input, setInput] = useState('');
+  const [error, setError] = useState(false);
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (input === '1229') { onUnlock(); }
+    else { setError(true); setInput(''); }
+  }
+
+  return (
+    <div className="min-h-screen bg-[#F5FBF8] flex items-center justify-center px-4">
+      <form onSubmit={handleSubmit} className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 w-full max-w-xs text-center">
+        <div className="text-3xl mb-3">🔒</div>
+        <h1 className="text-lg font-black text-gray-800 mb-1">MINT 어드민</h1>
+        <p className="text-sm text-gray-400 mb-6">비밀번호를 입력해주세요</p>
+        <input
+          type="password"
+          value={input}
+          onChange={(e) => { setInput(e.target.value); setError(false); }}
+          placeholder="비밀번호"
+          autoFocus
+          className={`w-full px-4 py-3 rounded-xl border-2 text-center text-lg tracking-widest outline-none transition-all ${error ? 'border-red-300 bg-red-50' : 'border-gray-200 focus:border-[#36CFA0]'}`}
+        />
+        {error && <p className="text-xs text-red-400 mt-2">비밀번호가 틀렸어요</p>}
+        <button type="submit" className="w-full mt-4 bg-[#36CFA0] text-white font-black py-3 rounded-xl hover:bg-[#2AB58C] transition-colors">
+          입장
+        </button>
+      </form>
+    </div>
+  );
+}
+
 export default function Admin() {
+  const [unlocked, setUnlocked] = useState(false);
   const [records, setRecords] = useState<ReservationRecord[]>([]);
   const [analytics, setAnalytics] = useState({ landingViews: 0, ctaClicks: 0, reservationAttempts: 0 });
   const [loading, setLoading] = useState(true);
@@ -39,12 +73,13 @@ export default function Admin() {
     : ((analytics.ctaClicks / analytics.landingViews) * 100).toFixed(1);
 
   useEffect(() => {
+    if (!unlocked) return;
     Promise.all([getAnalytics(), fetchReservations()]).then(([a, r]) => {
       setAnalytics(a);
       setRecords(r);
       setLoading(false);
     });
-  }, []);
+  }, [unlocked]);
 
   async function handleDelete(id: string) {
     await supabase.from('reservations').delete().eq('id', id);
@@ -62,6 +97,8 @@ export default function Admin() {
     await supabase.from('events').delete().not('id', 'is', null);
     setAnalytics({ landingViews: 0, ctaClicks: 0, reservationAttempts: 0 });
   }
+
+  if (!unlocked) return <PasswordGate onUnlock={() => setUnlocked(true)} />;
 
   if (loading) {
     return (
