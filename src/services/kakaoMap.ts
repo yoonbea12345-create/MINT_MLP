@@ -24,6 +24,10 @@ export function searchKakaoKeyword(
   if (cache.has(cacheKey)) return Promise.resolve(cache.get(cacheKey)!);
 
   return new Promise((resolve, reject) => {
+    if (!window.kakao?.maps?.services) {
+      reject(new Error('카카오 지도 SDK가 아직 로드되지 않았어요. 잠시 후 다시 시도해주세요.'));
+      return;
+    }
     const ps = new window.kakao.maps.services.Places();
     const opts: Record<string, unknown> = { size: 5 };
     if (options?.x) opts.x = Number(options.x);

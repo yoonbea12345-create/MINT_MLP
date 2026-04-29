@@ -16,7 +16,10 @@
     j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
     'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
     })(window,document,'script','dataLayer','GTM-TST2XCDT');</script>
-    <!-- End Google Tag Manager -->
+    <!-- Kakao SDKs: defer prevents blocking page render -->
+    <script defer src="https://t1.kakaocdn.net/kakaojs/2.7.4/kakao.min.js" crossorigin="anonymous"></script>
+    <script defer src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=%VITE_KAKAO_JS_API_KEY%&libraries=services"></script>
+    <!-- End Kakao SDKs -->
   </head>
   <body>
     <!-- Google Tag Manager (noscript) -->
@@ -24,8 +27,6 @@
     height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     <!-- End Google Tag Manager (noscript) -->
     <div id="root"></div>
-    <script src="https://t1.kakaocdn.net/kakaojs/2.7.4/kakao.min.js" crossorigin="anonymous"></script>
-    <script type="text/javascript" src="//dapi.kakao.com/v2/maps/sdk.js?appkey=%VITE_KAKAO_JS_API_KEY%&libraries=services"></script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
