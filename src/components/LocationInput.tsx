@@ -77,7 +77,11 @@ export default function LocationInput({ locations, onChange }: Props) {
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
   function handleFocus(index: number) {
-    inputRefs.current[index]?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    const el = inputRefs.current[index];
+    if (!el) return;
+    setTimeout(() => {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 300);
   }
 
   function update(index: number, partial: Partial<InputState>) {
