@@ -14,10 +14,13 @@ function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): nu
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
-// 직선거리 → 대중교통 예상 소요시간(분)
-// 도로 계수 1.3 / 평균속도 30km/h + 환승·대기 7분
+// 직선거리 → 대중교통 예상 소요시간(분) — 수도권 실측 기반 구간 보정
+// 구간별 실제 지하철+환승+대기 시간을 역산해 맞춤
 function estimateTransitMin(km: number): number {
-  return Math.round(km * 1.3 / 30 * 60 + 7);
+  if (km <= 3)  return Math.round(7   + km * 3.5);        // ~18분
+  if (km <= 10) return Math.round(17.5 + (km -  3) * 2.5); // 18→35분
+  if (km <= 25) return Math.round(35  + (km - 10) * 2.0);  // 35→65분
+  return        Math.round(65  + (km - 25) * 1.8);         // 65분~
 }
 
 // 수도권 도심 상업지역만 포함 (도시화 낮은 지역 제외)
