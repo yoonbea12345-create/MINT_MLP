@@ -1,7 +1,14 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../utils/supabase';
-import { getAnalytics } from '../utils/analytics';
+import { getAnalytics, isTrackingPaused, setTrackingPaused } from '../utils/analytics';
 import type { ReservationRecord } from './Reserve';
+
+function formatDuration(seconds: number): string {
+  if (seconds < 60) return `${seconds}초`;
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  return s > 0 ? `${m}분 ${s}초` : `${m}분`;
+}
 
 function formatDate(iso: string) {
   const d = new Date(iso);
@@ -65,8 +72,13 @@ function PasswordGate({ onUnlock }: { onUnlock: () => void }) {
 export default function Admin() {
   const [unlocked, setUnlocked] = useState(false);
   const [records, setRecords] = useState<ReservationRecord[]>([]);
-  const [analytics, setAnalytics] = useState({ landingViews: 0, ctaClicks: 0, reservationAttempts: 0 });
+  const [analytics, setAnalytics] = useState({ landingViews: 0, ctaClicks: 0, reservationAttempts: 0, avgStaySeconds: null as number | null });
   const [loading, setLoading] = useState(true);
+  const [paused, setPaused] = useState(false);
+
+  useEffect(() => {
+    setPaused(isTrackingPaused());
+  }, []);
 
   const conversionRate = analytics.landingViews === 0
     ? '0.0'
@@ -95,7 +107,13 @@ export default function Admin() {
   async function handleClearAnalytics() {
     if (!confirm('분석 데이터(랜딩 조회, CTA 클릭 등)를 초기화할까요?')) return;
     await supabase.from('events').delete().not('id', 'is', null);
-    setAnalytics({ landingViews: 0, ctaClicks: 0, reservationAttempts: 0 });
+    setAnalytics({ landingViews: 0, ctaClicks: 0, reservationAttempts: 0, avgStaySeconds: null });
+  }
+
+  function handleTogglePause() {
+    const next = !paused;
+    setTrackingPaused(next);
+    setPaused(next);
   }
 
   if (!unlocked) return <PasswordGate onUnlock={() => setUnlocked(true)} />;
@@ -113,7 +131,7 @@ export default function Admin() {
       <div className="max-w-3xl mx-auto px-4 pt-8 pb-16">
 
         {/* 헤더 */}
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center justify-between mb-4">
           <div>
             <h1 className="text-2xl font-black text-[#2AB5A0]">MINT 어드민</h1>
             <p className="text-sm text-gray-400">예약 요청 내역</p>
@@ -131,6 +149,33 @@ export default function Admin() {
               </button>
             )}
           </div>
+        </div>
+
+        {/* 데이터 수집 일시정지 토글 */}
+        <div className="mb-6">
+          <button
+            onClick={handleTogglePause}
+            className={`w-full flex items-center justify-between px-4 py-3 rounded-2xl border-2 transition-all ${
+              paused
+                ? 'border-orange-300 bg-orange-50'
+                : 'border-gray-200 bg-white'
+            }`}
+          >
+            <div className="flex items-center gap-3">
+              <span className="text-xl">{paused ? '⏸️' : '▶️'}</span>
+              <div className="text-left">
+                <div className={`font-black text-sm ${paused ? 'text-orange-600' : 'text-gray-700'}`}>
+                  데이터 수집 {paused ? '일시정지 중' : '수집 중'}
+                </div>
+                <div className="text-xs text-gray-400">
+                  {paused ? 'MVP 테스트 중에는 데이터가 기록되지 않아요' : '클릭하면 이 기기에서 수집이 멈춰요'}
+                </div>
+              </div>
+            </div>
+            <div className={`w-10 h-6 rounded-full transition-colors relative ${paused ? 'bg-orange-400' : 'bg-[#3CDBC0]'}`}>
+              <div className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-transform ${paused ? 'left-1' : 'left-5'}`} />
+            </div>
+          </button>
         </div>
 
         {/* ── 전환율 대시보드 ── */}
@@ -164,6 +209,15 @@ export default function Admin() {
               <div className="text-xs text-gray-400 mb-1">예약 시도</div>
               <div className="text-3xl font-black text-[#36CFA0]">{analytics.reservationAttempts}</div>
               <div className="text-xs text-gray-300 mt-1">건</div>
+            </div>
+            <div className="col-span-2 bg-white rounded-2xl border border-gray-100 p-4 shadow-sm">
+              <div className="text-xs text-gray-400 mb-1">평균 체류시간</div>
+              <div className="text-3xl font-black text-[#36CFA0]">
+                {analytics.avgStaySeconds != null ? formatDuration(analytics.avgStaySeconds) : '—'}
+              </div>
+              <div className="text-xs text-gray-300 mt-1">
+                {analytics.avgStaySeconds != null ? '앱 진입 → 결과 확인까지' : 'Supabase SQL 마이그레이션 필요 (analytics.ts 주석 참고)'}
+              </div>
             </div>
           </div>
         </div>

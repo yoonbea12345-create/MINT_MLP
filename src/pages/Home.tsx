@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import StepProgress from '../components/StepProgress';
 import LocationInput from '../components/LocationInput';
 import type { LocationEntry } from '../components/LocationInput';
@@ -7,14 +7,17 @@ import PurposeSelect from '../components/PurposeSelect';
 import VibeSelect from '../components/VibeSelect';
 import type { VibeAnswers } from '../components/VibeSelect';
 import ResultCard from '../components/ResultCard';
+import RegionSelect from '../components/RegionSelect';
 import Reserve from './Reserve';
 import { calcMidpoint, findNearestAreas } from '../services/midpoint';
+import type { PresetRegion } from '../services/midpoint';
 import { getMultiAreaCongestion } from '../services/seoulData';
 import { getAIRecommendation, getCourseRecommendation } from '../services/ai';
 import type { PlaceRecommendation, UserInput, CourseRecommendation } from '../services/ai';
+import { trackSessionDuration } from '../utils/analytics';
 
 type Step = 0 | 1 | 2 | 3;
-type View = 'steps' | 'result' | 'reserve';
+type View = 'steps' | 'region-select' | 'result' | 'reserve';
 
 const LOADING_MESSAGES = [
   '딱 맞는 곳 찾는 중...',
@@ -36,6 +39,25 @@ export default function Home() {
   const [result, setResult] = useState<PlaceRecommendation | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  // 세션 시작 시각 기록
+  useEffect(() => {
+    if (!sessionStorage.getItem('mintSessionStart')) {
+      sessionStorage.setItem('mintSessionStart', Date.now().toString());
+    }
+  }, []);
+
+  // 결과 화면 진입 시 체류시간 전송
+  useEffect(() => {
+    if (view === 'result') {
+      const startStr = sessionStorage.getItem('mintSessionStart');
+      if (startStr) {
+        const seconds = Math.round((Date.now() - parseInt(startStr)) / 1000);
+        trackSessionDuration(seconds);
+        sessionStorage.removeItem('mintSessionStart');
+      }
+    }
+  }, [view]);
+
   const [courseVisible, setCourseVisible] = useState(false);
   const [courseData, setCourseData] = useState<CourseRecommendation | null>(null);
   const [courseLoading, setCourseLoading] = useState(false);
@@ -51,14 +73,14 @@ export default function Home() {
 
   function handleNext() {
     if (step < 3) setStep((s) => (s + 1) as Step);
-    else handleSubmit();
+    else setView('region-select');
   }
 
   function handleBack() {
     if (step > 0) setStep((s) => (s - 1) as Step);
   }
 
-  async function handleSubmit() {
+  async function handleSubmit(presetRegion?: PresetRegion) {
     setLoading(true);
     setError(null);
     setResult(null);
@@ -68,8 +90,15 @@ export default function Home() {
     }, 1800);
 
     try {
-      const coords = locations.map((l) => ({ lat: l.lat ?? 37.5665, lng: l.lng ?? 126.978 }));
-      const midpoint = calcMidpoint(coords);
+      let midpoint;
+      if (presetRegion) {
+        midpoint = presetRegion.midpoint;
+      } else {
+        const coords = locations
+          .filter((l) => l.lat != null && l.lng != null)
+          .map((l) => ({ lat: l.lat!, lng: l.lng! }));
+        midpoint = calcMidpoint(coords.length >= 2 ? coords : [{ lat: 37.5665, lng: 126.978 }]);
+      }
       const nearestAreas = findNearestAreas(midpoint, 3);
       const congestionData = await getMultiAreaCongestion(nearestAreas);
 
@@ -124,7 +153,7 @@ export default function Home() {
     setCourseData(null);
     setCourseVisible(false);
     setCourseError(null);
-    handleSubmit();
+    setView('region-select');
   }
 
   function handleShare() {
@@ -179,6 +208,17 @@ export default function Home() {
     } else {
       navigator.clipboard?.writeText(shareText).then(() => alert('공유 내용이 복사되었습니다!'));
     }
+  }
+
+  // 지역 선택 화면
+  if (view === 'region-select') {
+    return (
+      <RegionSelect
+        onAutoSelect={() => handleSubmit()}
+        onRegionSelect={(region) => handleSubmit(region)}
+        onBack={() => { setView('steps'); setStep(3); }}
+      />
+    );
   }
 
   // 예약 페이지

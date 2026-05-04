@@ -19,6 +19,8 @@ interface InputState {
   suggestions: KakaoPlace[];
   loading: boolean;
   selected: boolean;
+  lat?: number;
+  lng?: number;
 }
 
 // Rendered via portal to escape the stacking context created by animate-fade-in-up (transform)
@@ -124,13 +126,15 @@ export default function LocationInput({ locations, onChange }: Props) {
       suggestions: [],
       selected: true,
       loading: false,
+      lat: parseFloat(place.y),
+      lng: parseFloat(place.x),
     });
   }
 
   useEffect(() => {
     const selected = inputs
       .filter((i) => i.selected && i.value)
-      .map((i) => ({ name: i.value }));
+      .map((i) => ({ name: i.value, lat: i.lat, lng: i.lng }));
     onChange(selected);
   }, [inputs]);
 
