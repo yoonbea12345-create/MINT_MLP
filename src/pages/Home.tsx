@@ -9,7 +9,7 @@ import type { VibeAnswers } from '../components/VibeSelect';
 import ResultCard from '../components/ResultCard';
 import RegionSelect from '../components/RegionSelect';
 import Reserve from './Reserve';
-import { calcMidpoint, findNearestAreas } from '../services/midpoint';
+import { calcMidpoint, findNearestAreas, findBalancedAreas } from '../services/midpoint';
 import type { PresetRegion, Coordinates } from '../services/midpoint';
 import { getMultiAreaCongestion } from '../services/seoulData';
 import { getAIRecommendation, getCourseRecommendation } from '../services/ai';
@@ -86,7 +86,7 @@ export default function Home() {
     setPrefetchedTravelTimes(null);
 
     const coords = validLocs.map((l) => ({ lat: l.lat!, lng: l.lng! }));
-    const midpoint = calcMidpoint(coords);
+    const { midpoint } = findBalancedAreas(coords);
 
     fetch('/api/travel-time', {
       method: 'POST',
@@ -149,8 +149,9 @@ export default function Home() {
       }
     } else {
       const coords = validLocs.map((l) => ({ lat: l.lat!, lng: l.lng! }));
-      midpoint = calcMidpoint(coords.length >= 2 ? coords : [{ lat: 37.5665, lng: 126.978 }]);
-      areaName = findNearestAreas(midpoint, 1)[0] ?? '서울 중심부';
+      const balanced = findBalancedAreas(coords.length >= 2 ? coords : [{ lat: 37.5665, lng: 126.978 }]);
+      midpoint = balanced.midpoint;
+      areaName = balanced.areaName;
       // 자동 중간지점은 백그라운드 사전계산 결과 사용
       setResultTravelTimes(prefetchedTravelTimes);
     }
