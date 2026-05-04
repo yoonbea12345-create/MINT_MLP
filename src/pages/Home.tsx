@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import StepProgress from '../components/StepProgress';
 import LocationInput from '../components/LocationInput';
 import type { LocationEntry } from '../components/LocationInput';
@@ -8,7 +8,6 @@ import VibeSelect from '../components/VibeSelect';
 import type { VibeAnswers } from '../components/VibeSelect';
 import ResultCard from '../components/ResultCard';
 import RegionSelect from '../components/RegionSelect';
-import MidpointConfirm from '../components/MidpointConfirm';
 import Reserve from './Reserve';
 import { calcMidpoint, findNearestAreas } from '../services/midpoint';
 import type { PresetRegion, Coordinates } from '../services/midpoint';
@@ -18,7 +17,14 @@ import type { PlaceRecommendation, UserInput, CourseRecommendation } from '../se
 import { trackSessionDuration } from '../utils/analytics';
 
 type Step = 0 | 1 | 2 | 3;
-type View = 'steps' | 'region-select' | 'midpoint-confirm' | 'result' | 'reserve';
+type View = 'steps' | 'region-select' | 'result' | 'reserve';
+
+interface TravelResult {
+  label: string;
+  formatted: string;
+  source?: string;
+  error?: boolean;
+}
 
 const LOADING_MESSAGES = [
   '딱 맞는 곳 찾는 중...',
@@ -65,6 +71,37 @@ export default function Home() {
     nearestAreas: string[];
   } | null>(null);
 
+  // 백그라운드 사전 계산: 위치 입력되면 자동 중간지점 소요시간 미리 fetch
+  const [prefetchedTravelTimes, setPrefetchedTravelTimes] = useState<TravelResult[] | null>(null);
+  const [resultTravelTimes, setResultTravelTimes] = useState<TravelResult[] | null>(null);
+  const prefetchAbortRef = useRef<AbortController | null>(null);
+
+  useEffect(() => {
+    const validLocs = locations.filter((l) => l.lat != null && l.lng != null);
+    if (validLocs.length < 2) { setPrefetchedTravelTimes(null); return; }
+
+    prefetchAbortRef.current?.abort();
+    const controller = new AbortController();
+    prefetchAbortRef.current = controller;
+    setPrefetchedTravelTimes(null);
+
+    const coords = validLocs.map((l) => ({ lat: l.lat!, lng: l.lng! }));
+    const midpoint = calcMidpoint(coords);
+
+    fetch('/api/travel-time', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        origins: validLocs.map((l) => ({ lat: l.lat!, lng: l.lng!, label: l.name })),
+        destination: midpoint,
+      }),
+      signal: controller.signal,
+    })
+      .then((r) => r.json())
+      .then((data: TravelResult[]) => setPrefetchedTravelTimes(data))
+      .catch(() => {});
+  }, [locations]);
+
   const [courseVisible, setCourseVisible] = useState(false);
   const [courseData, setCourseData] = useState<CourseRecommendation | null>(null);
   const [courseLoading, setCourseLoading] = useState(false);
@@ -87,26 +124,43 @@ export default function Home() {
     if (step > 0) setStep((s) => (s - 1) as Step);
   }
 
-  function handleShowConfirm(presetRegion?: PresetRegion) {
+  function handleMidpointSelect(presetRegion?: PresetRegion) {
     let midpoint: Coordinates;
     let areaName: string;
+    const validLocs = locations.filter((l) => l.lat != null && l.lng != null);
+
     if (presetRegion) {
       midpoint = presetRegion.midpoint;
       areaName = presetRegion.label;
+      // 프리셋은 사전계산 없으니 AI와 병렬로 fetch
+      setResultTravelTimes(null);
+      if (validLocs.length >= 2) {
+        fetch('/api/travel-time', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            origins: validLocs.map((l) => ({ lat: l.lat!, lng: l.lng!, label: l.name })),
+            destination: midpoint,
+          }),
+        })
+          .then((r) => r.json())
+          .then((data: TravelResult[]) => setResultTravelTimes(data))
+          .catch(() => {});
+      }
     } else {
-      const coords = locations
-        .filter((l) => l.lat != null && l.lng != null)
-        .map((l) => ({ lat: l.lat!, lng: l.lng! }));
+      const coords = validLocs.map((l) => ({ lat: l.lat!, lng: l.lng! }));
       midpoint = calcMidpoint(coords.length >= 2 ? coords : [{ lat: 37.5665, lng: 126.978 }]);
       areaName = findNearestAreas(midpoint, 1)[0] ?? '서울 중심부';
+      // 자동 중간지점은 백그라운드 사전계산 결과 사용
+      setResultTravelTimes(prefetchedTravelTimes);
     }
+
     const nearestAreas = findNearestAreas(midpoint, 3);
     setMidpointData({ midpoint, areaName, nearestAreas });
-    setView('midpoint-confirm');
+    handleRecommend(midpoint, nearestAreas);
   }
 
-  async function handleRecommend() {
-    if (!midpointData) return;
+  async function handleRecommend(midpoint: Coordinates, nearestAreas: string[]) {
     setLoading(true);
     setError(null);
     setResult(null);
@@ -116,7 +170,6 @@ export default function Home() {
     }, 1800);
 
     try {
-      const { midpoint, nearestAreas } = midpointData;
       const congestionData = await getMultiAreaCongestion(nearestAreas);
 
       const input: UserInput = {
@@ -170,11 +223,7 @@ export default function Home() {
     setCourseData(null);
     setCourseVisible(false);
     setCourseError(null);
-    if (midpointData) {
-      setView('midpoint-confirm');
-    } else {
-      setView('region-select');
-    }
+    setView('region-select');
   }
 
   function handleShare() {
@@ -267,22 +316,9 @@ export default function Home() {
   if (view === 'region-select') {
     return (
       <RegionSelect
-        onAutoSelect={() => handleShowConfirm()}
-        onRegionSelect={(region) => handleShowConfirm(region)}
+        onAutoSelect={() => handleMidpointSelect()}
+        onRegionSelect={(region) => handleMidpointSelect(region)}
         onBack={() => { setView('steps'); setStep(3); }}
-      />
-    );
-  }
-
-  // 중간지점 확인 + 소요시간 화면
-  if (view === 'midpoint-confirm' && midpointData) {
-    return (
-      <MidpointConfirm
-        areaName={midpointData.areaName}
-        midpoint={midpointData.midpoint}
-        locations={locations}
-        onConfirm={handleRecommend}
-        onBack={() => setView('region-select')}
       />
     );
   }
@@ -316,6 +352,37 @@ export default function Home() {
               <span className="text-xs text-gray-400">추천 결과</span>
             </div>
           </div>
+
+          {/* 중간지점 + 소요시간 카드 */}
+          {midpointData && (
+            <div className="bg-white rounded-2xl border border-gray-100 p-4 mb-4 shadow-sm">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs font-black text-gray-600">
+                  📍 {midpointData.areaName} 기준
+                </span>
+                <span className="text-xs text-gray-400">대중교통 예상</span>
+              </div>
+              {resultTravelTimes ? (
+                <div className="flex flex-wrap gap-x-4 gap-y-1">
+                  {resultTravelTimes.map((t, i) => (
+                    <div key={i} className="flex items-center gap-1 text-sm">
+                      <span className="text-gray-500 truncate max-w-[90px]">{t.label}</span>
+                      <span className="text-gray-400">→</span>
+                      <span className={`font-black ${t.error ? 'text-gray-400' : 'text-[#3CDBC0]'}`}>
+                        {t.formatted}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 text-sm text-gray-400">
+                  <div className="w-3.5 h-3.5 border-2 border-[#3CDBC0] border-t-transparent rounded-full animate-spin-slow" />
+                  계산 중...
+                </div>
+              )}
+            </div>
+          )}
+
           <ResultCard
             result={result}
             courseVisible={courseVisible}
