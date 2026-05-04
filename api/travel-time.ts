@@ -1,4 +1,4 @@
-// 환경변수 필요: KAKAO_REST_API_KEY (Vercel 대시보드에서 추가)
+// 환경변수: VITE_KAKAO_REST_API_KEY (이미 설정된 키 사용)
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 
 interface Origin {
@@ -20,7 +20,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') return res.status(405).end();
 
   const { origins, destination } = req.body as { origins: Origin[]; destination: { lat: number; lng: number } };
-  const apiKey = process.env.KAKAO_REST_API_KEY;
+  const apiKey = process.env.VITE_KAKAO_REST_API_KEY ?? process.env.KAKAO_REST_API_KEY;
 
   if (!apiKey) {
     return res.status(200).json(
