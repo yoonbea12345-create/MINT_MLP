@@ -8,16 +8,17 @@ import VibeSelect from '../components/VibeSelect';
 import type { VibeAnswers } from '../components/VibeSelect';
 import ResultCard from '../components/ResultCard';
 import RegionSelect from '../components/RegionSelect';
+import MidpointConfirm from '../components/MidpointConfirm';
 import Reserve from './Reserve';
 import { calcMidpoint, findNearestAreas } from '../services/midpoint';
-import type { PresetRegion } from '../services/midpoint';
+import type { PresetRegion, Coordinates } from '../services/midpoint';
 import { getMultiAreaCongestion } from '../services/seoulData';
 import { getAIRecommendation, getCourseRecommendation } from '../services/ai';
 import type { PlaceRecommendation, UserInput, CourseRecommendation } from '../services/ai';
 import { trackSessionDuration } from '../utils/analytics';
 
 type Step = 0 | 1 | 2 | 3;
-type View = 'steps' | 'region-select' | 'result' | 'reserve';
+type View = 'steps' | 'region-select' | 'midpoint-confirm' | 'result' | 'reserve';
 
 const LOADING_MESSAGES = [
   '딱 맞는 곳 찾는 중...',
@@ -58,6 +59,12 @@ export default function Home() {
     }
   }, [view]);
 
+  const [midpointData, setMidpointData] = useState<{
+    midpoint: Coordinates;
+    areaName: string;
+    nearestAreas: string[];
+  } | null>(null);
+
   const [courseVisible, setCourseVisible] = useState(false);
   const [courseData, setCourseData] = useState<CourseRecommendation | null>(null);
   const [courseLoading, setCourseLoading] = useState(false);
@@ -80,7 +87,26 @@ export default function Home() {
     if (step > 0) setStep((s) => (s - 1) as Step);
   }
 
-  async function handleSubmit(presetRegion?: PresetRegion) {
+  function handleShowConfirm(presetRegion?: PresetRegion) {
+    let midpoint: Coordinates;
+    let areaName: string;
+    if (presetRegion) {
+      midpoint = presetRegion.midpoint;
+      areaName = presetRegion.label;
+    } else {
+      const coords = locations
+        .filter((l) => l.lat != null && l.lng != null)
+        .map((l) => ({ lat: l.lat!, lng: l.lng! }));
+      midpoint = calcMidpoint(coords.length >= 2 ? coords : [{ lat: 37.5665, lng: 126.978 }]);
+      areaName = findNearestAreas(midpoint, 1)[0] ?? '서울 중심부';
+    }
+    const nearestAreas = findNearestAreas(midpoint, 3);
+    setMidpointData({ midpoint, areaName, nearestAreas });
+    setView('midpoint-confirm');
+  }
+
+  async function handleRecommend() {
+    if (!midpointData) return;
     setLoading(true);
     setError(null);
     setResult(null);
@@ -90,16 +116,7 @@ export default function Home() {
     }, 1800);
 
     try {
-      let midpoint;
-      if (presetRegion) {
-        midpoint = presetRegion.midpoint;
-      } else {
-        const coords = locations
-          .filter((l) => l.lat != null && l.lng != null)
-          .map((l) => ({ lat: l.lat!, lng: l.lng! }));
-        midpoint = calcMidpoint(coords.length >= 2 ? coords : [{ lat: 37.5665, lng: 126.978 }]);
-      }
-      const nearestAreas = findNearestAreas(midpoint, 3);
+      const { midpoint, nearestAreas } = midpointData;
       const congestionData = await getMultiAreaCongestion(nearestAreas);
 
       const input: UserInput = {
@@ -153,7 +170,11 @@ export default function Home() {
     setCourseData(null);
     setCourseVisible(false);
     setCourseError(null);
-    setView('region-select');
+    if (midpointData) {
+      setView('midpoint-confirm');
+    } else {
+      setView('region-select');
+    }
   }
 
   function handleShare() {
@@ -246,9 +267,22 @@ export default function Home() {
   if (view === 'region-select') {
     return (
       <RegionSelect
-        onAutoSelect={() => handleSubmit()}
-        onRegionSelect={(region) => handleSubmit(region)}
+        onAutoSelect={() => handleShowConfirm()}
+        onRegionSelect={(region) => handleShowConfirm(region)}
         onBack={() => { setView('steps'); setStep(3); }}
+      />
+    );
+  }
+
+  // 중간지점 확인 + 소요시간 화면
+  if (view === 'midpoint-confirm' && midpointData) {
+    return (
+      <MidpointConfirm
+        areaName={midpointData.areaName}
+        midpoint={midpointData.midpoint}
+        locations={locations}
+        onConfirm={handleRecommend}
+        onBack={() => setView('region-select')}
       />
     );
   }
