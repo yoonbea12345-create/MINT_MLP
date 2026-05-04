@@ -210,30 +210,7 @@ export default function Home() {
     }
   }
 
-  // 지역 선택 화면
-  if (view === 'region-select') {
-    return (
-      <RegionSelect
-        onAutoSelect={() => handleSubmit()}
-        onRegionSelect={(region) => handleSubmit(region)}
-        onBack={() => { setView('steps'); setStep(3); }}
-      />
-    );
-  }
-
-  // 예약 페이지
-  if (view === 'reserve' && result) {
-    return (
-      <Reserve
-        placeName={result.placeName}
-        address={result.address || result.area}
-        openingHours={result.openingHours ?? ''}
-        onBack={() => setView('result')}
-      />
-    );
-  }
-
-  // 로딩
+  // 로딩 (region-select보다 먼저 체크해야 즉시 전환됨)
   if (loading) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-[#F5FBF8] px-4">
@@ -262,6 +239,29 @@ export default function Home() {
           </div>
         </div>
       </div>
+    );
+  }
+
+  // 지역 선택 화면
+  if (view === 'region-select') {
+    return (
+      <RegionSelect
+        onAutoSelect={() => handleSubmit()}
+        onRegionSelect={(region) => handleSubmit(region)}
+        onBack={() => { setView('steps'); setStep(3); }}
+      />
+    );
+  }
+
+  // 예약 페이지
+  if (view === 'reserve' && result) {
+    return (
+      <Reserve
+        placeName={result.placeName}
+        address={result.address || result.area}
+        openingHours={result.openingHours ?? ''}
+        onBack={() => setView('result')}
+      />
     );
   }
 
