@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import StepProgress from '../components/StepProgress';
 import LocationInput from '../components/LocationInput';
 import type { LocationEntry } from '../components/LocationInput';
@@ -71,48 +71,9 @@ export default function Home() {
     nearestAreas: string[];
   } | null>(null);
 
-  // 백그라운드 사전 계산: 위치 입력되면 자동 중간지점 소요시간 미리 fetch
-  const [prefetchedTravelTimes, setPrefetchedTravelTimes] = useState<TravelResult[] | null>(null);
   const [resultTravelTimes, setResultTravelTimes] = useState<TravelResult[] | null>(null);
-  const prefetchAbortRef = useRef<AbortController | null>(null);
-
-  useEffect(() => {
-    const validLocs = locations.filter((l) => l.lat != null && l.lng != null);
-    if (validLocs.length < 2) { setPrefetchedTravelTimes(null); return; }
-
-    prefetchAbortRef.current?.abort();
-    const controller = new AbortController();
-    prefetchAbortRef.current = controller;
-    setPrefetchedTravelTimes(null);
-
-    const coords = validLocs.map((l) => ({ lat: l.lat!, lng: l.lng! }));
-    const { midpoint } = findBalancedAreas(coords);
-
-    fetch('/api/travel-time', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        origins: validLocs.map((l) => ({ lat: l.lat!, lng: l.lng!, label: l.name })),
-        destination: midpoint,
-      }),
-      signal: controller.signal,
-    })
-      .then((r) => r.json())
-      .then((data: TravelResult[]) => setPrefetchedTravelTimes(data))
-      .catch(() => {});
-  }, [locations]);
 
   const [treasurer, setTreasurer] = useState<string | null>(null);
-  const [treasurerPicked, setTreasurerPicked] = useState(false);
-
-  function handlePickTreasurer() {
-    if (treasurerPicked) return;
-    const validLocs = locations.filter((l) => l.name);
-    if (validLocs.length === 0) return;
-    const picked = validLocs[Math.floor(Math.random() * validLocs.length)];
-    setTreasurer(picked.name);
-    setTreasurerPicked(true);
-  }
 
   const [courseVisible, setCourseVisible] = useState(false);
   const [courseData, setCourseData] = useState<CourseRecommendation | null>(null);
@@ -157,30 +118,26 @@ export default function Home() {
         })
           .then((r) => r.json())
           .then((data: TravelResult[]) => setResultTravelTimes(data))
-          .catch(() => {});
+          .catch(() => setResultTravelTimes([]));
       }
     } else {
       const coords = validLocs.map((l) => ({ lat: l.lat!, lng: l.lng! }));
       const balanced = findBalancedAreas(coords.length >= 2 ? coords : [{ lat: 37.5665, lng: 126.978 }]);
       midpoint = balanced.midpoint;
       areaName = balanced.areaName;
-      if (prefetchedTravelTimes !== null) {
-        setResultTravelTimes(prefetchedTravelTimes);
-      } else {
-        setResultTravelTimes(null);
-        if (validLocs.length >= 2) {
-          fetch('/api/travel-time', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              origins: validLocs.map((l) => ({ lat: l.lat!, lng: l.lng!, label: l.name })),
-              destination: midpoint,
-            }),
-          })
-            .then((r) => r.json())
-            .then((data: TravelResult[]) => setResultTravelTimes(data))
-            .catch(() => {});
-        }
+      setResultTravelTimes(null);
+      if (validLocs.length >= 2) {
+        fetch('/api/travel-time', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            origins: validLocs.map((l) => ({ lat: l.lat!, lng: l.lng!, label: l.name })),
+            destination: midpoint,
+          }),
+        })
+          .then((r) => r.json())
+          .then((data: TravelResult[]) => setResultTravelTimes(data))
+          .catch(() => setResultTravelTimes([]));
       }
     }
 
@@ -210,6 +167,11 @@ export default function Home() {
 
       const recommendation = await getAIRecommendation(input, midpoint, congestionData);
       setResult(recommendation);
+      const validLocs = locations.filter((l) => l.name);
+      if (validLocs.length > 0) {
+        const picked = validLocs[Math.floor(Math.random() * validLocs.length)];
+        setTreasurer(picked.name);
+      }
       setView('result');
     } catch (e) {
       setError((e as Error).message || '추천을 가져오지 못했어요. 다시 시도해주세요.');
@@ -253,8 +215,6 @@ export default function Home() {
     setCourseVisible(false);
     setCourseError(null);
     setTreasurer(null);
-    setTreasurerPicked(false);
-    setPrefetchedTravelTimes(null);
     setResultTravelTimes(null);
     setView('region-select');
   }
@@ -378,7 +338,7 @@ export default function Home() {
         <div className="max-w-md mx-auto px-4 pb-10 pt-6">
           <div className="flex items-center justify-between mb-6">
             <button
-              onClick={() => { setResult(null); setView('steps'); setStep(0); setPrefetchedTravelTimes(null); setResultTravelTimes(null); }}
+              onClick={() => { setResult(null); setView('steps'); setStep(0); setResultTravelTimes(null); }}
               className="text-sm text-gray-400 hover:text-gray-600"
             >
               ← 처음으로
@@ -398,8 +358,6 @@ export default function Home() {
             courseData={courseData}
             courseError={courseError}
             treasurer={treasurer}
-            treasurerPicked={treasurerPicked}
-            onPickTreasurer={handlePickTreasurer}
             onToggleCourse={handleToggleCourse}
             onRetry={handleRetry}
             onShare={handleShare}

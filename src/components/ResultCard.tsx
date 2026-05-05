@@ -20,8 +20,6 @@ interface Props {
   courseData: CourseRecommendation | null;
   courseError: string | null;
   treasurer: string | null;
-  treasurerPicked: boolean;
-  onPickTreasurer: () => void;
   onToggleCourse: () => void;
   onRetry: () => void;
   onShare: () => void;
@@ -59,19 +57,13 @@ function parseOpenStatus(openingHours?: string): { label: string; isOpen: boolea
   const nowMin = now.getHours() * 60 + now.getMinutes();
   const openMin = parseInt(match[1]) * 60 + parseInt(match[2]);
   let closeMin = parseInt(match[3]) * 60 + parseInt(match[4]);
-
   if (closeMin < openMin) closeMin += 24 * 60;
 
   const isOpen = nowMin >= openMin && nowMin < closeMin;
-  let label: string;
-  if (isOpen) {
-    label = '영업중';
-  } else if (nowMin < openMin) {
-    label = '영업 전';
-  } else {
-    label = '영업 종료';
-  }
-  return { label, isOpen };
+  return {
+    label: isOpen ? '영업중' : nowMin < openMin ? '영업 전' : '영업 종료',
+    isOpen,
+  };
 }
 
 const rankLabel = ['🥇', '🥈', '🥉'];
@@ -85,14 +77,12 @@ export default function ResultCard({
   courseData,
   courseError,
   treasurer,
-  treasurerPicked,
-  onPickTreasurer,
   onToggleCourse,
   onRetry,
   onShare,
   onReserve,
 }: Props) {
-  const [mapVisible, setMapVisible] = useState(false);
+  const [mapVisible] = useState(false);
   const [moreVisible, setMoreVisible] = useState(false);
   const [courseMsgIdx, setCourseMsgIdx] = useState(0);
 
@@ -118,12 +108,17 @@ export default function ResultCard({
       {midpointAreaName && (
         <div className="bg-white rounded-2xl border border-gray-100 p-4 shadow-sm">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-black text-gray-600">
-              📍 {midpointAreaName} 기준
-            </span>
+            <span className="text-xs font-black text-gray-600">📍 {midpointAreaName} 기준</span>
             <span className="text-xs text-gray-400">대중교통 예상</span>
           </div>
-          {travelTimes ? (
+          {travelTimes === null ? (
+            <div className="flex items-center gap-2 text-sm text-gray-400">
+              <div className="w-3.5 h-3.5 border-2 border-[#3CDBC0] border-t-transparent rounded-full animate-spin-slow" />
+              계산 중...
+            </div>
+          ) : travelTimes.length === 0 ? (
+            <p className="text-xs text-gray-400">소요시간을 가져올 수 없어요</p>
+          ) : (
             <div className="flex flex-wrap gap-x-4 gap-y-1">
               {travelTimes.map((t, i) => (
                 <div key={i} className="flex items-center gap-1 text-sm">
@@ -135,46 +130,36 @@ export default function ResultCard({
                 </div>
               ))}
             </div>
-          ) : (
-            <div className="flex items-center gap-2 text-sm text-gray-400">
-              <div className="w-3.5 h-3.5 border-2 border-[#3CDBC0] border-t-transparent rounded-full animate-spin-slow" />
-              계산 중...
-            </div>
           )}
         </div>
       )}
 
-      {/* 메인 장소 카드 (1위) */}
+      {/* 메인 장소 카드 */}
       <div className="result-gradient rounded-3xl p-5 text-white shadow-xl shadow-[#3CDBC0]/30">
-        <div className="flex items-center justify-between mb-1">
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-black">{rankLabel[0]} 1위 추천</span>
-            <span className="text-xs font-semibold opacity-80 bg-white/20 px-2.5 py-1 rounded-full">
-              {result.category}
-            </span>
-          </div>
+        {/* 혼잡도 - 우측 상단 */}
+        <div className="flex justify-end mb-2">
           <div className="flex items-center gap-1.5 bg-black/15 px-2.5 py-1 rounded-full">
-            <div
-              className={`w-2 h-2 rounded-full ${congestionDotClass(result.congestionLevel as CongestionLevel)}`}
-            />
-            <span className="text-xs font-medium">
-              {currentTime} · {result.congestionLevel}
-            </span>
+            <div className={`w-2 h-2 rounded-full ${congestionDotClass(result.congestionLevel as CongestionLevel)}`} />
+            <span className="text-xs font-medium">{currentTime}기준 혼잡도: {result.congestionLevel}</span>
           </div>
         </div>
 
-        <h2 className="text-2xl font-black mt-3 mb-1 leading-tight">
-          오늘은<br /><span className="text-3xl">{result.placeName}</span>
-        </h2>
-        <p className="text-sm opacity-90 mb-3">{result.description}</p>
+        {/* 장소명 */}
+        <h2 className="text-3xl font-black mb-1 leading-tight">{result.placeName}</h2>
 
-        <div className="flex flex-wrap gap-1.5 mb-4">
+        {/* 카테고리 태그 - 장소명 바로 아래 */}
+        <div className="flex flex-wrap gap-1.5 mb-2">
+          <span className="text-xs font-black bg-white/30 px-3 py-1 rounded-full">
+            {result.category}
+          </span>
           {result.vibeTags.map((tag) => (
             <span key={tag} className="text-xs bg-white/20 px-2.5 py-1 rounded-full font-medium">
               #{tag}
             </span>
           ))}
         </div>
+
+        <p className="text-sm opacity-90 mb-4">{result.description}</p>
 
         <div className="bg-white/15 rounded-2xl p-3 flex flex-col gap-2">
           <div className="flex items-start gap-2 text-sm">
@@ -190,57 +175,52 @@ export default function ResultCard({
               <span className="opacity-70">🕐</span>
               <span className="opacity-90">{result.openingHours}</span>
               {openStatus && (
-                <span
-                  className={`ml-1 text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
-                    openStatus.isOpen ? 'bg-green-400 text-white' : 'bg-red-400 text-white'
-                  }`}
-                >
+                <span className={`ml-1 text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
+                  openStatus.isOpen ? 'bg-green-400 text-white' : 'bg-red-400 text-white'
+                }`}>
                   {openStatus.label}
                 </span>
               )}
             </div>
           )}
         </div>
-      </div>
 
-      {/* 추천 더보기 / 접기 */}
-      {extraResults.length > 0 && (
-        <>
+        {/* 더보기 - 카드 내부 하단 중앙 */}
+        {extraResults.length > 0 && (
           <button
             onClick={() => setMoreVisible(!moreVisible)}
-            className="w-full py-3 rounded-2xl border-2 border-dashed border-[#3CDBC0] bg-white text-[#2AB5A0] font-black text-sm flex items-center justify-center gap-2 active:scale-95 transition-all hover:bg-[#F5FBF8]"
+            className="w-full mt-4 text-white/80 text-sm font-bold flex items-center justify-center gap-1 active:scale-95 transition-all"
           >
-            {moreVisible
-              ? '접기 ▲'
-              : `추천 더보기 (${extraResults.length}개 더) ▼`}
+            {moreVisible ? '접기 ▲' : `추천 더보기 (${extraResults.length}개 더) ▼`}
           </button>
+        )}
+      </div>
 
-          {moreVisible && (
-            <div className="flex flex-col gap-3 animate-fade-in-up">
-              {extraResults.map((place, idx) => (
-                <div key={idx} className="bg-white rounded-2xl border-2 border-gray-100 p-4">
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="text-base">{rankLabel[idx + 1]}</span>
-                    <span className="text-sm font-black text-gray-800">{place.placeName}</span>
-                    <span className="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full ml-auto">{place.category}</span>
-                  </div>
-                  <p className="text-xs text-gray-500 mb-2">{place.description}</p>
-                  <div className="flex items-center gap-3 text-xs text-gray-500 mb-1">
-                    <span>💰 {place.priceRange}</span>
-                    <div className="flex items-center gap-1">
-                      <div className={`w-2 h-2 rounded-full ${congestionDotClass(place.congestionLevel as CongestionLevel)}`} />
-                      <span>{place.congestionLevel}</span>
-                    </div>
-                  </div>
-                  <p className="text-xs text-gray-400">📍 {place.address}</p>
+      {/* 추가 추천 장소 (더보기 펼침) */}
+      {moreVisible && extraResults.length > 0 && (
+        <div className="flex flex-col gap-3 animate-fade-in-up">
+          {extraResults.map((place, idx) => (
+            <div key={idx} className="bg-white rounded-2xl border-2 border-gray-100 p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-base">{rankLabel[idx + 1]}</span>
+                <span className="text-sm font-black text-gray-800">{place.placeName}</span>
+                <span className="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full ml-auto">{place.category}</span>
+              </div>
+              <p className="text-xs text-gray-500 mb-2">{place.description}</p>
+              <div className="flex items-center gap-3 text-xs text-gray-500 mb-1">
+                <span>💰 {place.priceRange}</span>
+                <div className="flex items-center gap-1">
+                  <div className={`w-2 h-2 rounded-full ${congestionDotClass(place.congestionLevel as CongestionLevel)}`} />
+                  <span>{place.congestionLevel}</span>
                 </div>
-              ))}
+              </div>
+              <p className="text-xs text-gray-400">📍 {place.address}</p>
             </div>
-          )}
-        </>
+          ))}
+        </div>
       )}
 
-      {/* 예약하기 */}
+      {/* 이 장소 예약하기 */}
       <button
         onClick={onReserve}
         className="w-full py-4 rounded-2xl bg-[#3CDBC0] text-white font-black text-base flex items-center justify-center gap-2 shadow-lg shadow-[#3CDBC0]/30 hover:bg-[#2AB5A0] active:scale-95 transition-all"
@@ -248,26 +228,7 @@ export default function ResultCard({
         📋 이 장소 예약하기
       </button>
 
-      {/* 총무 뽑기 */}
-      <div className="bg-white rounded-2xl border-2 border-gray-100 p-4">
-        {!treasurerPicked ? (
-          <button
-            onClick={onPickTreasurer}
-            className="w-full py-3.5 rounded-xl bg-[#F5FBF8] border-2 border-dashed border-[#3CDBC0] text-[#2AB5A0] font-black text-sm flex items-center justify-center gap-2 active:scale-95 transition-all hover:bg-[#E8F8F5]"
-          >
-            🎲 오늘의 총무 뽑기
-          </button>
-        ) : (
-          <div className="text-center py-1 animate-fade-in-up">
-            <p className="text-xs text-gray-400 mb-1">오늘의 총무</p>
-            <p className="text-base font-black text-[#2AB5A0]">
-              🎉 {treasurer}에서 출발하시는 분!
-            </p>
-          </div>
-        )}
-      </div>
-
-      {/* 카카오톡 공유 */}
+      {/* 카카오톡으로 공유하기 */}
       <button
         onClick={onShare}
         className="w-full py-4 rounded-2xl bg-[#FEE500] text-[#3A1D1D] font-black text-base flex items-center justify-center gap-2 shadow-lg shadow-yellow-200 active:scale-95 transition-transform"
@@ -278,19 +239,32 @@ export default function ResultCard({
         카카오톡으로 공유하기
       </button>
 
-      {/* 지도로 보기 */}
-      {hasCoords && (
-        <button
-          onClick={() => setMapVisible(!mapVisible)}
-          className="flex items-center justify-center gap-2 py-3 rounded-xl border-2 border-gray-200 bg-white text-sm font-medium text-gray-600 hover:border-[#3CDBC0] hover:text-[#2AB5A0] transition-all"
-        >
-          {mapVisible ? '🗺️ 지도 숨기기' : '🗺️ 지도로 보기'}
-        </button>
-      )}
+      {/* 카카오맵으로 보기 */}
+      <a
+        href={hasCoords
+          ? `https://map.kakao.com/link/to/${encodeURIComponent(result.placeName)},${result.lat},${result.lng}`
+          : `https://map.kakao.com/link/search/${encodeURIComponent(result.placeName)}`}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="w-full py-4 rounded-2xl bg-[#3C5CFA] text-white font-black text-base flex items-center justify-center gap-2 shadow-lg shadow-blue-200 active:scale-95 transition-transform"
+      >
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5S10.62 6.5 12 6.5s2.5 1.12 2.5 2.5S13.38 11.5 12 11.5z"/>
+        </svg>
+        카카오맵으로 보기
+      </a>
 
+      {/* 지도 (카카오맵 버튼 아래에 인라인 표시) */}
       {mapVisible && hasCoords && (
         <div className="animate-fade-in-up">
           <MiniMap lat={result.lat!} lng={result.lng!} placeName={result.placeName} />
+        </div>
+      )}
+
+      {/* 오늘의 총무 */}
+      {treasurer && (
+        <div className="w-full py-4 rounded-2xl bg-[#2AB5A0] text-white font-black text-base flex items-center justify-center gap-2 shadow-lg shadow-[#2AB5A0]/30">
+          🎲 오늘의 총무는 {treasurer}에서 출발하시는분!
         </div>
       )}
 
@@ -307,11 +281,9 @@ export default function ResultCard({
               courseVisible ? 'bg-[#3CDBC0]' : 'bg-gray-200'
             }`}
           >
-            <div
-              className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow-sm transition-all duration-300 ${
-                courseVisible ? 'left-6' : 'left-0.5'
-              }`}
-            />
+            <div className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow-sm transition-all duration-300 ${
+              courseVisible ? 'left-6' : 'left-0.5'
+            }`} />
           </button>
         </div>
 
@@ -324,9 +296,7 @@ export default function ResultCard({
               </div>
               <div className="text-center">
                 <p className="text-sm font-bold text-[#2AB5A0]">코스 생성 중...</p>
-                <p className="text-xs text-gray-400 mt-1 animate-mint-pulse">
-                  {COURSE_LOADING_MSGS[courseMsgIdx]}
-                </p>
+                <p className="text-xs text-gray-400 mt-1 animate-mint-pulse">{COURSE_LOADING_MSGS[courseMsgIdx]}</p>
               </div>
             </div>
           </div>
@@ -350,48 +320,31 @@ export default function ResultCard({
                         <span className="text-[#3CDBC0] text-base leading-none">↓</span>
                         <div className="w-px h-2 bg-[#3CDBC0]/50" />
                       </div>
-                      <span className="text-xs text-gray-400 font-medium">
-                        도보 {place.walkingMinutes}분
-                      </span>
+                      <span className="text-xs text-gray-400 font-medium">도보 {place.walkingMinutes}분</span>
                     </div>
                   )}
-
                   <div className="bg-[#F5FBF8] rounded-2xl p-3.5 border border-[#E0F5F0]">
                     <div className="flex items-center gap-2 mb-2">
-                      <span
-                        className={`text-xs font-black px-2.5 py-0.5 rounded-full text-white ${
-                          idx === 0 ? 'bg-[#3CDBC0]' : 'bg-[#2AB5A0]'
-                        }`}
-                      >
+                      <span className={`text-xs font-black px-2.5 py-0.5 rounded-full text-white ${idx === 0 ? 'bg-[#3CDBC0]' : 'bg-[#2AB5A0]'}`}>
                         {idx + 1}차
                       </span>
                       <span className="text-sm font-black text-gray-800">{place.placeName}</span>
                     </div>
-
                     <div className="mb-2">
-                      <span className="text-xs text-gray-500 bg-white px-2.5 py-1 rounded-full border border-gray-200">
-                        {place.category}
-                      </span>
+                      <span className="text-xs text-gray-500 bg-white px-2.5 py-1 rounded-full border border-gray-200">{place.category}</span>
                     </div>
-
                     <div className="flex flex-wrap gap-1.5 mb-2">
                       {place.vibeTags.map((tag) => (
-                        <span
-                          key={tag}
-                          className="text-xs text-[#2AB5A0] bg-white px-2 py-0.5 rounded-full border border-[#C8F0E8]"
-                        >
+                        <span key={tag} className="text-xs text-[#2AB5A0] bg-white px-2 py-0.5 rounded-full border border-[#C8F0E8]">
                           #{tag}
                         </span>
                       ))}
                     </div>
-
                     <p className="text-xs text-gray-500 mb-2">{place.description}</p>
-
                     <div className="flex items-start gap-1 text-xs text-gray-400 mb-3">
                       <span className="shrink-0">📍</span>
                       <span>{place.address}</span>
                     </div>
-
                     <a
                       href={kakaoMapLink(place)}
                       target="_blank"
@@ -407,12 +360,9 @@ export default function ResultCard({
                 </div>
               ))}
             </div>
-
             <div className="mt-3 flex items-center justify-center gap-2 py-2.5 bg-[#E8F8F5] rounded-xl">
               <span className="text-xs text-gray-500">총 소요 시간</span>
-              <span className="text-sm font-black text-[#2AB5A0]">
-                {formatTotalTime(courseData.totalMinutes)}
-              </span>
+              <span className="text-sm font-black text-[#2AB5A0]">{formatTotalTime(courseData.totalMinutes)}</span>
             </div>
           </div>
         )}
@@ -425,6 +375,15 @@ export default function ResultCard({
       >
         🔄 다시 뽑기
       </button>
+
+      {/* 스크롤 유도 */}
+      <div className="flex justify-center pb-4">
+        <span className="text-xs text-gray-300 flex flex-col items-center gap-1">
+          <span>더 보기</span>
+          <span className="animate-bounce">↓</span>
+        </span>
+      </div>
+
     </div>
   );
 }
