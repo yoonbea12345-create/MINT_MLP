@@ -10,6 +10,9 @@ interface Props {
   courseLoading: boolean;
   courseData: CourseRecommendation | null;
   courseError: string | null;
+  treasurer: string | null;
+  treasurerPicked: boolean;
+  onPickTreasurer: () => void;
   onToggleCourse: () => void;
   onRetry: () => void;
   onShare: () => void;
@@ -68,6 +71,9 @@ export default function ResultCard({
   courseLoading,
   courseData,
   courseError,
+  treasurer,
+  treasurerPicked,
+  onPickTreasurer,
   onToggleCourse,
   onRetry,
   onShare,
@@ -320,6 +326,25 @@ export default function ResultCard({
                 {formatTotalTime(courseData.totalMinutes)}
               </span>
             </div>
+          </div>
+        )}
+      </div>
+
+      {/* 총무 뽑기 */}
+      <div className="bg-white rounded-2xl border-2 border-gray-100 p-4">
+        {!treasurerPicked ? (
+          <button
+            onClick={onPickTreasurer}
+            className="w-full py-3.5 rounded-xl bg-[#F5FBF8] border-2 border-dashed border-[#3CDBC0] text-[#2AB5A0] font-black text-sm flex items-center justify-center gap-2 active:scale-95 transition-all hover:bg-[#E8F8F5]"
+          >
+            🎲 오늘의 총무 뽑기
+          </button>
+        ) : (
+          <div className="text-center py-1 animate-fade-in-up">
+            <p className="text-xs text-gray-400 mb-1">오늘의 총무</p>
+            <p className="text-base font-black text-[#2AB5A0]">
+              🎉 {treasurer}에서 출발하시는 분!
+            </p>
           </div>
         )}
       </div>

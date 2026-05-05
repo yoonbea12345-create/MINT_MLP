@@ -9,7 +9,7 @@ import type { VibeAnswers } from '../components/VibeSelect';
 import ResultCard from '../components/ResultCard';
 import RegionSelect from '../components/RegionSelect';
 import Reserve from './Reserve';
-import { calcMidpoint, findNearestAreas, findBalancedAreas } from '../services/midpoint';
+import { findNearestAreas, findBalancedAreas } from '../services/midpoint';
 import type { PresetRegion, Coordinates } from '../services/midpoint';
 import { getMultiAreaCongestion } from '../services/seoulData';
 import { getAIRecommendation, getCourseRecommendation } from '../services/ai';
@@ -101,6 +101,18 @@ export default function Home() {
       .then((data: TravelResult[]) => setPrefetchedTravelTimes(data))
       .catch(() => {});
   }, [locations]);
+
+  const [treasurer, setTreasurer] = useState<string | null>(null);
+  const [treasurerPicked, setTreasurerPicked] = useState(false);
+
+  function handlePickTreasurer() {
+    if (treasurerPicked) return;
+    const validLocs = locations.filter((l) => l.name);
+    if (validLocs.length === 0) return;
+    const picked = validLocs[Math.floor(Math.random() * validLocs.length)];
+    setTreasurer(picked.name);
+    setTreasurerPicked(true);
+  }
 
   const [courseVisible, setCourseVisible] = useState(false);
   const [courseData, setCourseData] = useState<CourseRecommendation | null>(null);
@@ -224,6 +236,8 @@ export default function Home() {
     setCourseData(null);
     setCourseVisible(false);
     setCourseError(null);
+    setTreasurer(null);
+    setTreasurerPicked(false);
     setView('region-select');
   }
 
@@ -245,6 +259,7 @@ export default function Home() {
             `혼잡도: ${result.congestionLevel || '정보 없음'}`,
             `바이브: ${result.vibeTags?.length ? result.vibeTags.join(', ') : '정보 없음'}`,
             `가격대: ${result.priceRange || '정보 없음'}`,
+            ...(treasurer ? [`💳 오늘의 총무는 ${treasurer}에서 오신 분!`] : []),
           ].join('\n'),
           imageUrl: `${mlpUrl}/image/step5.png`,
           link: { mobileWebUrl: mlpUrl, webUrl: mlpUrl },
@@ -267,6 +282,7 @@ export default function Home() {
       `혼잡도: ${result.congestionLevel || '정보 없음'}`,
       `바이브: ${result.vibeTags?.length ? result.vibeTags.join(', ') : '정보 없음'}`,
       `가격대: ${result.priceRange || '정보 없음'}`,
+      ...(treasurer ? ['', `💳 오늘의 총무는 ${treasurer}에서 오신 분!`] : []),
       '',
       '카카오맵에서 보기:',
       kakaoMapUrl,
@@ -390,6 +406,9 @@ export default function Home() {
             courseLoading={courseLoading}
             courseData={courseData}
             courseError={courseError}
+            treasurer={treasurer}
+            treasurerPicked={treasurerPicked}
+            onPickTreasurer={handlePickTreasurer}
             onToggleCourse={handleToggleCourse}
             onRetry={handleRetry}
             onShare={handleShare}
