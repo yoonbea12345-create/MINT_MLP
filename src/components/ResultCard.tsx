@@ -140,7 +140,7 @@ export default function ResultCard({
         <div className="flex justify-end mb-2">
           <div className="flex items-center gap-1.5 bg-black/15 px-2.5 py-1 rounded-full">
             <div className={`w-2 h-2 rounded-full ${congestionDotClass(result.congestionLevel as CongestionLevel)}`} />
-            <span className="text-xs font-medium">{currentTime}기준 혼잡도: {result.congestionLevel}</span>
+            <span className="text-xs font-medium">{currentTime} 기준 혼잡도: {result.congestionLevel}</span>
           </div>
         </div>
 
@@ -246,7 +246,7 @@ export default function ResultCard({
           : `https://map.kakao.com/link/search/${encodeURIComponent(result.placeName)}`}
         target="_blank"
         rel="noopener noreferrer"
-        className="w-full py-4 rounded-2xl bg-[#3C5CFA] text-white font-black text-base flex items-center justify-center gap-2 shadow-lg shadow-blue-200 active:scale-95 transition-transform"
+        className="w-full py-4 rounded-2xl bg-white border-2 border-gray-200 text-gray-700 font-black text-base flex items-center justify-center gap-2 hover:border-gray-300 active:scale-95 transition-transform"
       >
         <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
           <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5S10.62 6.5 12 6.5s2.5 1.12 2.5 2.5S13.38 11.5 12 11.5z"/>
@@ -263,7 +263,7 @@ export default function ResultCard({
 
       {/* 오늘의 총무 */}
       {treasurer && (
-        <div className="w-full py-4 rounded-2xl bg-[#2AB5A0] text-white font-black text-base flex items-center justify-center gap-2 shadow-lg shadow-[#2AB5A0]/30">
+        <div className="w-full py-4 rounded-2xl bg-white border-2 border-gray-200 text-gray-700 font-black text-base flex items-center justify-center gap-2">
           🎲 오늘의 총무는 {treasurer}에서 출발하시는분!
         </div>
       )}

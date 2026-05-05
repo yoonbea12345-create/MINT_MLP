@@ -343,10 +343,7 @@ export default function Home() {
             >
               ← 처음으로
             </button>
-            <div className="flex items-center gap-1.5">
-              <span className="text-[#3CDBC0] font-black text-lg">MINT</span>
-              <span className="text-xs text-gray-400">추천 결과</span>
-            </div>
+            <span className="text-[#3CDBC0] font-black text-lg">MINT</span>
           </div>
 
           <ResultCard
