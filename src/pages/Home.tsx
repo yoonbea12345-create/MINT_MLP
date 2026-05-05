@@ -105,48 +105,24 @@ export default function Home() {
     if (presetRegion) {
       midpoint = presetRegion.midpoint;
       areaName = presetRegion.label;
-      // 프리셋은 사전계산 없으니 AI와 병렬로 fetch
-      setResultTravelTimes(null);
-      if (validLocs.length >= 2) {
-        fetch('/api/travel-time', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            origins: validLocs.map((l) => ({ lat: l.lat!, lng: l.lng!, label: l.name })),
-            destination: midpoint,
-          }),
-        })
-          .then((r) => r.json())
-          .then((data: TravelResult[]) => setResultTravelTimes(data))
-          .catch(() => setResultTravelTimes([]));
-      }
     } else {
       const coords = validLocs.map((l) => ({ lat: l.lat!, lng: l.lng! }));
       const balanced = findBalancedAreas(coords.length >= 2 ? coords : [{ lat: 37.5665, lng: 126.978 }]);
       midpoint = balanced.midpoint;
       areaName = balanced.areaName;
-      setResultTravelTimes(null);
-      if (validLocs.length >= 2) {
-        fetch('/api/travel-time', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            origins: validLocs.map((l) => ({ lat: l.lat!, lng: l.lng!, label: l.name })),
-            destination: midpoint,
-          }),
-        })
-          .then((r) => r.json())
-          .then((data: TravelResult[]) => setResultTravelTimes(data))
-          .catch(() => setResultTravelTimes([]));
-      }
     }
 
     const nearestAreas = findNearestAreas(midpoint, 3);
     setMidpointData({ midpoint, areaName, nearestAreas });
-    handleRecommend(midpoint, nearestAreas);
+    setResultTravelTimes(null);
+    handleRecommend(midpoint, nearestAreas, validLocs);
   }
 
-  async function handleRecommend(midpoint: Coordinates, nearestAreas: string[]) {
+  async function handleRecommend(
+    midpoint: Coordinates,
+    nearestAreas: string[],
+    validLocs: LocationEntry[],
+  ) {
     setLoading(true);
     setError(null);
     setResult(null);
@@ -167,12 +143,29 @@ export default function Home() {
 
       const recommendation = await getAIRecommendation(input, midpoint, congestionData);
       setResult(recommendation);
-      const validLocs = locations.filter((l) => l.name);
-      if (validLocs.length > 0) {
-        const picked = validLocs[Math.floor(Math.random() * validLocs.length)];
+      const namedLocs = locations.filter((l) => l.name);
+      if (namedLocs.length > 0) {
+        const picked = namedLocs[Math.floor(Math.random() * namedLocs.length)];
         setTreasurer(picked.name);
       }
       setView('result');
+
+      // 소요시간 fetch: result view 진입 직후 시작해 race condition 제거
+      if (validLocs.length >= 2) {
+        fetch('/api/travel-time', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            origins: validLocs.map((l) => ({ lat: l.lat!, lng: l.lng!, label: l.name })),
+            destination: midpoint,
+          }),
+        })
+          .then((r) => r.json())
+          .then((data: TravelResult[]) => setResultTravelTimes(data))
+          .catch(() => setResultTravelTimes([]));
+      } else {
+        setResultTravelTimes([]);
+      }
     } catch (e) {
       setError((e as Error).message || '추천을 가져오지 못했어요. 다시 시도해주세요.');
     } finally {
