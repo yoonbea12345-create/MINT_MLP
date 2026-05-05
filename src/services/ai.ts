@@ -13,6 +13,7 @@ export interface UserInput {
 }
 
 export interface PlaceRecommendation {
+  rank?: number;
   placeName: string;
   category: string;
   description: string;
@@ -47,7 +48,7 @@ export async function getAIRecommendation(
   input: UserInput,
   midpoint: Coordinates,
   congestionData: AreaCongestion[]
-): Promise<PlaceRecommendation> {
+): Promise<PlaceRecommendation[]> {
   const res = await fetch('/api/recommend', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -56,7 +57,7 @@ export async function getAIRecommendation(
   if (!res.ok) throw new Error('AI 추천 요청 실패');
   const data = await res.json();
   if (data.error) throw new Error(data.error);
-  return data as PlaceRecommendation;
+  return Array.isArray(data) ? data as PlaceRecommendation[] : [data as PlaceRecommendation];
 }
 
 export async function getCourseRecommendation(

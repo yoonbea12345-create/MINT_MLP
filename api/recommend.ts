@@ -2,6 +2,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 
 const placeSchema = `{
+  "rank": 1,
   "placeName": "실제 식당/카페 이름",
   "category": "카테고리 (예: 이자카야, 루프탑 바, 감성 카페 등)",
   "description": "한줄 설명 (왜 오늘 여기여야 하는지, 20자 내외)",
@@ -29,7 +30,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       .map((c) => `${c.areaName}: ${c.level}`)
       .join(', ');
 
-    const prompt = `당신은 서울 맛집 큐레이터입니다. 아래 조건에 맞는 최적의 장소를 추천해주세요.
+    const prompt = `당신은 서울 맛집 큐레이터입니다. 아래 조건에 맞는 최적의 장소 3곳을 순위별로 추천해주세요.
 
 ## 모임 정보
 - 출발지: ${input.locations.map((l: { name: string }) => l.name).join(', ')}
@@ -51,13 +52,20 @@ ${congestionSummary}
 6. 실제 서울에 존재하는 장소만 추천
 7. 현재 시각(${currentTime}) 기준 영업 중인 곳 우선 추천
 8. openingHours는 실제 그 장소의 영업시간 형식으로 정확히 기재
+9. 3곳은 서로 다른 장소로 다양하게 추천 (같은 건물/골목 반복 금지)
 
 ## 응답 형식 (JSON만 반환, 다른 텍스트 없이)
-${placeSchema}`;
+{
+  "places": [
+    ${placeSchema},
+    { "rank": 2, ...같은 형식 },
+    { "rank": 3, ...같은 형식 }
+  ]
+}`;
 
     const message = await client.messages.create({
       model: 'claude-opus-4-7',
-      max_tokens: 1024,
+      max_tokens: 2048,
       messages: [{ role: 'user', content: prompt }],
     });
 
@@ -65,7 +73,9 @@ ${placeSchema}`;
     const jsonMatch = text.match(/\{[\s\S]*\}/);
     if (!jsonMatch) return res.status(500).json({ error: 'AI 응답 파싱 실패' });
 
-    return res.status(200).json(JSON.parse(jsonMatch[0]));
+    const parsed = JSON.parse(jsonMatch[0]);
+    const places = Array.isArray(parsed.places) ? parsed.places : [parsed];
+    return res.status(200).json(places);
   } catch (e) {
     return res.status(500).json({ error: (e as Error).message });
   }

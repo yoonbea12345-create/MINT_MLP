@@ -43,7 +43,7 @@ export default function Home() {
   const [vibe, setVibe] = useState<Partial<VibeAnswers>>({});
   const [loading, setLoading] = useState(false);
   const [loadingMsg, setLoadingMsg] = useState(0);
-  const [result, setResult] = useState<PlaceRecommendation | null>(null);
+  const [result, setResult] = useState<PlaceRecommendation[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   // 세션 시작 시각 기록
@@ -164,8 +164,24 @@ export default function Home() {
       const balanced = findBalancedAreas(coords.length >= 2 ? coords : [{ lat: 37.5665, lng: 126.978 }]);
       midpoint = balanced.midpoint;
       areaName = balanced.areaName;
-      // 자동 중간지점은 백그라운드 사전계산 결과 사용
-      setResultTravelTimes(prefetchedTravelTimes);
+      if (prefetchedTravelTimes !== null) {
+        setResultTravelTimes(prefetchedTravelTimes);
+      } else {
+        setResultTravelTimes(null);
+        if (validLocs.length >= 2) {
+          fetch('/api/travel-time', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              origins: validLocs.map((l) => ({ lat: l.lat!, lng: l.lng!, label: l.name })),
+              destination: midpoint,
+            }),
+          })
+            .then((r) => r.json())
+            .then((data: TravelResult[]) => setResultTravelTimes(data))
+            .catch(() => {});
+        }
+      }
     }
 
     const nearestAreas = findNearestAreas(midpoint, 3);
@@ -222,7 +238,7 @@ export default function Home() {
         purpose: purpose!,
         vibe: vibe as VibeAnswers,
       };
-      const course = await getCourseRecommendation(input, result!);
+      const course = await getCourseRecommendation(input, result![0]);
       setCourseData(course);
     } catch (e) {
       setCourseError((e as Error).message || '코스 추천을 가져오지 못했어요.');
@@ -238,13 +254,16 @@ export default function Home() {
     setCourseError(null);
     setTreasurer(null);
     setTreasurerPicked(false);
+    setPrefetchedTravelTimes(null);
+    setResultTravelTimes(null);
     setView('region-select');
   }
 
   function handleShare() {
-    if (!result) return;
+    if (!result || result.length === 0) return;
+    const primary = result[0];
     const mlpUrl = window.location.origin;
-    const kakaoMapUrl = `https://map.kakao.com/link/search/${encodeURIComponent(result.placeName)}`;
+    const kakaoMapUrl = `https://map.kakao.com/link/search/${encodeURIComponent(primary.placeName)}`;
 
     // Kakao Share SDK — 카카오톡에 MINT 링크 카드로 공유
     if (window.Kakao?.Share) {
@@ -254,11 +273,11 @@ export default function Home() {
       window.Kakao.Share.sendDefault({
         objectType: 'feed',
         content: {
-          title: `🍀 MINT 추천: ${result.placeName || '정보 없음'}`,
+          title: `🍀 MINT 추천: ${primary.placeName || '정보 없음'}`,
           description: [
-            `혼잡도: ${result.congestionLevel || '정보 없음'}`,
-            `바이브: ${result.vibeTags?.length ? result.vibeTags.join(', ') : '정보 없음'}`,
-            `가격대: ${result.priceRange || '정보 없음'}`,
+            `혼잡도: ${primary.congestionLevel || '정보 없음'}`,
+            `바이브: ${primary.vibeTags?.length ? primary.vibeTags.join(', ') : '정보 없음'}`,
+            `가격대: ${primary.priceRange || '정보 없음'}`,
             ...(treasurer ? [`💳 오늘의 총무는 ${treasurer}에서 오신 분!`] : []),
           ].join('\n'),
           imageUrl: `${mlpUrl}/image/step5.png`,
@@ -278,10 +297,10 @@ export default function Home() {
     const shareText = [
       '🍀 MINT의 추천 장소🍀',
       '',
-      `장소명: ${result.placeName || '정보 없음'}`,
-      `혼잡도: ${result.congestionLevel || '정보 없음'}`,
-      `바이브: ${result.vibeTags?.length ? result.vibeTags.join(', ') : '정보 없음'}`,
-      `가격대: ${result.priceRange || '정보 없음'}`,
+      `장소명: ${primary.placeName || '정보 없음'}`,
+      `혼잡도: ${primary.congestionLevel || '정보 없음'}`,
+      `바이브: ${primary.vibeTags?.length ? primary.vibeTags.join(', ') : '정보 없음'}`,
+      `가격대: ${primary.priceRange || '정보 없음'}`,
       ...(treasurer ? ['', `💳 오늘의 총무는 ${treasurer}에서 오신 분!`] : []),
       '',
       '카카오맵에서 보기:',
@@ -341,25 +360,25 @@ export default function Home() {
   }
 
   // 예약 페이지
-  if (view === 'reserve' && result) {
+  if (view === 'reserve' && result && result.length > 0) {
     return (
       <Reserve
-        placeName={result.placeName}
-        address={result.address || result.area}
-        openingHours={result.openingHours ?? ''}
+        placeName={result[0].placeName}
+        address={result[0].address || result[0].area}
+        openingHours={result[0].openingHours ?? ''}
         onBack={() => setView('result')}
       />
     );
   }
 
   // 추천 결과
-  if (view === 'result' && result) {
+  if (view === 'result' && result && result.length > 0) {
     return (
       <div className="min-h-screen bg-[#F5FBF8]">
         <div className="max-w-md mx-auto px-4 pb-10 pt-6">
           <div className="flex items-center justify-between mb-6">
             <button
-              onClick={() => { setResult(null); setView('steps'); setStep(0); }}
+              onClick={() => { setResult(null); setView('steps'); setStep(0); setPrefetchedTravelTimes(null); setResultTravelTimes(null); }}
               className="text-sm text-gray-400 hover:text-gray-600"
             >
               ← 처음으로
@@ -370,38 +389,10 @@ export default function Home() {
             </div>
           </div>
 
-          {/* 중간지점 + 소요시간 카드 */}
-          {midpointData && (
-            <div className="bg-white rounded-2xl border border-gray-100 p-4 mb-4 shadow-sm">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-xs font-black text-gray-600">
-                  📍 {midpointData.areaName} 기준
-                </span>
-                <span className="text-xs text-gray-400">대중교통 예상</span>
-              </div>
-              {resultTravelTimes ? (
-                <div className="flex flex-wrap gap-x-4 gap-y-1">
-                  {resultTravelTimes.map((t, i) => (
-                    <div key={i} className="flex items-center gap-1 text-sm">
-                      <span className="text-gray-500 truncate max-w-[90px]">{t.label}</span>
-                      <span className="text-gray-400">→</span>
-                      <span className={`font-black ${t.error ? 'text-gray-400' : 'text-[#3CDBC0]'}`}>
-                        {t.formatted}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="flex items-center gap-2 text-sm text-gray-400">
-                  <div className="w-3.5 h-3.5 border-2 border-[#3CDBC0] border-t-transparent rounded-full animate-spin-slow" />
-                  계산 중...
-                </div>
-              )}
-            </div>
-          )}
-
           <ResultCard
-            result={result}
+            results={result}
+            travelTimes={resultTravelTimes}
+            midpointAreaName={midpointData?.areaName}
             courseVisible={courseVisible}
             courseLoading={courseLoading}
             courseData={courseData}
