@@ -30,14 +30,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       .map((c) => `${c.areaName}: ${c.level}`)
       .join(', ');
 
+    const purpose = input.purpose as { first: string; second: string | null };
+    const purposeStr = purpose.second && purpose.second !== '없음'
+      ? `1차: ${purpose.first}, 2차: ${purpose.second}`
+      : purpose.first;
+    const vibeStr = [input.vibe?.noise, input.vibe?.pace, input.vibe?.novelty]
+      .filter(Boolean)
+      .join(', ') || '자유롭게';
+
     const prompt = `당신은 서울 맛집 큐레이터입니다. 아래 조건에 맞는 최적의 장소 3곳을 순위별로 추천해주세요.
 
 ## 모임 정보
 - 출발지: ${input.locations.map((l: { name: string }) => l.name).join(', ')}
 - 지리적 중간 지점: 위도 ${midpoint.lat.toFixed(4)}, 경도 ${midpoint.lng.toFixed(4)}
 - 인원: ${input.groupSize}
-- 목적: ${input.purpose}
-- 바이브: ${input.vibe.noise}, ${input.vibe.pace}, ${input.vibe.novelty}
+- 목적: ${purposeStr}
+- 바이브: ${vibeStr}
 - 현재 시각: ${currentTime}
 
 ## 현재 실시간 혼잡도
@@ -45,14 +53,15 @@ ${congestionSummary}
 
 ## 추천 조건
 1. 중간 지점 반경 2km 이내 지역 우선
-2. "${input.vibe.noise}" 바이브에 맞는 장소
-3. ${input.vibe.noise === '조용하게' ? '혼잡도가 낮은(여유/보통) 지역 강력 우선' : '활기찬 분위기 지역 우선'}
-4. "${input.vibe.novelty}" 성향 반영
+2. ${input.vibe?.noise ? `"${input.vibe.noise}" 바이브에 맞는 장소` : '분위기 무관'}
+3. ${input.vibe?.noise === '조용하게' ? '혼잡도가 낮은(여유/보통) 지역 강력 우선' : '활기찬 분위기 지역 우선'}
+4. ${input.vibe?.novelty ? `"${input.vibe.novelty}" 성향 반영` : '성향 무관'}
 5. ${input.groupSize} 수용 가능한 장소
 6. 실제 서울에 존재하는 장소만 추천
 7. 현재 시각(${currentTime}) 기준 영업 중인 곳 우선 추천
 8. openingHours는 실제 그 장소의 영업시간 형식으로 정확히 기재
 9. 3곳은 서로 다른 장소로 다양하게 추천 (같은 건물/골목 반복 금지)
+${purpose.second && purpose.second !== '없음' ? `10. 1차 목적(${purpose.first})에 맞는 장소를 추천 (2차 ${purpose.second}는 코스 추천에서 별도 제공)` : ''}
 
 ## 응답 형식 (JSON만 반환, 다른 텍스트 없이)
 {

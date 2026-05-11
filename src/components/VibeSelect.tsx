@@ -32,13 +32,25 @@ const QUESTIONS: {
 ];
 
 export default function VibeSelect({ value, onChange }: Props) {
+  const selectedCount = Object.keys(value).length;
+
   function select(key: keyof VibeAnswers, val: string) {
     onChange({ ...value, [key]: val });
   }
 
   return (
     <div className="px-4 flex flex-col gap-4">
-      <p className="text-center text-sm text-gray-500">오늘의 바이브를 골라요</p>
+      <div className="flex items-center justify-between">
+        <p className="text-sm text-gray-500">오늘의 바이브를 골라요</p>
+        {selectedCount > 0 && (
+          <span className="text-xs font-bold text-white bg-[#3CDBC0] px-2.5 py-0.5 rounded-full">
+            {selectedCount}개 선택됨
+          </span>
+        )}
+      </div>
+      <p className="text-xs text-gray-400 -mt-2">
+        1개 이상 선택하면 넘어갈 수 있어요. 많이 선택할수록 추천이 정확해져요 🎯
+      </p>
       {QUESTIONS.map((q, qi) => (
         <div key={q.key} className="animate-fade-in-up" style={{ animationDelay: `${qi * 0.1}s` }}>
           <div className="grid grid-cols-2 gap-3">

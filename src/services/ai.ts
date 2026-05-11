@@ -4,12 +4,12 @@ import type { Coordinates } from './midpoint';
 export interface UserInput {
   locations: { name: string; coords?: Coordinates }[];
   groupSize: '2명' | '3~4명' | '5명 이상';
-  purpose: '밥' | '술' | '카페' | '밥+술';
-  vibe: {
+  purpose: { first: string; second: string | null };
+  vibe: Partial<{
     noise: '시끌벅적' | '조용하게';
     pace: '빠르게 한잔' | '오래 즐기기';
     novelty: '새로운 곳' | '검증된 곳';
-  };
+  }>;
 }
 
 export interface PlaceRecommendation {

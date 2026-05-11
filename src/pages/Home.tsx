@@ -4,6 +4,7 @@ import LocationInput from '../components/LocationInput';
 import type { LocationEntry } from '../components/LocationInput';
 import GroupSizeSelect from '../components/GroupSizeSelect';
 import PurposeSelect from '../components/PurposeSelect';
+import type { PurposeValue } from '../components/PurposeSelect';
 import VibeSelect from '../components/VibeSelect';
 import type { VibeAnswers } from '../components/VibeSelect';
 import ResultCard from '../components/ResultCard';
@@ -39,7 +40,7 @@ export default function Home() {
   const [step, setStep] = useState<Step>(0);
   const [locations, setLocations] = useState<LocationEntry[]>([]);
   const [groupSize, setGroupSize] = useState<UserInput['groupSize'] | null>(null);
-  const [purpose, setPurpose] = useState<UserInput['purpose'] | null>(null);
+  const [purpose, setPurpose] = useState<PurposeValue | null>(null);
   const [vibe, setVibe] = useState<Partial<VibeAnswers>>({});
   const [loading, setLoading] = useState(false);
   const [loadingMsg, setLoadingMsg] = useState(0);
@@ -83,8 +84,8 @@ export default function Home() {
   function canNext(): boolean {
     if (step === 0) return locations.length >= 2;
     if (step === 1) return !!groupSize;
-    if (step === 2) return !!purpose;
-    if (step === 3) return Object.keys(vibe).length === 3;
+    if (step === 2) return !!purpose?.first;
+    if (step === 3) return Object.keys(vibe).length >= 1;
     return false;
   }
 
@@ -137,7 +138,7 @@ export default function Home() {
       const input: UserInput = {
         locations,
         groupSize: groupSize!,
-        purpose: purpose!,
+        purpose: { first: purpose!.first!, second: purpose!.second ?? null },
         vibe: vibe as VibeAnswers,
       };
 
@@ -190,7 +191,7 @@ export default function Home() {
       const input: UserInput = {
         locations,
         groupSize: groupSize!,
-        purpose: purpose!,
+        purpose: { first: purpose!.first!, second: purpose!.second ?? null },
         vibe: vibe as VibeAnswers,
       };
       const course = await getCourseRecommendation(input, result![0]);
@@ -331,7 +332,21 @@ export default function Home() {
         <div className="max-w-md mx-auto px-4 pb-10 pt-6">
           <div className="flex items-center justify-between mb-6">
             <button
-              onClick={() => { setResult(null); setView('steps'); setStep(0); setResultTravelTimes(null); }}
+              onClick={() => {
+                setResult(null);
+                setView('steps');
+                setStep(0);
+                setResultTravelTimes(null);
+                setLocations([]);
+                setGroupSize(null);
+                setPurpose(null);
+                setVibe({});
+                setMidpointData(null);
+                setCourseData(null);
+                setCourseVisible(false);
+                setCourseError(null);
+                setTreasurer(null);
+              }}
               className="text-sm text-gray-400 hover:text-gray-600"
             >
               ← 처음으로
@@ -392,7 +407,7 @@ export default function Home() {
               <div className="text-center mb-6 px-4">
                 <h2 className="text-xl font-black text-gray-800">오늘의 목적은?</h2>
               </div>
-              <PurposeSelect value={purpose} onChange={setPurpose} />
+              <PurposeSelect value={purpose ?? { first: null, second: null }} onChange={setPurpose} />
             </div>
           )}
           {step === 3 && (
@@ -411,26 +426,31 @@ export default function Home() {
           </div>
         )}
 
-        <div className="px-4 pb-10 pt-4 flex gap-3">
-          {step > 0 && (
+        <div className="px-4 pb-10 pt-4 flex flex-col gap-2">
+          <div className="flex gap-3">
+            {step > 0 && (
+              <button
+                onClick={handleBack}
+                className="w-14 py-4 rounded-2xl border-2 border-gray-200 bg-white text-gray-500 font-bold text-lg hover:border-gray-300 transition-all active:scale-95"
+              >
+                ←
+              </button>
+            )}
             <button
-              onClick={handleBack}
-              className="w-14 py-4 rounded-2xl border-2 border-gray-200 bg-white text-gray-500 font-bold text-lg hover:border-gray-300 transition-all active:scale-95"
+              onClick={handleNext}
+              disabled={!canNext()}
+              className={`flex-1 py-4 rounded-2xl font-black text-base transition-all duration-300 active:scale-95 ${
+                canNext()
+                  ? 'bg-[#3CDBC0] text-white shadow-lg shadow-[#3CDBC0]/30 hover:bg-[#2AB5A0]'
+                  : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+              }`}
             >
-              ←
+              {step === 3 ? '✨ 장소 추천받기' : '다음'}
             </button>
+          </div>
+          {step === 3 && !canNext() && (
+            <p className="text-xs text-gray-400 text-center mt-1">바이브를 1개 이상 선택해주세요</p>
           )}
-          <button
-            onClick={handleNext}
-            disabled={!canNext()}
-            className={`flex-1 py-4 rounded-2xl font-black text-base transition-all duration-300 active:scale-95 ${
-              canNext()
-                ? 'bg-[#3CDBC0] text-white shadow-lg shadow-[#3CDBC0]/30 hover:bg-[#2AB5A0]'
-                : 'bg-gray-200 text-gray-400 cursor-not-allowed'
-            }`}
-          >
-            {step === 3 ? '✨ 장소 추천받기' : '다음'}
-          </button>
         </div>
       </div>
     </div>
