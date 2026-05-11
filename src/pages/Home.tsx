@@ -81,7 +81,7 @@ export default function Home() {
   function canNext(): boolean {
     if (step === 0) return locations.length >= 2;
     if (step === 1) return !!purpose?.first;
-    if (step === 2) return Object.values(vibe).some((v) => v === 'first' || v === 'both');
+    if (step === 2) return Object.values(vibe).some((g) => g.first !== null);
     if (step === 3) return meetingLocation !== null;
     return false;
   }
@@ -150,12 +150,12 @@ export default function Home() {
     try {
       const congestionData = await getMultiAreaCongestion(nearestAreas);
 
-      const vibeFirst = Object.entries(vibe)
-        .filter(([, v]) => v === 'first' || v === 'both')
-        .map(([k]) => VIBE_KEY_TO_LABEL[k] ?? k);
-      const vibeSecond = Object.entries(vibe)
-        .filter(([, v]) => v === 'both')
-        .map(([k]) => VIBE_KEY_TO_LABEL[k] ?? k);
+      const vibeFirst: string[] = [];
+      const vibeSecond: string[] = [];
+      Object.values(vibe).forEach((g) => {
+        if (g.first) vibeFirst.push(VIBE_KEY_TO_LABEL[g.first] ?? g.first);
+        if (g.second) vibeSecond.push(VIBE_KEY_TO_LABEL[g.second] ?? g.second);
+      });
 
       const input: UserInput = {
         locations,
