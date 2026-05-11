@@ -99,24 +99,22 @@ export default function VibeSelect({ value, onChange, purpose }: Props) {
         </div>
       )}
 
-      {/* 범례 + 힌트 */}
-      <div className="flex flex-col items-center gap-1.5">
-        <div className="flex items-center gap-3">
-          <span className="text-xs font-black bg-green-600 text-white px-3 py-1 rounded-full">🍀 1차</span>
-          <span className="text-xs font-black bg-[#3CDBC0] text-white px-3 py-1 rounded-full">🍀 2차</span>
-        </div>
-        <p className="text-[11px] text-gray-400 text-center">
-          최소 1개 이상 선택 · 많이 고를수록 추천이 정확해져요
-        </p>
-      </div>
-
-      {GROUPS.map((group) => {
+      {GROUPS.map((group, groupIdx) => {
         const g = value[group.label] ?? { first: null, second: null };
         return (
           <div key={group.label}>
-            <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-2">
-              {group.label}
-            </p>
+            {/* 첫 번째 그룹 라벨 오른쪽에 범례 배치 */}
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest">
+                {group.label}
+              </p>
+              {groupIdx === 0 && (
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[10px] font-black bg-green-600 text-white px-2 py-0.5 rounded-full">🍀 1차</span>
+                  <span className="text-[10px] font-black bg-[#3CDBC0] text-white px-2 py-0.5 rounded-full">🍀 2차</span>
+                </div>
+              )}
+            </div>
             <div className="grid grid-cols-2 gap-2">
               {group.options.map((opt) => {
                 const hasFirst = g.first === opt.key;

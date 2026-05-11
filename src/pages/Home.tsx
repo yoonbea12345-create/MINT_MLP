@@ -369,6 +369,9 @@ export default function Home() {
             {step === 2 && '원하는 분위기를 골라봐요'}
             {step === 3 && '어디서 만날까요?'}
           </h2>
+          {step === 2 && (
+            <p className="text-xs text-gray-400 mt-1">최소 1개 이상 선택 · 많이 고를수록 추천이 정확해져요</p>
+          )}
           {step === 3 && (
             <p className="text-xs text-gray-400 mt-1">친구들이 만날 동네를 입력해봐요</p>
           )}
