@@ -83,6 +83,8 @@ ${commonInfo}
 - rank 2: 2차 목적인 "${purpose.second}"에 맞는 최적 장소 (rank 1과 도보 15분 이내 거리)
 - rank 3: 1차 목적인 "${purpose.first}"의 대안 장소 1 (rank 1과 다른 곳)
 - rank 4: 1차 목적인 "${purpose.first}"의 대안 장소 2 (rank 1, 3과 다른 곳)
+- rank 5: 2차 목적인 "${purpose.second}"의 대안 장소 1 (rank 2와 다른 곳, rank 2와 인접)
+- rank 6: 2차 목적인 "${purpose.second}"의 대안 장소 2 (rank 2, 5와 다른 곳)
 
 rank 1과 rank 2는 반드시 같은 동네 또는 인접한 지역이어야 합니다.
 
@@ -92,7 +94,9 @@ rank 1과 rank 2는 반드시 같은 동네 또는 인접한 지역이어야 합
     ${placeSchemaWithWalking},
     { "rank": 2, ...같은 형식 },
     { "rank": 3, ...같은 형식 },
-    { "rank": 4, ...같은 형식 }
+    { "rank": 4, ...같은 형식 },
+    { "rank": 5, ...같은 형식 },
+    { "rank": 6, ...같은 형식 }
   ]
 }`
       : `당신은 서울 맛집 큐레이터입니다. 아래 조건에 맞는 최적의 장소 3곳을 순위별로 추천해주세요.

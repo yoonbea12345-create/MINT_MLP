@@ -2,7 +2,6 @@ import { useState } from 'react';
 import type { PlaceRecommendation } from '../services/ai';
 import { congestionDotClass } from '../services/seoulData';
 import type { CongestionLevel } from '../services/seoulData';
-// congestionDotClass used in extraResults list only
 
 interface TravelResult {
   label: string;
@@ -22,6 +21,16 @@ interface Props {
   onReserve: () => void;
 }
 
+function GpsPin({ className = '' }: { className?: string }) {
+  return (
+    <svg
+      width="13" height="13" viewBox="0 0 24 24" fill="currentColor"
+      className={`shrink-0 ${className}`}
+    >
+      <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" />
+    </svg>
+  );
+}
 
 function parseOpenStatus(openingHours?: string): { label: string; isOpen: boolean } | null {
   if (!openingHours) return null;
@@ -43,59 +52,61 @@ function congestionInfo(level: string): { dot: string; label: string } {
   return { dot: 'text-red-300', label: '혼잡' };
 }
 
-interface CardProps {
-  place: PlaceRecommendation;
-  compact?: boolean;
-  extraResults?: PlaceRecommendation[];
+function kakaoUrl(place: PlaceRecommendation) {
+  return place.lat && place.lng
+    ? `https://map.kakao.com/link/to/${encodeURIComponent(place.placeName)},${place.lat},${place.lng}`
+    : `https://map.kakao.com/link/search/${encodeURIComponent(place.placeName)}`;
 }
 
-function PlaceCard({ place, compact = false, extraResults = [] }: CardProps) {
+interface CardProps {
+  place: PlaceRecommendation;
+  extraResults?: PlaceRecommendation[];
+  gradient: string;
+  shadowColor: string;
+}
+
+function PlaceCard({ place, extraResults = [], gradient, shadowColor }: CardProps) {
   const [moreVisible, setMoreVisible] = useState(false);
   const openStatus = parseOpenStatus(place.openingHours);
-  const hasCoords = !!(place.lat && place.lng);
+  const cong = congestionInfo(place.congestionLevel);
+  const url = kakaoUrl(place);
 
   return (
-    <div className="rounded-2xl text-white shadow-xl shadow-[#3CDBC0]/25 overflow-hidden"
-         style={{ background: 'linear-gradient(135deg, #3CDBC0 0%, #2AB5A0 100%)' }}>
-      <div className={compact ? 'py-3 px-4' : 'py-4 px-4'}>
-        {/* 카테고리 + 혼잡도 한 줄 */}
-        {(() => {
-          const cong = congestionInfo(place.congestionLevel);
-          return (
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-black bg-white/30 text-white px-3 py-0.5 rounded-full border border-white/30">
-                {place.category}
-              </span>
-              <div className="flex items-center gap-1">
-                <span className={`${cong.dot} text-xs leading-none`}>●</span>
-                <span className="text-xs text-white/80">{cong.label}</span>
-              </div>
-            </div>
-          );
-        })()}
+    <div
+      className={`rounded-2xl text-white overflow-hidden cursor-pointer active:scale-[0.99] transition-transform shadow-xl ${shadowColor}`}
+      style={{ background: gradient }}
+      onClick={() => window.open(url, '_blank')}
+    >
+      <div className="py-4 px-4">
+        {/* 카테고리 + 혼잡도 */}
+        <div className="flex items-center justify-between mb-2">
+          <span className="text-xs font-black bg-white/30 text-white px-3 py-0.5 rounded-full border border-white/30">
+            {place.category}
+          </span>
+          <div className="flex items-center gap-1">
+            <span className={`${cong.dot} text-xs leading-none`}>●</span>
+            <span className="text-xs text-white/80">{cong.label}</span>
+          </div>
+        </div>
 
         {/* 장소명 */}
-        <h2 className={`font-black leading-tight mb-1 ${compact ? 'text-xl' : 'text-2xl'}`}>
-          {place.placeName}
-        </h2>
+        <h2 className="text-2xl font-black leading-tight mb-1">{place.placeName}</h2>
 
         {/* 해시태그 */}
         <div className="flex flex-wrap gap-1 mb-2">
-          {place.vibeTags.slice(0, compact ? 2 : 4).map((tag) => (
+          {place.vibeTags.slice(0, 4).map((tag) => (
             <span key={tag} className="text-xs text-white/80 bg-white/15 px-2 py-0.5 rounded-full">
               #{tag}
             </span>
           ))}
         </div>
 
-        {!compact && (
-          <p className="text-sm text-white/90 mb-3 leading-relaxed">{place.description}</p>
-        )}
+        <p className="text-sm text-white/90 mb-3 leading-relaxed">{place.description}</p>
 
         {/* 핵심 정보 */}
         <div className="flex flex-col gap-1">
           <div className="flex items-start gap-1.5 text-sm text-white/80">
-            <span className="shrink-0">📍</span>
+            <GpsPin className="mt-0.5 opacity-80" />
             <span className="leading-tight">{place.address || place.area}</span>
           </div>
           <div className="flex items-center gap-1.5 text-sm text-white/80">
@@ -118,9 +129,9 @@ function PlaceCard({ place, compact = false, extraResults = [] }: CardProps) {
         </div>
 
         {/* 더보기 버튼 */}
-        {!compact && extraResults.length > 0 && (
+        {extraResults.length > 0 && (
           <button
-            onClick={() => setMoreVisible(!moreVisible)}
+            onClick={(e) => { e.stopPropagation(); setMoreVisible(!moreVisible); }}
             className="w-full mt-3 text-white/70 text-sm font-bold flex items-center justify-center gap-1 active:scale-95 transition-all"
           >
             {moreVisible ? '접기 ▲' : `추천 더보기 (${extraResults.length}개 더) ▼`}
@@ -129,10 +140,14 @@ function PlaceCard({ place, compact = false, extraResults = [] }: CardProps) {
       </div>
 
       {/* 더보기 펼침 */}
-      {!compact && moreVisible && extraResults.length > 0 && (
+      {moreVisible && extraResults.length > 0 && (
         <div className="border-t border-white/20 px-4 pb-3 pt-3 flex flex-col gap-2 animate-fade-in-up">
           {extraResults.map((p, idx) => (
-            <div key={idx} className="bg-white/15 rounded-xl p-3">
+            <div
+              key={idx}
+              className="bg-white/15 rounded-xl p-3 cursor-pointer active:bg-white/25 transition-colors"
+              onClick={(e) => { e.stopPropagation(); window.open(kakaoUrl(p), '_blank'); }}
+            >
               <div className="flex items-start justify-between mb-1">
                 <div>
                   <p className="text-sm font-black">{p.placeName}</p>
@@ -146,25 +161,15 @@ function PlaceCard({ place, compact = false, extraResults = [] }: CardProps) {
               <p className="text-xs text-white/70 mb-1.5 leading-relaxed">{p.description}</p>
               <div className="flex items-center gap-3 text-xs text-white/60">
                 <span>💰 {p.priceRange}</span>
-                {p.address && <span className="truncate flex-1">📍 {p.address}</span>}
+                {p.address && (
+                  <span className="flex items-center gap-1 truncate flex-1">
+                    <GpsPin className="opacity-60" /> {p.address}
+                  </span>
+                )}
               </div>
             </div>
           ))}
         </div>
-      )}
-
-      {/* 카카오맵 링크 (compact 2차 카드용) */}
-      {compact && (
-        <a
-          href={hasCoords
-            ? `https://map.kakao.com/link/to/${encodeURIComponent(place.placeName)},${place.lat},${place.lng}`
-            : `https://map.kakao.com/link/search/${encodeURIComponent(place.placeName)}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="mx-4 mb-3 flex items-center justify-center gap-1.5 py-2 rounded-xl bg-white/20 text-white text-xs font-bold active:scale-95 transition-transform"
-        >
-          📍 카카오맵에서 보기
-        </a>
       )}
     </div>
   );
@@ -180,10 +185,13 @@ export default function ResultCard({
   onShare,
   onReserve,
 }: Props) {
+  const [secondMoreVisible, setSecondMoreVisible] = useState(false);
+
   const hasSecond = !!(purpose?.second && purpose.second !== '없음');
   const result = results[0];
   const secondResult = hasSecond ? results[1] : null;
-  const extraResults = hasSecond ? results.slice(2) : results.slice(1);
+  const extraFirstResults = hasSecond ? results.slice(2, 4) : results.slice(1);
+  const extraSecondResults = hasSecond ? results.slice(4) : [];
   const hasCoords = !!(result.lat && result.lng);
 
   const nearbySpots = result.nearbySpots ?? [];
@@ -195,7 +203,9 @@ export default function ResultCard({
       {midpointAreaName && (
         <div className="bg-white rounded-2xl border border-gray-100 p-3 shadow-sm">
           <div className="flex items-center justify-between mb-1.5">
-            <span className="text-xs font-black text-gray-700">📍 {midpointAreaName} 기준</span>
+            <span className="text-xs font-black text-gray-700 flex items-center gap-1">
+              <GpsPin className="text-[#3CDBC0]" /> {midpointAreaName} 기준
+            </span>
             <span className="text-xs text-gray-400">대중교통 예상</span>
           </div>
           {travelTimes === null ? (
@@ -221,9 +231,14 @@ export default function ResultCard({
         </div>
       )}
 
+      {/* 힌트 */}
+      <p className="text-[11px] text-gray-400 text-center">
+        추천 카드를 터치하면 카카오맵에서 자세히 확인할 수 있어요
+      </p>
+
       {/* 1차 라벨 */}
       {hasSecond && (
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 -mb-2">
           <span className="text-xs font-black bg-[#3CDBC0] text-white px-3 py-1 rounded-full">
             1차 추천 {purpose!.first}
           </span>
@@ -233,28 +248,36 @@ export default function ResultCard({
       {/* 1차 카드 */}
       <PlaceCard
         place={result}
-        extraResults={extraResults}
+        extraResults={extraFirstResults}
+        gradient="linear-gradient(135deg, #3CDBC0 0%, #2AB5A0 100%)"
+        shadowColor="shadow-[#3CDBC0]/25"
       />
 
-      {/* 1차→2차 도보 시간 */}
+      {/* 1차→2차 화살표 + 도보 */}
       {hasSecond && secondResult && (
-        <div className="flex items-center justify-center gap-1.5 py-0.5">
+        <div className="flex flex-col items-center gap-0 -my-2">
+          <span className="text-[#3CDBC0] text-xl leading-none">↓</span>
           <span className="text-xs text-gray-400 font-medium">
-            🚶 도보 약 {result.walkingToNext ? `${result.walkingToNext}분` : '10~15분'}
+            도보 약 {result.walkingToNext ? `${result.walkingToNext}분` : '10~15분'}
           </span>
         </div>
       )}
 
       {/* 2차 라벨 + 카드 */}
       {hasSecond && secondResult && (
-        <div>
-          <div className="flex items-center gap-2 mb-2">
+        <div className="flex flex-col gap-2">
+          <div className="flex items-center gap-2">
             <span className="text-xs font-black bg-[#1A7A6E] text-white px-3 py-1 rounded-full">
               2차 추천 {purpose!.second}
             </span>
           </div>
-          <div className="rounded-2xl text-white shadow-xl shadow-[#1A7A6E]/25 overflow-hidden"
-               style={{ background: 'linear-gradient(135deg, #1A7A6E 0%, #155E54 100%)' }}>
+
+          {/* 2차 카드 */}
+          <div
+            className="rounded-2xl text-white shadow-xl shadow-[#1A7A6E]/25 overflow-hidden cursor-pointer active:scale-[0.99] transition-transform"
+            style={{ background: 'linear-gradient(135deg, #1A7A6E 0%, #155E54 100%)' }}
+            onClick={() => window.open(kakaoUrl(secondResult), '_blank')}
+          >
             <div className="py-3 px-4">
               {(() => {
                 const cong = congestionInfo(secondResult.congestionLevel);
@@ -280,7 +303,7 @@ export default function ResultCard({
               </div>
               <div className="flex flex-col gap-1">
                 <div className="flex items-start gap-1.5 text-sm text-white/80">
-                  <span className="shrink-0">📍</span>
+                  <GpsPin className="mt-0.5 opacity-80" />
                   <span className="leading-tight">{secondResult.address || secondResult.area}</span>
                 </div>
                 <div className="flex items-center gap-1.5 text-sm text-white/80">
@@ -300,17 +323,50 @@ export default function ResultCard({
                   </div>
                 )}
               </div>
+
+              {/* 2차 추천 더보기 */}
+              {extraSecondResults.length > 0 && (
+                <button
+                  onClick={(e) => { e.stopPropagation(); setSecondMoreVisible(!secondMoreVisible); }}
+                  className="w-full mt-3 text-white/70 text-sm font-bold flex items-center justify-center gap-1 active:scale-95 transition-all"
+                >
+                  {secondMoreVisible ? '접기 ▲' : `추천 더보기 (${extraSecondResults.length}개 더) ▼`}
+                </button>
+              )}
             </div>
-            <a
-              href={secondResult.lat && secondResult.lng
-                ? `https://map.kakao.com/link/to/${encodeURIComponent(secondResult.placeName)},${secondResult.lat},${secondResult.lng}`
-                : `https://map.kakao.com/link/search/${encodeURIComponent(secondResult.placeName)}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="mx-4 mb-3 flex items-center justify-center gap-1.5 py-2 rounded-xl bg-white/20 text-white text-xs font-bold active:scale-95 transition-transform"
-            >
-              📍 카카오맵에서 보기
-            </a>
+
+            {/* 2차 더보기 펼침 */}
+            {secondMoreVisible && extraSecondResults.length > 0 && (
+              <div className="border-t border-white/20 px-4 pb-3 pt-3 flex flex-col gap-2 animate-fade-in-up">
+                {extraSecondResults.map((p, idx) => (
+                  <div
+                    key={idx}
+                    className="bg-white/15 rounded-xl p-3 cursor-pointer active:bg-white/25 transition-colors"
+                    onClick={(e) => { e.stopPropagation(); window.open(kakaoUrl(p), '_blank'); }}
+                  >
+                    <div className="flex items-start justify-between mb-1">
+                      <div>
+                        <p className="text-sm font-black">{p.placeName}</p>
+                        <p className="text-xs text-white/70">{p.category}</p>
+                      </div>
+                      <div className="flex items-center gap-1 flex-shrink-0">
+                        <div className={`w-1.5 h-1.5 rounded-full ${congestionDotClass(p.congestionLevel as CongestionLevel)}`} />
+                        <span className="text-xs text-white/60">{p.congestionLevel}</span>
+                      </div>
+                    </div>
+                    <p className="text-xs text-white/70 mb-1.5 leading-relaxed">{p.description}</p>
+                    <div className="flex items-center gap-3 text-xs text-white/60">
+                      <span>💰 {p.priceRange}</span>
+                      {p.address && (
+                        <span className="flex items-center gap-1 truncate flex-1">
+                          <GpsPin className="opacity-60" /> {p.address}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -331,7 +387,7 @@ export default function ResultCard({
         <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
           <path d="M12 2C6.48 2 2 6.08 2 11.1c0 3.13 1.73 5.9 4.35 7.57V22l3.97-2.18c1.06.29 2.18.44 3.33.44 5.52 0 10-4.08 10-9.1C23.65 6.08 17.52 2 12 2z" />
         </svg>
-        💬 카카오톡으로 공유하기
+        카카오톡으로 공유하기
       </button>
 
       {/* 카카오맵으로 보기 */}
@@ -353,7 +409,7 @@ export default function ResultCard({
           rel="noopener noreferrer"
           className="w-full py-4 rounded-2xl bg-white border border-gray-200 text-gray-700 font-black text-base flex items-center justify-center gap-2 hover:border-gray-300 active:scale-95 transition-transform"
         >
-          📍 카카오맵으로 보기
+          🗺️ 카카오맵으로 보기
         </a>
       )}
 
@@ -370,13 +426,12 @@ export default function ResultCard({
       {/* 근처 스팟 */}
       {nearbySpots.length > 0 && (
         <div className="bg-white rounded-2xl border border-gray-100 p-4">
-          <p className="text-xs font-bold text-gray-500 mb-2">📍 근처 구경할 곳</p>
+          <p className="text-xs font-bold text-gray-500 mb-2 flex items-center gap-1">
+            <GpsPin className="text-[#3CDBC0]" /> 근처 구경할 곳
+          </p>
           <div className="flex flex-wrap gap-2">
             {nearbySpots.slice(0, 2).map((spot, i) => (
-              <span
-                key={i}
-                className="text-xs text-[#2AB5A0] bg-[#E8F8F5] px-3 py-1.5 rounded-full font-medium"
-              >
+              <span key={i} className="text-xs text-[#2AB5A0] bg-[#E8F8F5] px-3 py-1.5 rounded-full font-medium">
                 {spot}
               </span>
             ))}
