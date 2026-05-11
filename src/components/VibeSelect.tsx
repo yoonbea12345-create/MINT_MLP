@@ -9,6 +9,15 @@ interface Props {
   onChange: (v: Partial<VibeAnswers>) => void;
 }
 
+const EMOJIS: Record<string, string> = {
+  '시끌벅적': '🎉',
+  '조용하게': '🍃',
+  '빠르게 한잔': '⚡',
+  '오래 즐기기': '🌙',
+  '새로운 곳': '✨',
+  '검증된 곳': '⭐',
+};
+
 const QUESTIONS: {
   key: keyof VibeAnswers;
   label: string;
@@ -51,13 +60,14 @@ export default function VibeSelect({ value, onChange }: Props) {
                 <button
                   key={label}
                   onClick={() => select(q.key, label)}
-                  className={`vibe-card py-3.5 rounded-xl border-2 text-sm font-bold transition-all duration-200 ${
+                  className={`vibe-card py-3.5 rounded-xl border-2 text-sm font-bold transition-all duration-200 flex flex-col items-center gap-0.5 ${
                     selected
                       ? 'border-[#3CDBC0] bg-[#E8F8F5] text-[#2AB5A0] shadow-md shadow-[#3CDBC0]/20'
                       : 'border-gray-200 bg-white text-gray-700 hover:border-[#3CDBC0]/50'
                   }`}
                 >
-                  {label}
+                  <span className="text-lg leading-none">{EMOJIS[label]}</span>
+                  <span>{label}</span>
                 </button>
               );
             })}

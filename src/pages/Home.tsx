@@ -9,14 +9,14 @@ import type { VibeAnswers } from '../components/VibeSelect';
 import ResultCard from '../components/ResultCard';
 import RegionSelect from '../components/RegionSelect';
 import Reserve from './Reserve';
-import { findNearestAreas, findBalancedAreas } from '../services/midpoint';
+import { PRESET_REGIONS, findNearestAreas, findBalancedAreas } from '../services/midpoint';
 import type { PresetRegion, Coordinates } from '../services/midpoint';
 import { getMultiAreaCongestion } from '../services/seoulData';
 import { getAIRecommendation, getCourseRecommendation } from '../services/ai';
 import type { PlaceRecommendation, UserInput, CourseRecommendation } from '../services/ai';
 import { trackSessionDuration } from '../utils/analytics';
 
-type Step = 0 | 1 | 2;
+type Step = 0 | 1 | 2 | 3;
 type View = 'steps' | 'region-select' | 'result' | 'reserve';
 
 interface TravelResult {
@@ -38,6 +38,21 @@ function deriveGroupSize(locationCount: number): UserInput['groupSize'] {
   if (locationCount >= 5) return '5명 이상';
   if (locationCount >= 3) return '3~4명';
   return '2명';
+}
+
+function getHotSpots(): PresetRegion[] {
+  const now = new Date();
+  const hour = now.getHours();
+  const day = now.getDay();
+  const isWeekend = day === 0 || day === 6;
+  const isEvening = hour >= 18;
+  const isLate = hour >= 22 || hour < 4;
+  const find = (id: string) => PRESET_REGIONS.find((r) => r.id === id) ?? PRESET_REGIONS[0];
+  if (isLate) return [find('hongdae'), find('itaewon'), find('gangnam')];
+  if (isWeekend && isEvening) return [find('seongsu'), find('hongdae'), find('gangnam')];
+  if (isWeekend) return [find('seongsu'), find('myeongdong'), find('jongno')];
+  if (isEvening) return [find('gangnam'), find('yeouido'), find('seongsu')];
+  return [find('seongsu'), find('hongdae'), find('myeongdong')];
 }
 
 export default function Home() {
@@ -85,12 +100,13 @@ export default function Home() {
     if (step === 0) return locations.length >= 2;
     if (step === 1) return !!purpose?.first;
     if (step === 2) return Object.keys(vibe).length >= 1;
+    if (step === 3) return true;
     return false;
   }
 
   function handleNext() {
-    if (step < 2) setStep((s) => (s + 1) as Step);
-    else setView('region-select');
+    if (step < 3) setStep((s) => (s + 1) as Step);
+    else handleMidpointSelect();
   }
 
   function handleBack() {
@@ -208,7 +224,8 @@ export default function Home() {
     setCourseError(null);
     setTreasurer(null);
     setResultTravelTimes(null);
-    setView('region-select');
+    setStep(3 as Step);
+    setView('steps');
   }
 
   function handleShare() {
@@ -298,13 +315,13 @@ export default function Home() {
     );
   }
 
-  // 지역 선택 화면
+  // 지역 선택 화면 (직접 선택 확장 모드)
   if (view === 'region-select') {
     return (
       <RegionSelect
         onAutoSelect={() => handleMidpointSelect()}
         onRegionSelect={(region) => handleMidpointSelect(region)}
-        onBack={() => { setView('steps'); setStep(2); }}
+        onBack={() => { setView('steps'); setStep(3 as Step); }}
       />
     );
   }
@@ -381,7 +398,7 @@ export default function Home() {
 
         {/* 스텝 프로그레스 */}
         <div className="flex-shrink-0">
-          <StepProgress current={step} total={3} />
+          <StepProgress current={step} total={4} />
         </div>
 
         {/* 스텝 제목 */}
@@ -390,8 +407,10 @@ export default function Home() {
             {step === 0 && '어디서 출발해요?'}
             {step === 1 && '오늘의 목적은?'}
             {step === 2 && '오늘 어떤 분위기?'}
+            {step === 3 && '어디서 만날까요?'}
           </h2>
           {step === 0 && <p className="text-xs text-gray-400 mt-1">최소 2명의 출발지를 입력해주세요</p>}
+          {step === 3 && <p className="text-xs text-gray-400 mt-1">자동 추천 또는 지역을 직접 선택하세요</p>}
         </div>
 
         {/* 콘텐츠 */}
@@ -399,6 +418,54 @@ export default function Home() {
           {step === 0 && <LocationInput locations={locations} onChange={setLocations} />}
           {step === 1 && <PurposeSelect value={purpose ?? { first: null, second: null }} onChange={setPurpose} />}
           {step === 2 && <VibeSelect value={vibe} onChange={setVibe} />}
+          {step === 3 && (
+            <div className="px-4 py-3 flex flex-col gap-3">
+              {/* 자동 중간지점 */}
+              <button
+                onClick={() => handleMidpointSelect()}
+                className="w-full text-left bg-gradient-to-r from-[#3CDBC0] to-[#2AB5A0] rounded-2xl p-4 flex items-center gap-3 active:scale-[0.98] transition-all shadow-lg shadow-[#3CDBC0]/30"
+              >
+                <div className="text-2xl">🧭</div>
+                <div className="flex-1">
+                  <div className="font-black text-white text-base">자동 중간지점 찾기</div>
+                  <div className="text-xs text-white/80 mt-0.5">모든 출발지 기준 최적 중간 지점 계산</div>
+                </div>
+                <div className="text-xs font-bold text-white bg-white/25 px-2.5 py-1 rounded-full">추천</div>
+              </button>
+
+              {/* 핫스팟 구분선 */}
+              <div className="flex items-center gap-2">
+                <div className="h-px flex-1 bg-gray-100" />
+                <span className="text-xs text-gray-400 font-medium">직접 선택</span>
+                <div className="h-px flex-1 bg-gray-100" />
+              </div>
+
+              {/* 지금 핫한 지역 3개 */}
+              <div>
+                <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-2">🔥 지금 핫한 지역</p>
+                <div className="grid grid-cols-3 gap-2">
+                  {getHotSpots().map((region) => (
+                    <button
+                      key={region.id}
+                      onClick={() => handleMidpointSelect(region)}
+                      className="bg-white border-2 border-gray-100 rounded-xl p-3 text-left hover:border-[#3CDBC0] hover:bg-[#E8F8F5] active:scale-[0.97] transition-all"
+                    >
+                      <div className="text-sm font-black text-gray-800 truncate">{region.label}</div>
+                      <div className="text-[10px] text-gray-400 mt-0.5 leading-tight">{region.sublabel}</div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* 더 많은 지역 */}
+              <button
+                onClick={() => setView('region-select')}
+                className="text-center text-xs text-[#3CDBC0] font-bold hover:text-[#2AB5A0] transition-colors py-1"
+              >
+                다른 지역 선택하기 →
+              </button>
+            </div>
+          )}
         </div>
 
         {/* 에러 */}
@@ -428,7 +495,7 @@ export default function Home() {
                   : 'bg-gray-200 text-gray-400 cursor-not-allowed'
               }`}
             >
-              {step === 2 ? '✨ 장소 추천받기' : '다음'}
+              {step === 3 ? '🧭 자동으로 추천받기' : '다음'}
             </button>
           </div>
           {step === 1 && !canNext() && (
