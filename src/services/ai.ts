@@ -23,6 +23,7 @@ export interface PlaceRecommendation {
   lat?: number;
   lng?: number;
   nearbySpots?: string[];
+  walkingToNext?: number;
 }
 
 export interface CoursePlace {

@@ -236,12 +236,12 @@ export default function ResultCard({
         extraResults={extraResults}
       />
 
-      {/* 1차→2차 이동 표시 */}
+      {/* 1차→2차 도보 시간 */}
       {hasSecond && secondResult && (
         <div className="flex items-center justify-center gap-1.5 py-0.5">
-          <span className="text-gray-300 text-sm">↓</span>
-          <span className="text-xs text-gray-400 font-medium">이동</span>
-          <span className="text-gray-300 text-sm">↓</span>
+          <span className="text-xs text-gray-400 font-medium">
+            🚶 도보 약 {result.walkingToNext ? `${result.walkingToNext}분` : '10~15분'}
+          </span>
         </div>
       )}
 
@@ -335,19 +335,27 @@ export default function ResultCard({
       </button>
 
       {/* 카카오맵으로 보기 */}
-      <a
-        href={hasCoords
-          ? `https://map.kakao.com/link/to/${encodeURIComponent(result.placeName)},${result.lat},${result.lng}`
-          : `https://map.kakao.com/link/search/${encodeURIComponent(result.placeName)}`}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="w-full py-4 rounded-2xl bg-white border border-gray-200 text-gray-700 font-black text-base flex items-center justify-center gap-2 hover:border-gray-300 active:scale-95 transition-transform"
-      >
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5S10.62 6.5 12 6.5s2.5 1.12 2.5 2.5S13.38 11.5 12 11.5z"/>
-        </svg>
-        📍 카카오맵으로 보기
-      </a>
+      {hasSecond && secondResult && result.lat && result.lng && secondResult.lat && secondResult.lng ? (
+        <a
+          href={`https://map.kakao.com/link/from/${encodeURIComponent(result.placeName)},${result.lat},${result.lng}/to/${encodeURIComponent(secondResult.placeName)},${secondResult.lat},${secondResult.lng}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="w-full py-4 rounded-2xl bg-white border border-gray-200 text-gray-700 font-black text-base flex items-center justify-center gap-2 hover:border-gray-300 active:scale-95 transition-transform"
+        >
+          🗺️ 카카오맵에서 경로 보기 (1차→2차)
+        </a>
+      ) : (
+        <a
+          href={hasCoords
+            ? `https://map.kakao.com/link/to/${encodeURIComponent(result.placeName)},${result.lat},${result.lng}`
+            : `https://map.kakao.com/link/search/${encodeURIComponent(result.placeName)}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="w-full py-4 rounded-2xl bg-white border border-gray-200 text-gray-700 font-black text-base flex items-center justify-center gap-2 hover:border-gray-300 active:scale-95 transition-transform"
+        >
+          📍 카카오맵으로 보기
+        </a>
+      )}
 
       {/* 오늘의 총무 */}
       {treasurer && (
