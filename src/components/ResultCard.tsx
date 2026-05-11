@@ -362,7 +362,7 @@ export default function ResultCard({
         <div className="w-full py-3.5 px-4 rounded-2xl bg-gradient-to-r from-amber-50 to-yellow-50 border-2 border-amber-200 flex items-center gap-3">
           <span className="text-2xl flex-shrink-0">🎲</span>
           <p className="text-sm font-black text-amber-800">
-            {midpointAreaName ?? treasurer}에서 계산은 늦게 온 사람이 내기!
+            {treasurer}에서 출발하는 분이 오늘의 총무 담첨!
           </p>
         </div>
       )}

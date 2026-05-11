@@ -1,3 +1,5 @@
+import { useState } from 'react';
+
 export type GroupVibeState = { first: string | null; second: string | null };
 export type VibeState = Record<string, GroupVibeState>;
 
@@ -41,28 +43,42 @@ interface Props {
 }
 
 export default function VibeSelect({ value, onChange, purpose }: Props) {
+  // 같은 카드에 1차+2차가 모두 붙었다가 2차 제거된 직후 여부 (그룹별 추적)
+  const [wasDoubled, setWasDoubled] = useState<Record<string, boolean>>({});
+
   function toggle(groupLabel: string, key: string) {
     const g = value[groupLabel] ?? { first: null, second: null };
     let { first, second } = g;
+    const nextDoubled = { ...wasDoubled };
 
     if (first === key && second === key) {
-      // 같은 카드에 1차+2차 → 2차 먼저 제거
+      // 같은 카드에 1차+2차 → 2차 제거, "연속 제거 모드" 진입
       second = null;
-    } else if (first === key) {
-      // 이 카드가 1차만 → 1차 제거
+      nextDoubled[groupLabel] = true;
+    } else if (wasDoubled[groupLabel] && first === key && second === null) {
+      // 연속 제거 모드: 2차 제거 직후 다시 클릭 → 1차 제거
       first = null;
+      nextDoubled[groupLabel] = false;
+    } else if (first === key && second !== null) {
+      // 1차가 이 카드, 2차는 다른 카드 → 1차 제거
+      first = null;
+      nextDoubled[groupLabel] = false;
     } else if (second === key) {
-      // 이 카드가 2차만 → 2차 제거
+      // 2차가 이 카드 → 2차 제거
       second = null;
+      nextDoubled[groupLabel] = false;
     } else if (first === null) {
       // 1차 자리 비어있음 → 1차 배정
       first = key;
+      nextDoubled[groupLabel] = false;
     } else if (second === null) {
-      // 1차는 다른 카드, 2차 자리 비어있음 → 2차 배정
+      // 1차 있음, 2차 자리 비어있음 → 2차 배정 (같은 카드 가능)
       second = key;
+      nextDoubled[groupLabel] = false;
     }
-    // 두 자리 모두 다른 카드에 있으면 무시
+    // else: 두 자리 모두 다른 카드 → 무시
 
+    setWasDoubled(nextDoubled);
     onChange({ ...value, [groupLabel]: { first, second } });
   }
 
@@ -83,15 +99,16 @@ export default function VibeSelect({ value, onChange, purpose }: Props) {
         </div>
       )}
 
-      {/* 범례 */}
-      <div className="flex items-center gap-3 justify-center">
-        <span className="text-xs font-bold bg-[#3CDBC0] text-white px-3 py-1 rounded-full">1차</span>
-        <span className="text-xs font-bold bg-[#F5A623] text-white px-3 py-1 rounded-full">2차</span>
+      {/* 범례 + 힌트 */}
+      <div className="flex flex-col items-center gap-1.5">
+        <div className="flex items-center gap-3">
+          <span className="text-xs font-black bg-green-600 text-white px-3 py-1 rounded-full">🍀 1차</span>
+          <span className="text-xs font-black bg-[#3CDBC0] text-white px-3 py-1 rounded-full">🍀 2차</span>
+        </div>
+        <p className="text-[11px] text-gray-400 text-center">
+          최소 1개 이상 선택 · 많이 고를수록 추천이 정확해져요
+        </p>
       </div>
-
-      <p className="text-center text-[11px] text-gray-400">
-        최소 1개 이상 선택 · 많이 고를수록 추천이 정확해져요
-      </p>
 
       {GROUPS.map((group) => {
         const g = value[group.label] ?? { first: null, second: null };
@@ -109,22 +126,23 @@ export default function VibeSelect({ value, onChange, purpose }: Props) {
                   <button
                     key={opt.key}
                     onClick={() => toggle(group.label, opt.key)}
-                    className={`relative pt-5 pb-3.5 rounded-xl border-2 text-sm font-bold transition-all duration-200 flex flex-col items-center gap-0.5 active:scale-[0.97] ${
+                    className={`relative pt-6 pb-3.5 rounded-xl border-2 text-sm font-bold transition-all duration-200 flex flex-col items-center gap-0.5 active:scale-[0.97] ${
                       isActive
                         ? 'border-[#3CDBC0] bg-[#E8F8F5] text-[#2AB5A0] shadow-md shadow-[#3CDBC0]/20'
                         : 'border-gray-200 bg-white text-gray-700 hover:border-[#3CDBC0]/50'
                     }`}
                   >
+                    {/* 클로버 스티커 */}
                     {isActive && (
-                      <div className="absolute top-1.5 left-1.5 flex gap-1">
+                      <div className="absolute top-1.5 left-1.5 flex gap-0.5">
                         {hasFirst && (
-                          <span className="text-[10px] font-black bg-[#3CDBC0] text-white px-1.5 py-0.5 rounded-full leading-none">
-                            1차
+                          <span className="text-[9px] font-black bg-green-600 text-white px-1.5 py-0.5 rounded-full leading-none shadow-sm">
+                            🍀 1차
                           </span>
                         )}
                         {hasSecond && (
-                          <span className="text-[10px] font-black bg-[#F5A623] text-white px-1.5 py-0.5 rounded-full leading-none">
-                            2차
+                          <span className="text-[9px] font-black bg-[#3CDBC0] text-white px-1.5 py-0.5 rounded-full leading-none shadow-sm">
+                            🍀 2차
                           </span>
                         )}
                       </div>
