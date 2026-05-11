@@ -229,19 +229,17 @@ export default function ResultCard({
         </div>
       )}
 
-      {/* 힌트 */}
-      <p className="text-[11px] text-gray-400 text-center -mt-1">
-        추천 카드를 터치하면 카카오맵에서 자세히 확인할 수 있어요
-      </p>
-
-      {/* 1차 라벨 */}
-      {hasSecond && (
-        <div className="flex items-center gap-2 -mb-1">
-          <span className="text-xs font-black bg-[#3CDBC0] text-white px-3 py-1 rounded-full">
+      {/* 힌트 + 1차 라벨 같은 줄 */}
+      <div className="flex items-center justify-between -mt-1">
+        <p className="text-[11px] text-gray-400">
+          추천 카드를 터치하면 카카오맵에서 확인할 수 있어요
+        </p>
+        {hasSecond && (
+          <span className="text-xs font-black bg-[#3CDBC0] text-white px-3 py-1 rounded-full ml-2 shrink-0">
             1차 추천 {purpose!.first}
           </span>
-        </div>
-      )}
+        )}
+      </div>
 
       {/* 1차 카드 */}
       <PlaceCard
@@ -251,24 +249,22 @@ export default function ResultCard({
         shadowColor="shadow-[#3CDBC0]/25"
       />
 
-      {/* 1차→2차 화살표 + 도보 */}
+      {/* 도보 + 2차 라벨 같은 줄 */}
       {hasSecond && secondResult && (
-        <div className="flex flex-col items-center gap-0 -my-1">
-          <span className="text-[#3CDBC0] text-xl leading-none">↓</span>
-          <span className="text-xs text-gray-400 font-medium">
-            도보 약 {result.walkingToNext ? `${result.walkingToNext}분` : '10~15분'}
+        <div className="flex items-center justify-between -my-0.5">
+          <div className="flex items-center gap-1 text-xs text-gray-400 font-medium">
+            <span className="text-[#3CDBC0] text-base leading-none">↓</span>
+            <span>도보 약 {result.walkingToNext ? `${result.walkingToNext}분` : '10~15분'}</span>
+          </div>
+          <span className="text-xs font-black bg-[#1A7A6E] text-white px-3 py-1 rounded-full">
+            2차 추천 {purpose!.second}
           </span>
         </div>
       )}
 
-      {/* 2차 라벨 + 카드 */}
+      {/* 2차 카드 */}
       {hasSecond && secondResult && (
         <div className="flex flex-col gap-1">
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-black bg-[#1A7A6E] text-white px-3 py-1 rounded-full">
-              2차 추천 {purpose!.second}
-            </span>
-          </div>
 
           {/* 2차 카드 */}
           <div
@@ -372,7 +368,7 @@ export default function ResultCard({
       {/* 예약하기 */}
       <button
         onClick={onReserve}
-        className="w-full py-4 rounded-2xl bg-[#3CDBC0] text-white font-black text-base flex items-center justify-center gap-2 shadow-lg shadow-[#3CDBC0]/30 hover:bg-[#2AB5A0] active:scale-95 transition-all"
+        className="w-full py-3 rounded-2xl bg-[#3CDBC0] text-white font-black text-base flex items-center justify-center gap-2 shadow-lg shadow-[#3CDBC0]/30 hover:bg-[#2AB5A0] active:scale-95 transition-all"
       >
         📋 이 장소 예약하기
       </button>
@@ -380,7 +376,7 @@ export default function ResultCard({
       {/* 카카오톡 공유 */}
       <button
         onClick={onShare}
-        className="w-full py-4 rounded-2xl bg-[#FEE500] text-gray-900 font-black text-base flex items-center justify-center gap-2 shadow-lg shadow-yellow-200 active:scale-95 transition-transform"
+        className="w-full py-3 rounded-2xl bg-[#FEE500] text-gray-900 font-black text-base flex items-center justify-center gap-2 shadow-lg shadow-yellow-200 active:scale-95 transition-transform"
       >
         <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
           <path d="M12 2C6.48 2 2 6.08 2 11.1c0 3.13 1.73 5.9 4.35 7.57V22l3.97-2.18c1.06.29 2.18.44 3.33.44 5.52 0 10-4.08 10-9.1C23.65 6.08 17.52 2 12 2z" />
@@ -392,14 +388,14 @@ export default function ResultCard({
       <div className="flex gap-2">
         <button
           onClick={() => treasurer && setShowTreasurerPopup(true)}
-          className="flex-1 py-3 rounded-2xl bg-gradient-to-r from-amber-50 to-yellow-50 border-2 border-amber-200 flex items-center justify-center gap-2 active:scale-95 transition-all"
+          className="flex-1 py-2.5 rounded-2xl bg-gradient-to-r from-amber-50 to-yellow-50 border-2 border-amber-200 flex items-center justify-center gap-2 active:scale-95 transition-all"
         >
           <span className="text-lg">💰</span>
           <span className="text-sm font-black text-amber-700">오늘의 총무</span>
         </button>
         <button
           onClick={onRetry}
-          className="flex-1 py-3 rounded-2xl border border-gray-200 bg-white text-gray-500 font-bold text-sm flex items-center justify-center gap-2 hover:border-[#3CDBC0] hover:text-[#2AB5A0] transition-all active:scale-95"
+          className="flex-1 py-2.5 rounded-2xl border border-gray-200 bg-white text-gray-500 font-bold text-sm flex items-center justify-center gap-2 hover:border-[#3CDBC0] hover:text-[#2AB5A0] transition-all active:scale-95"
         >
           <span className="text-lg">🔄</span>
           <span>다시 뽑기</span>

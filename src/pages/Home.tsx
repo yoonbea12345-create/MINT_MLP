@@ -309,8 +309,8 @@ export default function Home() {
   if (view === 'result' && result && result.length > 0) {
     return (
       <div className="min-h-screen bg-[#F5FBF8]">
-        <div className="max-w-md mx-auto px-4 pb-10 pt-6">
-          <div className="flex items-center justify-between mb-6">
+        <div className="max-w-md mx-auto px-4 pb-6 pt-2">
+          <div className="flex items-center justify-between mb-2">
             <button
               onClick={() => {
                 setResult(null);
