@@ -87,32 +87,26 @@ export default function Home() {
   }
 
   function handleNext() {
-    if (step < 3) {
-      setStep((s) => (s + 1) as Step);
-    } else {
-      handleConfirmMeetingLocation();
-    }
+    setStep((s) => (s + 1) as Step);
   }
 
   function handleBack() {
     if (step > 0) setStep((s) => (s - 1) as Step);
   }
 
-  function handleConfirmMeetingLocation() {
-    if (!meetingLocation) return;
-    if (meetingLocation.type === 'auto') {
+  function handleConfirmMeetingLocation(loc: MeetingLocation) {
+    if (loc.type === 'auto') {
       handleMidpointSelect();
     } else {
-      const region = PRESET_REGIONS.find((r) => r.id === meetingLocation.regionId);
+      const region = PRESET_REGIONS.find((r) => r.id === loc.regionId);
       if (region) {
         handleMidpointSelect(region);
       } else {
-        // 직접 입력 검색어 — 자동 중간지점 계산에 area 이름만 덮어씌움
         const validLocs = locations.filter((l) => l.lat != null && l.lng != null);
         const coords = validLocs.map((l) => ({ lat: l.lat!, lng: l.lng! }));
         const balanced = findBalancedAreas(coords.length >= 2 ? coords : [{ lat: 37.5665, lng: 126.978 }]);
         const nearestAreas = findNearestAreas(balanced.midpoint, 3);
-        setMidpointData({ midpoint: balanced.midpoint, areaName: meetingLocation.area, nearestAreas });
+        setMidpointData({ midpoint: balanced.midpoint, areaName: loc.area, nearestAreas });
         setResultTravelTimes(null);
         handleRecommend(balanced.midpoint, nearestAreas, validLocs);
       }
@@ -364,7 +358,7 @@ export default function Home() {
 
         {/* 스텝 프로그레스 */}
         <div className="flex-shrink-0">
-          <StepProgress current={step} total={5} />
+          <StepProgress current={step} total={4} />
         </div>
 
         {/* 스텝 제목 */}
@@ -399,7 +393,10 @@ export default function Home() {
           {step === 3 && (
             <MeetingLocationSelect
               value={meetingLocation}
-              onSelect={setMeetingLocation}
+              onSelect={(loc) => {
+                setMeetingLocation(loc);
+                handleConfirmMeetingLocation(loc);
+              }}
             />
           )}
         </div>
@@ -413,29 +410,40 @@ export default function Home() {
 
         {/* 하단 버튼 */}
         <div className="flex-shrink-0 px-4 pt-2 pb-8 flex flex-col gap-2">
-          <div className="flex gap-3">
-            {step > 0 && (
-              <button
-                onClick={handleBack}
-                className="w-14 py-4 rounded-2xl border-2 border-gray-200 bg-white text-gray-500 font-bold text-lg hover:border-gray-300 transition-all active:scale-95"
-              >
-                ←
-              </button>
-            )}
+          {step < 3 ? (
+            <>
+              <div className="flex gap-3">
+                {step > 0 && (
+                  <button
+                    onClick={handleBack}
+                    className="w-14 py-4 rounded-2xl border-2 border-gray-200 bg-white text-gray-500 font-bold text-lg hover:border-gray-300 transition-all active:scale-95"
+                  >
+                    ←
+                  </button>
+                )}
+                <button
+                  onClick={handleNext}
+                  disabled={!canNext()}
+                  className={`flex-1 py-4 rounded-2xl font-black text-base transition-all duration-300 active:scale-95 ${
+                    canNext()
+                      ? 'bg-[#3CDBC0] text-white shadow-lg shadow-[#3CDBC0]/30 hover:bg-[#2AB5A0]'
+                      : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                  }`}
+                >
+                  다음
+                </button>
+              </div>
+              {step === 1 && !canNext() && (
+                <p className="text-xs text-gray-400 text-center">1차 목적을 선택해주세요</p>
+              )}
+            </>
+          ) : (
             <button
-              onClick={handleNext}
-              disabled={!canNext()}
-              className={`flex-1 py-4 rounded-2xl font-black text-base transition-all duration-300 active:scale-95 ${
-                canNext()
-                  ? 'bg-[#3CDBC0] text-white shadow-lg shadow-[#3CDBC0]/30 hover:bg-[#2AB5A0]'
-                  : 'bg-gray-200 text-gray-400 cursor-not-allowed'
-              }`}
+              onClick={handleBack}
+              className="w-full py-4 rounded-2xl border-2 border-gray-200 bg-white text-gray-500 font-bold text-base hover:border-gray-300 transition-all active:scale-95"
             >
-              {step === 3 ? '✨ 추천받기' : '다음'}
+              ← 뒤로
             </button>
-          </div>
-          {step === 1 && !canNext() && (
-            <p className="text-xs text-gray-400 text-center">1차 목적을 선택해주세요</p>
           )}
         </div>
 
