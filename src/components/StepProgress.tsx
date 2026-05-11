@@ -3,7 +3,7 @@ interface Props {
   total: number;
 }
 
-const STEP_LABELS = ['출발지', '인원', '목적', '바이브'];
+const STEP_LABELS = ['출발지', '목적', '분위기'];
 
 export default function StepProgress({ current, total }: Props) {
   return (

@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import StepProgress from '../components/StepProgress';
 import LocationInput from '../components/LocationInput';
 import type { LocationEntry } from '../components/LocationInput';
-import GroupSizeSelect from '../components/GroupSizeSelect';
 import PurposeSelect from '../components/PurposeSelect';
 import type { PurposeValue } from '../components/PurposeSelect';
 import VibeSelect from '../components/VibeSelect';
@@ -17,7 +16,7 @@ import { getAIRecommendation, getCourseRecommendation } from '../services/ai';
 import type { PlaceRecommendation, UserInput, CourseRecommendation } from '../services/ai';
 import { trackSessionDuration } from '../utils/analytics';
 
-type Step = 0 | 1 | 2 | 3;
+type Step = 0 | 1 | 2;
 type View = 'steps' | 'region-select' | 'result' | 'reserve';
 
 interface TravelResult {
@@ -30,16 +29,21 @@ interface TravelResult {
 const LOADING_MESSAGES = [
   '딱 맞는 곳 찾는 중...',
   '실시간 혼잡도 확인 중...',
-  '바이브 분석 중...',
+  '분위기 분석 중...',
   '최적 동선 계산 중...',
   '거의 다 됐어요! ✨',
 ];
+
+function deriveGroupSize(locationCount: number): UserInput['groupSize'] {
+  if (locationCount >= 5) return '5명 이상';
+  if (locationCount >= 3) return '3~4명';
+  return '2명';
+}
 
 export default function Home() {
   const [view, setView] = useState<View>('steps');
   const [step, setStep] = useState<Step>(0);
   const [locations, setLocations] = useState<LocationEntry[]>([]);
-  const [groupSize, setGroupSize] = useState<UserInput['groupSize'] | null>(null);
   const [purpose, setPurpose] = useState<PurposeValue | null>(null);
   const [vibe, setVibe] = useState<Partial<VibeAnswers>>({});
   const [loading, setLoading] = useState(false);
@@ -47,14 +51,12 @@ export default function Home() {
   const [result, setResult] = useState<PlaceRecommendation[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  // 세션 시작 시각 기록
   useEffect(() => {
     if (!sessionStorage.getItem('mintSessionStart')) {
       sessionStorage.setItem('mintSessionStart', Date.now().toString());
     }
   }, []);
 
-  // 결과 화면 진입 시 체류시간 전송
   useEffect(() => {
     if (view === 'result') {
       const startStr = sessionStorage.getItem('mintSessionStart');
@@ -73,9 +75,7 @@ export default function Home() {
   } | null>(null);
 
   const [resultTravelTimes, setResultTravelTimes] = useState<TravelResult[] | null>(null);
-
   const [treasurer, setTreasurer] = useState<string | null>(null);
-
   const [courseVisible, setCourseVisible] = useState(false);
   const [courseData, setCourseData] = useState<CourseRecommendation | null>(null);
   const [courseLoading, setCourseLoading] = useState(false);
@@ -83,14 +83,13 @@ export default function Home() {
 
   function canNext(): boolean {
     if (step === 0) return locations.length >= 2;
-    if (step === 1) return !!groupSize;
-    if (step === 2) return !!purpose?.first;
-    if (step === 3) return Object.keys(vibe).length >= 1;
+    if (step === 1) return !!purpose?.first;
+    if (step === 2) return Object.keys(vibe).length >= 1;
     return false;
   }
 
   function handleNext() {
-    if (step < 3) setStep((s) => (s + 1) as Step);
+    if (step < 2) setStep((s) => (s + 1) as Step);
     else setView('region-select');
   }
 
@@ -137,7 +136,7 @@ export default function Home() {
 
       const input: UserInput = {
         locations,
-        groupSize: groupSize!,
+        groupSize: deriveGroupSize(locations.length),
         purpose: { first: purpose!.first!, second: purpose!.second ?? null },
         vibe: vibe as VibeAnswers,
       };
@@ -151,7 +150,6 @@ export default function Home() {
       }
       setView('result');
 
-      // 소요시간 fetch: result view 진입 직후 시작해 race condition 제거
       if (validLocs.length >= 2) {
         fetch('/api/travel-time', {
           method: 'POST',
@@ -190,7 +188,7 @@ export default function Home() {
     try {
       const input: UserInput = {
         locations,
-        groupSize: groupSize!,
+        groupSize: deriveGroupSize(locations.length),
         purpose: { first: purpose!.first!, second: purpose!.second ?? null },
         vibe: vibe as VibeAnswers,
       };
@@ -219,7 +217,6 @@ export default function Home() {
     const mlpUrl = window.location.origin;
     const kakaoMapUrl = `https://map.kakao.com/link/search/${encodeURIComponent(primary.placeName)}`;
 
-    // Kakao Share SDK — 카카오톡에 MINT 링크 카드로 공유
     if (window.Kakao?.Share) {
       if (!window.Kakao.isInitialized()) {
         window.Kakao.init(import.meta.env.VITE_KAKAO_JS_API_KEY);
@@ -230,7 +227,7 @@ export default function Home() {
           title: `🍀 MINT 추천: ${primary.placeName || '정보 없음'}`,
           description: [
             `혼잡도: ${primary.congestionLevel || '정보 없음'}`,
-            `바이브: ${primary.vibeTags?.length ? primary.vibeTags.join(', ') : '정보 없음'}`,
+            `분위기: ${primary.vibeTags?.length ? primary.vibeTags.join(', ') : '정보 없음'}`,
             `가격대: ${primary.priceRange || '정보 없음'}`,
             ...(treasurer ? [`💳 오늘의 총무는 ${treasurer}에서 오신 분!`] : []),
           ].join('\n'),
@@ -247,13 +244,12 @@ export default function Home() {
       return;
     }
 
-    // fallback — 텍스트 공유 (MLP URL을 마지막에 넣어 카카오톡 링크 미리보기가 MINT로 뜨도록)
     const shareText = [
       '🍀 MINT의 추천 장소🍀',
       '',
       `장소명: ${primary.placeName || '정보 없음'}`,
       `혼잡도: ${primary.congestionLevel || '정보 없음'}`,
-      `바이브: ${primary.vibeTags?.length ? primary.vibeTags.join(', ') : '정보 없음'}`,
+      `분위기: ${primary.vibeTags?.length ? primary.vibeTags.join(', ') : '정보 없음'}`,
       `가격대: ${primary.priceRange || '정보 없음'}`,
       ...(treasurer ? ['', `💳 오늘의 총무는 ${treasurer}에서 오신 분!`] : []),
       '',
@@ -270,7 +266,7 @@ export default function Home() {
     }
   }
 
-  // 로딩 (region-select보다 먼저 체크해야 즉시 전환됨)
+  // 로딩
   if (loading) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-[#F5FBF8] px-4">
@@ -308,7 +304,7 @@ export default function Home() {
       <RegionSelect
         onAutoSelect={() => handleMidpointSelect()}
         onRegionSelect={(region) => handleMidpointSelect(region)}
-        onBack={() => { setView('steps'); setStep(3); }}
+        onBack={() => { setView('steps'); setStep(2); }}
       />
     );
   }
@@ -338,7 +334,6 @@ export default function Home() {
                 setStep(0);
                 setResultTravelTimes(null);
                 setLocations([]);
-                setGroupSize(null);
                 setPurpose(null);
                 setVibe({});
                 setMidpointData(null);
@@ -373,7 +368,7 @@ export default function Home() {
     );
   }
 
-  // 입력 플로우 — 한 화면에 모든 UI가 보이는 구조
+  // 입력 플로우 — 3단계, 한 화면에 모든 UI
   return (
     <div className="h-[100dvh] bg-[#F5FBF8] overflow-hidden">
       <div className="h-full max-w-md mx-auto flex flex-col">
@@ -385,26 +380,24 @@ export default function Home() {
 
         {/* 스텝 프로그레스 */}
         <div className="flex-shrink-0">
-          <StepProgress current={step} total={4} />
+          <StepProgress current={step} total={3} />
         </div>
 
         {/* 스텝 제목 */}
         <div className="flex-shrink-0 text-center px-4 pt-3 pb-1">
           <h2 className="text-xl font-black text-gray-800">
             {step === 0 && '어디서 출발해요?'}
-            {step === 1 && '몇 명이서 가요?'}
-            {step === 2 && '오늘의 목적은?'}
-            {step === 3 && '오늘 어떤 바이브?'}
+            {step === 1 && '오늘의 목적은?'}
+            {step === 2 && '오늘 어떤 분위기?'}
           </h2>
           {step === 0 && <p className="text-xs text-gray-400 mt-1">최소 2명의 출발지를 입력해주세요</p>}
         </div>
 
-        {/* 콘텐츠 — flex-1로 남은 공간 채움, 각 스텝은 스크롤 없이 한눈에 */}
+        {/* 콘텐츠 */}
         <div key={step} className="flex-1 min-h-0 overflow-y-auto animate-fade-in-up">
           {step === 0 && <LocationInput locations={locations} onChange={setLocations} />}
-          {step === 1 && <GroupSizeSelect value={groupSize} onChange={setGroupSize} />}
-          {step === 2 && <PurposeSelect value={purpose ?? { first: null, second: null }} onChange={setPurpose} />}
-          {step === 3 && <VibeSelect value={vibe} onChange={setVibe} />}
+          {step === 1 && <PurposeSelect value={purpose ?? { first: null, second: null }} onChange={setPurpose} />}
+          {step === 2 && <VibeSelect value={vibe} onChange={setVibe} />}
         </div>
 
         {/* 에러 */}
@@ -434,14 +427,14 @@ export default function Home() {
                   : 'bg-gray-200 text-gray-400 cursor-not-allowed'
               }`}
             >
-              {step === 3 ? '✨ 장소 추천받기' : '다음'}
+              {step === 2 ? '✨ 장소 추천받기' : '다음'}
             </button>
           </div>
-          {step === 2 && !canNext() && (
+          {step === 1 && !canNext() && (
             <p className="text-xs text-gray-400 text-center">1차 목적을 선택해주세요</p>
           )}
-          {step === 3 && !canNext() && (
-            <p className="text-xs text-gray-400 text-center">바이브를 1개 이상 선택해주세요</p>
+          {step === 2 && !canNext() && (
+            <p className="text-xs text-gray-400 text-center">분위기를 1개 이상 선택해주세요</p>
           )}
         </div>
 
