@@ -186,18 +186,16 @@ export default function ResultCard({
   onReserve,
 }: Props) {
   const [secondMoreVisible, setSecondMoreVisible] = useState(false);
+  const [showTreasurerPopup, setShowTreasurerPopup] = useState(false);
 
   const hasSecond = !!(purpose?.second && purpose.second !== '없음');
   const result = results[0];
   const secondResult = hasSecond ? results[1] : null;
   const extraFirstResults = hasSecond ? results.slice(2, 4) : results.slice(1);
   const extraSecondResults = hasSecond ? results.slice(4) : [];
-  const hasCoords = !!(result.lat && result.lng);
-
-  const nearbySpots = result.nearbySpots ?? [];
 
   return (
-    <div className="flex flex-col gap-4 animate-fade-in-up">
+    <div className="flex flex-col gap-2 animate-fade-in-up">
 
       {/* 상단 요약 바 */}
       {midpointAreaName && (
@@ -232,13 +230,13 @@ export default function ResultCard({
       )}
 
       {/* 힌트 */}
-      <p className="text-[11px] text-gray-400 text-center">
+      <p className="text-[11px] text-gray-400 text-center -mt-1">
         추천 카드를 터치하면 카카오맵에서 자세히 확인할 수 있어요
       </p>
 
       {/* 1차 라벨 */}
       {hasSecond && (
-        <div className="flex items-center gap-2 -mb-2">
+        <div className="flex items-center gap-2 -mb-1">
           <span className="text-xs font-black bg-[#3CDBC0] text-white px-3 py-1 rounded-full">
             1차 추천 {purpose!.first}
           </span>
@@ -255,7 +253,7 @@ export default function ResultCard({
 
       {/* 1차→2차 화살표 + 도보 */}
       {hasSecond && secondResult && (
-        <div className="flex flex-col items-center gap-0 -my-2">
+        <div className="flex flex-col items-center gap-0 -my-1">
           <span className="text-[#3CDBC0] text-xl leading-none">↓</span>
           <span className="text-xs text-gray-400 font-medium">
             도보 약 {result.walkingToNext ? `${result.walkingToNext}분` : '10~15분'}
@@ -265,7 +263,7 @@ export default function ResultCard({
 
       {/* 2차 라벨 + 카드 */}
       {hasSecond && secondResult && (
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-col gap-1">
           <div className="flex items-center gap-2">
             <span className="text-xs font-black bg-[#1A7A6E] text-white px-3 py-1 rounded-full">
               2차 추천 {purpose!.second}
@@ -390,64 +388,49 @@ export default function ResultCard({
         카카오톡으로 공유하기
       </button>
 
-      {/* 카카오맵으로 보기 */}
-      {hasSecond && secondResult && result.lat && result.lng && secondResult.lat && secondResult.lng ? (
-        <a
-          href={`https://map.kakao.com/link/from/${encodeURIComponent(result.placeName)},${result.lat},${result.lng}/to/${encodeURIComponent(secondResult.placeName)},${secondResult.lat},${secondResult.lng}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="w-full py-4 rounded-2xl bg-white border border-gray-200 text-gray-700 font-black text-base flex items-center justify-center gap-2 hover:border-gray-300 active:scale-95 transition-transform"
+      {/* 총무 + 다시뽑기 반반 */}
+      <div className="flex gap-2">
+        <button
+          onClick={() => treasurer && setShowTreasurerPopup(true)}
+          className="flex-1 py-3 rounded-2xl bg-gradient-to-r from-amber-50 to-yellow-50 border-2 border-amber-200 flex items-center justify-center gap-2 active:scale-95 transition-all"
         >
-          🗺️ 카카오맵에서 경로 보기 (1차→2차)
-        </a>
-      ) : (
-        <a
-          href={hasCoords
-            ? `https://map.kakao.com/link/to/${encodeURIComponent(result.placeName)},${result.lat},${result.lng}`
-            : `https://map.kakao.com/link/search/${encodeURIComponent(result.placeName)}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="w-full py-4 rounded-2xl bg-white border border-gray-200 text-gray-700 font-black text-base flex items-center justify-center gap-2 hover:border-gray-300 active:scale-95 transition-transform"
+          <span className="text-lg">💰</span>
+          <span className="text-sm font-black text-amber-700">오늘의 총무</span>
+        </button>
+        <button
+          onClick={onRetry}
+          className="flex-1 py-3 rounded-2xl border border-gray-200 bg-white text-gray-500 font-bold text-sm flex items-center justify-center gap-2 hover:border-[#3CDBC0] hover:text-[#2AB5A0] transition-all active:scale-95"
         >
-          🗺️ 카카오맵으로 보기
-        </a>
-      )}
+          <span className="text-lg">🔄</span>
+          <span>다시 뽑기</span>
+        </button>
+      </div>
 
-      {/* 오늘의 총무 */}
-      {treasurer && (
-        <div className="w-full py-3.5 px-4 rounded-2xl bg-gradient-to-r from-amber-50 to-yellow-50 border-2 border-amber-200 flex items-center gap-3">
-          <span className="text-2xl flex-shrink-0">🎲</span>
-          <p className="text-sm font-black text-amber-800">
-            {treasurer}에서 출발하는 분이 오늘의 총무 담첨!
-          </p>
-        </div>
-      )}
+      <div className="pb-2" />
 
-      {/* 근처 스팟 */}
-      {nearbySpots.length > 0 && (
-        <div className="bg-white rounded-2xl border border-gray-100 p-4">
-          <p className="text-xs font-bold text-gray-500 mb-2 flex items-center gap-1">
-            <GpsPin className="text-[#3CDBC0]" /> 근처 구경할 곳
-          </p>
-          <div className="flex flex-wrap gap-2">
-            {nearbySpots.slice(0, 2).map((spot, i) => (
-              <span key={i} className="text-xs text-[#2AB5A0] bg-[#E8F8F5] px-3 py-1.5 rounded-full font-medium">
-                {spot}
-              </span>
-            ))}
+      {/* 총무 팝업 */}
+      {showTreasurerPopup && treasurer && (
+        <div
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 px-6"
+          onClick={() => setShowTreasurerPopup(false)}
+        >
+          <div
+            className="bg-white rounded-3xl p-7 w-full max-w-sm text-center shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="text-5xl mb-4">🎲</div>
+            <p className="text-lg font-black text-gray-800 leading-snug">
+              {treasurer}에서 출발하는 분이<br />오늘의 총무 담첨!
+            </p>
+            <button
+              onClick={() => setShowTreasurerPopup(false)}
+              className="mt-5 w-full py-3 rounded-2xl bg-[#3CDBC0] text-white font-black text-base active:scale-95 transition-transform"
+            >
+              확인
+            </button>
           </div>
         </div>
       )}
-
-      {/* 다시 뽑기 */}
-      <button
-        onClick={onRetry}
-        className="w-full py-3.5 rounded-2xl border border-gray-200 bg-white text-gray-500 font-bold text-sm flex items-center justify-center gap-2 hover:border-[#3CDBC0] hover:text-[#2AB5A0] transition-all active:scale-95"
-      >
-        🔄 다시 뽑기
-      </button>
-
-      <div className="pb-4" />
     </div>
   );
 }
