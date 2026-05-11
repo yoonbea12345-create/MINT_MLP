@@ -62,7 +62,12 @@ export default function MeetingLocationSelect({ value, onSelect }: Props) {
 
         {/* 카드 헤더 */}
         <div className="flex items-center gap-3">
-          <div className="text-2xl">📍</div>
+          <div className="w-9 h-9 rounded-xl bg-[#E8F8F5] flex items-center justify-center">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#3CDBC0" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+            </svg>
+          </div>
           <div className="flex-1">
             <div className="font-black text-gray-800 text-base">직접 입력하기</div>
             <div className="text-xs text-gray-400 mt-0.5">만날 지역을 직접 입력</div>
