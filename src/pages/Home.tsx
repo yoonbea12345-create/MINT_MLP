@@ -404,19 +404,18 @@ export default function Home() {
         {/* 스텝 제목 */}
         <div className="flex-shrink-0 text-center px-4 pt-3 pb-1">
           <h2 className="text-xl font-black text-gray-800">
-            {step === 0 && '어디서 출발해요?'}
-            {step === 1 && '오늘의 목적은?'}
+            {step === 0 && '각자의 출발지를 입력해주세요'}
+            {step === 1 && '오늘의 코스 선택'}
             {step === 2 && '오늘 어떤 분위기?'}
             {step === 3 && '어디서 만날까요?'}
           </h2>
-          {step === 0 && <p className="text-xs text-gray-400 mt-1">최소 2명의 출발지를 입력해주세요</p>}
           {step === 3 && <p className="text-xs text-gray-400 mt-1">자동 추천 또는 지역을 직접 선택하세요</p>}
         </div>
 
         {/* 콘텐츠 */}
         <div key={step} className="flex-1 min-h-0 overflow-y-auto animate-fade-in-up">
           {step === 0 && <LocationInput locations={locations} onChange={setLocations} />}
-          {step === 1 && <PurposeSelect value={purpose ?? { first: null, second: null }} onChange={setPurpose} />}
+          {step === 1 && <PurposeSelect value={purpose ?? { first: null, firstRaw: null, second: '없음', secondRaw: '없음' }} onChange={setPurpose} />}
           {step === 2 && <VibeSelect value={vibe} onChange={setVibe} />}
           {step === 3 && (
             <div className="px-4 py-3 flex flex-col gap-3">
