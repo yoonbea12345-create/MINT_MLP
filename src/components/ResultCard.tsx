@@ -2,6 +2,7 @@ import { useState } from 'react';
 import type { PlaceRecommendation } from '../services/ai';
 import { congestionDotClass } from '../services/seoulData';
 import type { CongestionLevel } from '../services/seoulData';
+// congestionDotClass used in extraResults list only
 
 interface TravelResult {
   label: string;
@@ -21,10 +22,6 @@ interface Props {
   onReserve: () => void;
 }
 
-function getCurrentTimeStr() {
-  const now = new Date();
-  return `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-}
 
 function parseOpenStatus(openingHours?: string): { label: string; isOpen: boolean } | null {
   if (!openingHours) return null;
@@ -39,21 +36,20 @@ function parseOpenStatus(openingHours?: string): { label: string; isOpen: boolea
   return { label: isOpen ? '영업중' : nowMin < openMin ? '영업 전' : '영업 종료', isOpen };
 }
 
-function congestionTextColor(level: string): string {
-  if (!level) return 'text-white/70';
-  if (level.includes('여유') || level.includes('원활')) return 'text-green-300';
-  if (level.includes('보통')) return 'text-yellow-300';
-  return 'text-red-300';
+function congestionInfo(level: string): { dot: string; label: string } {
+  if (!level) return { dot: 'text-white/50', label: '-' };
+  if (level.includes('여유') || level.includes('원활')) return { dot: 'text-green-300', label: '여유' };
+  if (level.includes('보통')) return { dot: 'text-yellow-300', label: '보통' };
+  return { dot: 'text-red-300', label: '혼잡' };
 }
 
 interface CardProps {
   place: PlaceRecommendation;
-  timeStr: string;
   compact?: boolean;
   extraResults?: PlaceRecommendation[];
 }
 
-function PlaceCard({ place, timeStr, compact = false, extraResults = [] }: CardProps) {
+function PlaceCard({ place, compact = false, extraResults = [] }: CardProps) {
   const [moreVisible, setMoreVisible] = useState(false);
   const openStatus = parseOpenStatus(place.openingHours);
   const hasCoords = !!(place.lat && place.lng);
@@ -62,22 +58,21 @@ function PlaceCard({ place, timeStr, compact = false, extraResults = [] }: CardP
     <div className="rounded-2xl text-white shadow-xl shadow-[#3CDBC0]/25 overflow-hidden"
          style={{ background: 'linear-gradient(135deg, #3CDBC0 0%, #2AB5A0 100%)' }}>
       <div className={compact ? 'py-3 px-4' : 'py-4 px-4'}>
-        {/* 혼잡도 우상단 */}
-        <div className="flex justify-end mb-2">
-          <div className="flex items-center gap-1.5 bg-black/15 px-2.5 py-1 rounded-full">
-            <div className={`w-2 h-2 rounded-full ${congestionDotClass(place.congestionLevel as CongestionLevel)}`} />
-            <span className={`text-xs font-medium ${congestionTextColor(place.congestionLevel)}`}>
-              🕐 {timeStr} 기준 혼잡도: {place.congestionLevel}
-            </span>
-          </div>
-        </div>
-
-        {/* 카테고리 */}
-        <div className="mb-2">
-          <span className="text-xs font-black bg-white/30 text-white px-3 py-0.5 rounded-full border border-white/30">
-            {place.category}
-          </span>
-        </div>
+        {/* 카테고리 + 혼잡도 한 줄 */}
+        {(() => {
+          const cong = congestionInfo(place.congestionLevel);
+          return (
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs font-black bg-white/30 text-white px-3 py-0.5 rounded-full border border-white/30">
+                {place.category}
+              </span>
+              <div className="flex items-center gap-1">
+                <span className={`${cong.dot} text-xs leading-none`}>●</span>
+                <span className="text-xs text-white/80">{cong.label}</span>
+              </div>
+            </div>
+          );
+        })()}
 
         {/* 장소명 */}
         <h2 className={`font-black leading-tight mb-1 ${compact ? 'text-xl' : 'text-2xl'}`}>
@@ -190,7 +185,7 @@ export default function ResultCard({
   const secondResult = hasSecond ? results[1] : null;
   const extraResults = hasSecond ? results.slice(2) : results.slice(1);
   const hasCoords = !!(result.lat && result.lng);
-  const currentTime = getCurrentTimeStr();
+
   const nearbySpots = result.nearbySpots ?? [];
 
   return (
@@ -238,7 +233,6 @@ export default function ResultCard({
       {/* 1차 카드 */}
       <PlaceCard
         place={result}
-        timeStr={currentTime}
         extraResults={extraResults}
       />
 
@@ -255,26 +249,27 @@ export default function ResultCard({
       {hasSecond && secondResult && (
         <div>
           <div className="flex items-center gap-2 mb-2">
-            <span className="text-xs font-black bg-[#F5A623] text-white px-3 py-1 rounded-full">
+            <span className="text-xs font-black bg-[#1A7A6E] text-white px-3 py-1 rounded-full">
               2차 추천 {purpose!.second}
             </span>
           </div>
-          <div className="rounded-2xl text-white shadow-xl shadow-[#F5A623]/20 overflow-hidden"
-               style={{ background: 'linear-gradient(135deg, #F5A623 0%, #D4861A 100%)' }}>
+          <div className="rounded-2xl text-white shadow-xl shadow-[#1A7A6E]/25 overflow-hidden"
+               style={{ background: 'linear-gradient(135deg, #1A7A6E 0%, #155E54 100%)' }}>
             <div className="py-3 px-4">
-              <div className="flex justify-end mb-2">
-                <div className="flex items-center gap-1.5 bg-black/15 px-2.5 py-1 rounded-full">
-                  <div className={`w-2 h-2 rounded-full ${congestionDotClass(secondResult.congestionLevel as CongestionLevel)}`} />
-                  <span className="text-xs font-medium text-white/80">
-                    🕐 {currentTime} 기준 혼잡도: {secondResult.congestionLevel}
-                  </span>
-                </div>
-              </div>
-              <div className="mb-2">
-                <span className="text-xs font-black bg-white/30 text-white px-3 py-0.5 rounded-full border border-white/30">
-                  {secondResult.category}
-                </span>
-              </div>
+              {(() => {
+                const cong = congestionInfo(secondResult.congestionLevel);
+                return (
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs font-black bg-white/20 text-white px-3 py-0.5 rounded-full border border-white/20">
+                      {secondResult.category}
+                    </span>
+                    <div className="flex items-center gap-1">
+                      <span className={`${cong.dot} text-xs leading-none`}>●</span>
+                      <span className="text-xs text-white/80">{cong.label}</span>
+                    </div>
+                  </div>
+                );
+              })()}
               <h2 className="text-xl font-black leading-tight mb-1">{secondResult.placeName}</h2>
               <div className="flex flex-wrap gap-1 mb-2">
                 {secondResult.vibeTags.slice(0, 2).map((tag) => (

@@ -38,100 +38,80 @@ export default function MeetingLocationSelect({ value, onSelect }: Props) {
   }
 
   return (
-    <div className="px-4 py-3 flex flex-col gap-4">
-      {/* 자동 중간지점 카드 */}
-      <button
-        onClick={() => onSelect({ type: 'auto' })}
-        className={`w-full text-left rounded-2xl p-4 flex items-center gap-3 active:scale-[0.98] transition-all shadow-lg shadow-[#3CDBC0]/25 ${
-          value?.type === 'auto'
-            ? 'bg-[#3CDBC0] border-4 border-[#2AB58C]'
-            : 'bg-[#3CDBC0]'
-        }`}
-      >
-        <div className="text-2xl">🧭</div>
-        <div className="flex-1">
-          <div className="font-black text-white text-base">자동 중간지점 찾기</div>
-          <div className="text-xs text-white/80 mt-0.5">모든 출발지 기준 최적 중간 지점 계산</div>
-        </div>
-        <div className="text-xs font-bold text-[#3CDBC0] bg-white px-2.5 py-1 rounded-full flex-shrink-0">
-          추천
-        </div>
-      </button>
+    <div className="px-4 py-3">
+      <div className="bg-white rounded-2xl border-2 border-gray-100 shadow-sm p-4 flex flex-col gap-4">
 
-      {/* 구분선 */}
-      <div className="flex items-center gap-2">
-        <div className="h-px flex-1 bg-gray-100" />
-        <span className="text-xs text-gray-400 font-medium">또는 직접 선택</span>
-        <div className="h-px flex-1 bg-gray-100" />
-      </div>
+        {/* 검색창 — 메인 */}
+        <div className="relative">
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter') handleSearch(); }}
+            placeholder="예: 홍대, 강남역, 성수동..."
+            className="w-full bg-white border-2 border-[#3CDBC0] rounded-xl px-4 py-3 text-sm text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#3CDBC0]/20 transition-colors"
+          />
+          {search.trim() && (
+            <button
+              onClick={handleSearch}
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 bg-[#3CDBC0] text-white text-xs font-bold px-3 py-1.5 rounded-lg active:scale-95 transition-transform"
+            >
+              →
+            </button>
+          )}
+        </div>
 
-      {/* 검색창 */}
-      <div className="relative">
-        <input
-          type="text"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          onKeyDown={(e) => { if (e.key === 'Enter') handleSearch(); }}
-          placeholder="지역 검색..."
-          className="w-full bg-white border-2 border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-700 placeholder-gray-400 focus:outline-none focus:border-[#3CDBC0] transition-colors"
-        />
-        {search.trim() && (
+        {/* 핫 지역 */}
+        <div>
+          <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-2">
+            🔥 지금 핫한 지역
+          </p>
+          <div className="grid grid-cols-3 gap-2">
+            {HOT_REGIONS.map((r) => (
+              <button
+                key={r.id}
+                onClick={() => onSelect({ type: 'manual', regionId: r.id, area: r.label })}
+                className={`rounded-xl border-2 p-3 text-left active:scale-[0.97] transition-all ${
+                  isManualSelected(r.id)
+                    ? 'border-[#3CDBC0] bg-teal-50'
+                    : 'border-gray-200 bg-white hover:border-[#3CDBC0]'
+                }`}
+              >
+                <div className="text-sm font-black text-gray-800 truncate">{r.label}</div>
+                <div className="text-[10px] text-gray-400 mt-0.5 leading-tight">{r.desc}</div>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* 더 많은 지역 */}
+        {!showMore ? (
           <button
-            onClick={handleSearch}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-[#3CDBC0]"
+            onClick={() => setShowMore(true)}
+            className="text-center text-xs text-[#3CDBC0] font-bold hover:text-[#2AB5A0] transition-colors py-0.5"
           >
-            선택
+            다른 지역 선택하기 →
           </button>
+        ) : (
+          <div className="grid grid-cols-3 gap-2 animate-fade-in-up">
+            {MORE_REGIONS.map((r) => (
+              <button
+                key={r.id}
+                onClick={() => onSelect({ type: 'manual', regionId: r.id, area: r.label })}
+                className={`rounded-xl border-2 p-3 text-left active:scale-[0.97] transition-all ${
+                  isManualSelected(r.id)
+                    ? 'border-[#3CDBC0] bg-teal-50'
+                    : 'border-gray-200 bg-white hover:border-[#3CDBC0]'
+                }`}
+              >
+                <div className="text-sm font-black text-gray-800 truncate">{r.label}</div>
+                <div className="text-[10px] text-gray-400 mt-0.5 leading-tight">{r.desc}</div>
+              </button>
+            ))}
+          </div>
         )}
-      </div>
 
-      {/* 핫 지역 */}
-      <div>
-        <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-2">🔥 지금 핫한 지역</p>
-        <div className="grid grid-cols-3 gap-2">
-          {HOT_REGIONS.map((r) => (
-            <button
-              key={r.id}
-              onClick={() => onSelect({ type: 'manual', regionId: r.id, area: r.label })}
-              className={`bg-white rounded-xl border-2 p-3 text-left active:scale-[0.97] transition-all ${
-                isManualSelected(r.id)
-                  ? 'border-[#3CDBC0] bg-teal-50'
-                  : 'border-gray-200 hover:border-[#3CDBC0]'
-              }`}
-            >
-              <div className="text-sm font-black text-gray-800 truncate">{r.label}</div>
-              <div className="text-[10px] text-gray-400 mt-0.5 leading-tight">{r.desc}</div>
-            </button>
-          ))}
-        </div>
       </div>
-
-      {/* 더 많은 지역 */}
-      {!showMore ? (
-        <button
-          onClick={() => setShowMore(true)}
-          className="text-center text-xs text-[#3CDBC0] font-bold hover:text-[#2AB5A0] transition-colors py-1"
-        >
-          다른 지역 선택하기 →
-        </button>
-      ) : (
-        <div className="grid grid-cols-3 gap-2 animate-fade-in-up">
-          {MORE_REGIONS.map((r) => (
-            <button
-              key={r.id}
-              onClick={() => onSelect({ type: 'manual', regionId: r.id, area: r.label })}
-              className={`bg-white rounded-xl border-2 p-3 text-left active:scale-[0.97] transition-all ${
-                isManualSelected(r.id)
-                  ? 'border-[#3CDBC0] bg-teal-50'
-                  : 'border-gray-200 hover:border-[#3CDBC0]'
-              }`}
-            >
-              <div className="text-sm font-black text-gray-800 truncate">{r.label}</div>
-              <div className="text-[10px] text-gray-400 mt-0.5 leading-tight">{r.desc}</div>
-            </button>
-          ))}
-        </div>
-      )}
     </div>
   );
 }

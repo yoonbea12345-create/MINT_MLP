@@ -81,7 +81,7 @@ export default function Home() {
   function canNext(): boolean {
     if (step === 0) return locations.length >= 2;
     if (step === 1) return !!purpose?.first;
-    if (step === 2) return Object.values(vibe).some((v) => v === 'first');
+    if (step === 2) return Object.values(vibe).some((v) => v === 'first' || v === 'both');
     if (step === 3) return meetingLocation !== null;
     return false;
   }
@@ -151,10 +151,10 @@ export default function Home() {
       const congestionData = await getMultiAreaCongestion(nearestAreas);
 
       const vibeFirst = Object.entries(vibe)
-        .filter(([, v]) => v === 'first')
+        .filter(([, v]) => v === 'first' || v === 'both')
         .map(([k]) => VIBE_KEY_TO_LABEL[k] ?? k);
       const vibeSecond = Object.entries(vibe)
-        .filter(([, v]) => v === 'second')
+        .filter(([, v]) => v === 'both')
         .map(([k]) => VIBE_KEY_TO_LABEL[k] ?? k);
 
       const input: UserInput = {
@@ -366,11 +366,11 @@ export default function Home() {
           <h2 className="text-xl font-black text-gray-800">
             {step === 0 && '각자의 출발지를 입력해주세요'}
             {step === 1 && '오늘의 코스 선택'}
-            {step === 2 && '원하는 분위기를 골라봐요.'}
+            {step === 2 && '원하는 분위기를 골라봐요'}
             {step === 3 && '어디서 만날까요?'}
           </h2>
           {step === 3 && (
-            <p className="text-xs text-gray-400 mt-1">자동 추천 또는 지역을 직접 선택하세요</p>
+            <p className="text-xs text-gray-400 mt-1">친구들이 만날 동네를 입력해봐요</p>
           )}
         </div>
 
