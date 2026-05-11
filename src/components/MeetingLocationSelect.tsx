@@ -38,7 +38,26 @@ export default function MeetingLocationSelect({ value, onSelect }: Props) {
   }
 
   return (
-    <div className="px-4 py-3">
+    <div className="px-4 py-3 flex flex-col gap-4">
+      {/* 자동 중간지점 카드 */}
+      <button
+        onClick={() => onSelect({ type: 'auto' })}
+        className={`w-full text-left rounded-2xl p-4 flex items-center gap-3 active:scale-[0.98] transition-all shadow-lg shadow-[#3CDBC0]/25 ${
+          value?.type === 'auto'
+            ? 'bg-[#3CDBC0] border-4 border-[#2AB58C]'
+            : 'bg-[#3CDBC0]'
+        }`}
+      >
+        <div className="text-2xl">🧭</div>
+        <div className="flex-1">
+          <div className="font-black text-white text-base">자동 중간지점 찾기</div>
+          <div className="text-xs text-white/80 mt-0.5">모든 출발지 기준 최적 중간 지점 계산</div>
+        </div>
+        <div className="text-xs font-bold text-[#3CDBC0] bg-white px-2.5 py-1 rounded-full flex-shrink-0">
+          추천
+        </div>
+      </button>
+
       <div className="bg-white rounded-2xl border-2 border-gray-100 shadow-sm p-4 flex flex-col gap-4">
 
         {/* 검색창 — 메인 */}
