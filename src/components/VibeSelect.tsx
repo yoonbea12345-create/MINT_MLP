@@ -91,19 +91,16 @@ export default function VibeSelect({ value, onChange, purpose }: Props) {
 
   return (
     <div className="px-4 py-3 flex flex-col gap-4">
-      {reminderText && (
-        <div className="flex justify-center">
-          <div className="bg-gray-100 rounded-full px-4 py-1.5">
-            <span className="text-xs text-gray-500 font-medium">{reminderText}</span>
-          </div>
-        </div>
-      )}
-
       {GROUPS.map((group, groupIdx) => {
         const g = value[group.label] ?? { first: null, second: null };
         return (
           <div key={group.label}>
-            {/* 첫 번째 그룹 라벨 오른쪽에 범례 배치 */}
+            {/* 첫 번째 그룹: 리마인드 + 범례를 라벨 위/오른쪽에 배치 */}
+            {groupIdx === 0 && reminderText && (
+              <div className="flex justify-end mb-1">
+                <span className="text-[11px] text-gray-400 font-medium">{reminderText}</span>
+              </div>
+            )}
             <div className="flex items-center justify-between mb-2">
               <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest">
                 {group.label}
