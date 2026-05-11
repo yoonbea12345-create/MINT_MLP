@@ -209,51 +209,79 @@ export default function Home() {
     if (!result || result.length === 0) return;
     const primary = result[0];
     const mlpUrl = window.location.origin;
-    const kakaoMapUrl = `https://map.kakao.com/link/search/${encodeURIComponent(primary.placeName)}`;
+    const hasSecond = !!(purpose?.second && purpose.second !== '없음');
+    const secondPlace = hasSecond && result.length > 1 ? result[1] : null;
+
+    const mapUrl = (p: typeof primary) =>
+      p.lat && p.lng
+        ? `https://map.kakao.com/link/to/${encodeURIComponent(p.placeName)},${p.lat},${p.lng}`
+        : `https://map.kakao.com/link/search/${encodeURIComponent(p.placeName)}`;
+
+    const primaryMapUrl = mapUrl(primary);
+    const secondMapUrl = secondPlace ? mapUrl(secondPlace) : null;
 
     if (window.Kakao?.Share) {
       if (!window.Kakao.isInitialized()) {
         window.Kakao.init(import.meta.env.VITE_KAKAO_JS_API_KEY);
       }
+
+      const descLines = hasSecond && secondPlace
+        ? [
+            `1차(${purpose!.first}): ${primary.placeName}`,
+            `2차(${purpose!.second}): ${secondPlace.placeName}`,
+            ...(treasurer ? [`💰 ${treasurer}에서 출발하는 분이 오늘의 총무!`] : []),
+          ]
+        : [
+            `장소: ${primary.placeName}`,
+            `가격대: ${primary.priceRange || ''}`,
+            ...(treasurer ? [`💰 ${treasurer}에서 출발하는 분이 오늘의 총무!`] : []),
+          ];
+
+      const buttons: object[] = [
+        { title: 'MINT로 장소 정하러 가기', link: { mobileWebUrl: mlpUrl, webUrl: mlpUrl } },
+      ];
+      if (secondMapUrl) {
+        buttons.push({ title: `2차(${purpose!.second}) 카카오맵 보기`, link: { mobileWebUrl: secondMapUrl, webUrl: secondMapUrl } });
+      } else {
+        buttons.push({ title: '카카오맵에서 보기', link: { mobileWebUrl: primaryMapUrl, webUrl: primaryMapUrl } });
+      }
+
       window.Kakao.Share.sendDefault({
         objectType: 'feed',
         content: {
-          title: `🍀 MINT 추천: ${primary.placeName || '정보 없음'}`,
-          description: [
-            `혼잡도: ${primary.congestionLevel || '정보 없음'}`,
-            `분위기: ${primary.vibeTags?.length ? primary.vibeTags.join(', ') : '정보 없음'}`,
-            `가격대: ${primary.priceRange || '정보 없음'}`,
-            ...(treasurer ? [`💳 오늘의 총무는 ${treasurer}에서 오신 분!`] : []),
-          ].join('\n'),
+          title: `🍀 MINT 추천${hasSecond ? ` | 1차(${purpose!.first}) · 2차(${purpose!.second})` : ''}`,
+          description: descLines.join('\n'),
           imageUrl: `${mlpUrl}/image/step5.png`,
           link: { mobileWebUrl: mlpUrl, webUrl: mlpUrl },
         },
-        buttons: [
-          {
-            title: '이젠, MINT로 우리 모임 장소 정해봐요!',
-            link: { mobileWebUrl: mlpUrl, webUrl: mlpUrl },
-          },
-        ],
+        buttons,
       });
       return;
     }
 
-    const shareText = [
-      '🍀 MINT의 추천 장소🍀',
+    // 카카오 SDK 없을 때 텍스트 공유
+    const lines = [
+      '🍀 MINT 추천 장소 🍀',
       '',
-      `장소명: ${primary.placeName || '정보 없음'}`,
-      `혼잡도: ${primary.congestionLevel || '정보 없음'}`,
-      `분위기: ${primary.vibeTags?.length ? primary.vibeTags.join(', ') : '정보 없음'}`,
-      `가격대: ${primary.priceRange || '정보 없음'}`,
-      ...(treasurer ? ['', `💳 오늘의 총무는 ${treasurer}에서 오신 분!`] : []),
-      '',
-      '카카오맵에서 보기:',
-      kakaoMapUrl,
+      ...(hasSecond && secondPlace
+        ? [
+            `1차(${purpose!.first}): ${primary.placeName}`,
+            `  카카오맵 → ${primaryMapUrl}`,
+            '',
+            `2차(${purpose!.second}): ${secondPlace.placeName}`,
+            `  카카오맵 → ${secondMapUrl}`,
+          ]
+        : [
+            `장소: ${primary.placeName}`,
+            `  카카오맵 → ${primaryMapUrl}`,
+          ]),
+      ...(treasurer ? ['', `💰 ${treasurer}에서 출발하는 분이 오늘의 총무 담첨!`] : []),
       '',
       '이젠, MINT로 우리 모임 장소 정해봐요!',
       mlpUrl,
-    ].join('\n');
+    ];
 
+    const shareText = lines.join('\n');
     if (navigator.share) {
       navigator.share({ text: shareText });
     } else {
