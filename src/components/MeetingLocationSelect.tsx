@@ -60,6 +60,15 @@ export default function MeetingLocationSelect({ value, onSelect }: Props) {
 
       <div className="bg-white rounded-2xl border-2 border-gray-100 shadow-sm p-4 flex flex-col gap-4">
 
+        {/* 카드 헤더 */}
+        <div className="flex items-center gap-3">
+          <div className="text-2xl">📍</div>
+          <div className="flex-1">
+            <div className="font-black text-gray-800 text-base">직접 입력하기</div>
+            <div className="text-xs text-gray-400 mt-0.5">만날 지역을 직접 입력</div>
+          </div>
+        </div>
+
         {/* 검색창 — 메인 */}
         <div className="relative">
           <input
@@ -90,14 +99,13 @@ export default function MeetingLocationSelect({ value, onSelect }: Props) {
               <button
                 key={r.id}
                 onClick={() => onSelect({ type: 'manual', regionId: r.id, area: r.label })}
-                className={`rounded-xl border-2 p-3 text-left active:scale-[0.97] transition-all ${
+                className={`rounded-xl border-2 px-3 py-2.5 text-center active:scale-[0.97] transition-all ${
                   isManualSelected(r.id)
                     ? 'border-[#3CDBC0] bg-teal-50'
                     : 'border-gray-200 bg-white hover:border-[#3CDBC0]'
                 }`}
               >
                 <div className="text-sm font-black text-gray-800 truncate">{r.label}</div>
-                <div className="text-[10px] text-gray-400 mt-0.5 leading-tight">{r.desc}</div>
               </button>
             ))}
           </div>
@@ -117,14 +125,13 @@ export default function MeetingLocationSelect({ value, onSelect }: Props) {
               <button
                 key={r.id}
                 onClick={() => onSelect({ type: 'manual', regionId: r.id, area: r.label })}
-                className={`rounded-xl border-2 p-3 text-left active:scale-[0.97] transition-all ${
+                className={`rounded-xl border-2 px-3 py-2.5 text-center active:scale-[0.97] transition-all ${
                   isManualSelected(r.id)
                     ? 'border-[#3CDBC0] bg-teal-50'
                     : 'border-gray-200 bg-white hover:border-[#3CDBC0]'
                 }`}
               >
                 <div className="text-sm font-black text-gray-800 truncate">{r.label}</div>
-                <div className="text-[10px] text-gray-400 mt-0.5 leading-tight">{r.desc}</div>
               </button>
             ))}
           </div>
