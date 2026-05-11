@@ -14,6 +14,7 @@ interface Props {
   results: PlaceRecommendation[];
   travelTimes: TravelResult[] | null;
   midpointAreaName?: string;
+  purpose?: { first: string; second: string | null };
   courseVisible: boolean;
   courseLoading: boolean;
   courseData: CourseRecommendation | null;
@@ -71,6 +72,7 @@ export default function ResultCard({
   results,
   travelTimes,
   midpointAreaName,
+  purpose,
   courseVisible,
   courseLoading,
   courseData,
@@ -84,8 +86,10 @@ export default function ResultCard({
   const [moreVisible, setMoreVisible] = useState(false);
   const [courseMsgIdx, setCourseMsgIdx] = useState(0);
 
+  const hasSecond = !!(purpose?.second && purpose.second !== '없음');
   const result = results[0];
-  const extraResults = results.slice(1);
+  const secondResult = hasSecond ? results[1] : null;
+  const extraResults = hasSecond ? results.slice(2) : results.slice(1);
   const hasCoords = !!(result.lat && result.lng);
   const currentTime = getCurrentTimeStr();
   const openStatus = parseOpenStatus(result.openingHours);
@@ -129,6 +133,14 @@ export default function ResultCard({
               ))}
             </div>
           )}
+        </div>
+      )}
+
+      {/* 1차 라벨 (2차가 있을 때만) */}
+      {hasSecond && (
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-black bg-[#3CDBC0] text-white px-3 py-1 rounded-full">1차 추천</span>
+          <span className="text-sm font-bold text-gray-600">{purpose!.first}</span>
         </div>
       )}
 
@@ -197,6 +209,60 @@ export default function ResultCard({
           </button>
         )}
       </div>
+
+      {/* 2차 추천 카드 */}
+      {hasSecond && secondResult && (
+        <div>
+          <div className="flex items-center gap-2 mb-2">
+            <span className="text-xs font-black bg-[#2AB5A0] text-white px-3 py-1 rounded-full">2차 추천</span>
+            <span className="text-sm font-bold text-gray-600">{purpose!.second}</span>
+          </div>
+          <div className="result-gradient rounded-3xl p-5 text-white shadow-xl shadow-[#3CDBC0]/30" style={{ background: 'linear-gradient(135deg, #2AB5A0 0%, #1A9080 100%)' }}>
+            <div className="flex justify-end mb-2">
+              <div className="flex items-center gap-1.5 bg-black/15 px-2.5 py-1 rounded-full">
+                <div className={`w-2 h-2 rounded-full ${congestionDotClass(secondResult.congestionLevel as CongestionLevel)}`} />
+                <span className="text-xs font-medium">{currentTime} 기준 혼잡도: {secondResult.congestionLevel}</span>
+              </div>
+            </div>
+            <div className="mb-2">
+              <span className="text-sm font-black bg-white/40 text-white px-3.5 py-1 rounded-full border border-white/40">
+                {secondResult.category}
+              </span>
+            </div>
+            <h2 className="text-2xl font-black mb-1 leading-tight">{secondResult.placeName}</h2>
+            <div className="flex flex-wrap gap-1.5 mb-2">
+              {secondResult.vibeTags.map((tag) => (
+                <span key={tag} className="text-xs bg-white/20 px-2.5 py-1 rounded-full font-medium">#{tag}</span>
+              ))}
+            </div>
+            <p className="text-sm opacity-90 mb-3">{secondResult.description}</p>
+            <div className="bg-white/15 rounded-2xl p-3 flex flex-col gap-1.5">
+              <div className="flex items-start gap-2 text-sm">
+                <span className="opacity-70 shrink-0">📍</span>
+                <span className="opacity-90">{secondResult.address || secondResult.area}</span>
+              </div>
+              <div className="flex items-center gap-2 text-sm">
+                <span className="opacity-70">💰</span>
+                <span className="opacity-90">{secondResult.priceRange}</span>
+              </div>
+              {secondResult.openingHours && (
+                <div className="flex items-center gap-2 text-sm">
+                  <span className="opacity-70">🕐</span>
+                  <span className="opacity-90">{secondResult.openingHours}</span>
+                  {(() => {
+                    const s = parseOpenStatus(secondResult.openingHours);
+                    return s ? (
+                      <span className={`ml-1 text-[10px] font-bold px-1.5 py-0.5 rounded-full ${s.isOpen ? 'bg-green-400 text-white' : 'bg-red-400 text-white'}`}>
+                        {s.label}
+                      </span>
+                    ) : null;
+                  })()}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* 추가 추천 장소 (더보기 펼침) */}
       {moreVisible && extraResults.length > 0 && (
@@ -271,7 +337,7 @@ export default function ResultCard({
           <span className="text-3xl flex-shrink-0">🎲</span>
           <div>
             <p className="text-xs font-bold text-amber-500 uppercase tracking-wide">오늘의 총무</p>
-            <p className="text-sm font-black text-amber-800">{treasurer}에서 오신 분이 쏜다!</p>
+            <p className="text-sm font-black text-amber-800">오늘은 {treasurer}에서 오신 분이 총 계산을 맡아주세요</p>
           </div>
         </div>
       )}

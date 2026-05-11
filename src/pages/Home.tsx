@@ -353,6 +353,7 @@ export default function Home() {
             results={result}
             travelTimes={resultTravelTimes}
             midpointAreaName={midpointData?.areaName}
+            purpose={purpose?.first ? { first: purpose.first, second: purpose.second } : undefined}
             courseVisible={courseVisible}
             courseLoading={courseLoading}
             courseData={courseData}

@@ -7,7 +7,7 @@ const placeSchema = `{
   "category": "카테고리 (예: 이자카야, 루프탑 바, 감성 카페 등)",
   "description": "한줄 설명 (왜 오늘 여기여야 하는지, 20자 내외)",
   "priceRange": "1인 예상 가격대 (예: 1~2만원)",
-  "vibeTags": ["바이브 태그 3개"],
+  "vibeTags": ["분위기 태그 3개"],
   "address": "도로명 주소",
   "area": "지역명 (예: 성수동, 홍대, 강남역 등)",
   "congestionLevel": "혼잡도",
@@ -31,37 +31,57 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       .join(', ');
 
     const purpose = input.purpose as { first: string; second: string | null };
-    const purposeStr = purpose.second && purpose.second !== '없음'
-      ? `1차: ${purpose.first}, 2차: ${purpose.second}`
-      : purpose.first;
+    const hasTwoPurposes = !!(purpose.second && purpose.second !== '없음');
     const vibeStr = [input.vibe?.noise, input.vibe?.pace, input.vibe?.novelty]
       .filter(Boolean)
       .join(', ') || '자유롭게';
 
-    const prompt = `당신은 서울 맛집 큐레이터입니다. 아래 조건에 맞는 최적의 장소 3곳을 순위별로 추천해주세요.
-
+    const commonInfo = `
 ## 모임 정보
 - 출발지: ${input.locations.map((l: { name: string }) => l.name).join(', ')}
 - 지리적 중간 지점: 위도 ${midpoint.lat.toFixed(4)}, 경도 ${midpoint.lng.toFixed(4)}
 - 인원: ${input.groupSize}
-- 목적: ${purposeStr}
-- 바이브: ${vibeStr}
+- 분위기: ${vibeStr}
 - 현재 시각: ${currentTime}
 
 ## 현재 실시간 혼잡도
 ${congestionSummary}
 
-## 추천 조건
-1. 중간 지점 반경 2km 이내 지역 우선
-2. ${input.vibe?.noise ? `"${input.vibe.noise}" 바이브에 맞는 장소` : '분위기 무관'}
-3. ${input.vibe?.noise === '조용하게' ? '혼잡도가 낮은(여유/보통) 지역 강력 우선' : '활기찬 분위기 지역 우선'}
-4. ${input.vibe?.novelty ? `"${input.vibe.novelty}" 성향 반영` : '성향 무관'}
-5. ${input.groupSize} 수용 가능한 장소
-6. 실제 서울에 존재하는 장소만 추천
-7. 현재 시각(${currentTime}) 기준 영업 중인 곳 우선 추천
-8. openingHours는 실제 그 장소의 영업시간 형식으로 정확히 기재
-9. 3곳은 서로 다른 장소로 다양하게 추천 (같은 건물/골목 반복 금지)
-${purpose.second && purpose.second !== '없음' ? `10. 1차 목적(${purpose.first})에 맞는 장소를 추천 (2차 ${purpose.second}는 코스 추천에서 별도 제공)` : ''}
+## 공통 조건
+- 중간 지점 반경 2km 이내 지역 우선
+- ${input.vibe?.noise ? `"${input.vibe.noise}" 분위기에 맞는 장소` : '분위기 무관'}
+- ${input.vibe?.noise === '조용하게' ? '혼잡도가 낮은(여유/보통) 지역 우선' : '활기찬 분위기 지역 우선'}
+- ${input.vibe?.novelty ? `"${input.vibe.novelty}" 성향 반영` : '성향 무관'}
+- ${input.groupSize} 수용 가능한 장소
+- 실제 서울에 존재하는 장소만 추천
+- 현재 시각(${currentTime}) 기준 영업 중인 곳 우선
+- openingHours는 실제 영업시간 형식으로 정확히 기재`;
+
+    const prompt = hasTwoPurposes
+      ? `당신은 서울 맛집 큐레이터입니다. 이 모임은 1차와 2차 장소를 모두 찾고 있습니다. 아래 조건에 맞게 정확히 3곳을 추천해주세요.
+${commonInfo}
+
+## 핵심 요구사항 (반드시 준수)
+- rank 1: 1차 목적인 "${purpose.first}"에 맞는 최적의 장소
+- rank 2: 2차 목적인 "${purpose.second}"에 맞는 최적의 장소 (rank 1 장소와 도보 10~15분 거리 이내여야 함)
+- rank 3: 1차 목적인 "${purpose.first}"의 다른 대안 장소 (rank 1과 다른 곳)
+
+rank 1과 rank 2는 반드시 같은 동네 또는 인접한 지역이어야 합니다.
+
+## 응답 형식 (JSON만 반환, 다른 텍스트 없이)
+{
+  "places": [
+    ${placeSchema},
+    { "rank": 2, ...같은 형식 },
+    { "rank": 3, ...같은 형식 }
+  ]
+}`
+      : `당신은 서울 맛집 큐레이터입니다. 아래 조건에 맞는 최적의 장소 3곳을 순위별로 추천해주세요.
+${commonInfo}
+
+## 추가 조건
+- 목적: ${purpose.first}
+- 3곳은 서로 다른 장소로 다양하게 추천 (같은 건물/골목 반복 금지)
 
 ## 응답 형식 (JSON만 반환, 다른 텍스트 없이)
 {
