@@ -5,19 +5,21 @@ import type { LocationEntry } from '../components/LocationInput';
 import PurposeSelect from '../components/PurposeSelect';
 import type { PurposeValue } from '../components/PurposeSelect';
 import VibeSelect from '../components/VibeSelect';
-import type { VibeAnswers } from '../components/VibeSelect';
+import type { VibeState } from '../components/VibeSelect';
+import { VIBE_KEY_TO_LABEL } from '../components/VibeSelect';
+import MeetingLocationSelect from '../components/MeetingLocationSelect';
+import type { MeetingLocation } from '../components/MeetingLocationSelect';
 import ResultCard from '../components/ResultCard';
-import RegionSelect from '../components/RegionSelect';
 import Reserve from './Reserve';
 import { PRESET_REGIONS, findNearestAreas, findBalancedAreas } from '../services/midpoint';
 import type { PresetRegion, Coordinates } from '../services/midpoint';
 import { getMultiAreaCongestion } from '../services/seoulData';
-import { getAIRecommendation, getCourseRecommendation } from '../services/ai';
-import type { PlaceRecommendation, UserInput, CourseRecommendation } from '../services/ai';
+import { getAIRecommendation } from '../services/ai';
+import type { PlaceRecommendation, UserInput } from '../services/ai';
 import { trackSessionDuration } from '../utils/analytics';
 
 type Step = 0 | 1 | 2 | 3;
-type View = 'steps' | 'region-select' | 'result' | 'reserve';
+type View = 'steps' | 'result' | 'reserve';
 
 interface TravelResult {
   label: string;
@@ -40,31 +42,24 @@ function deriveGroupSize(locationCount: number): UserInput['groupSize'] {
   return '2명';
 }
 
-function getHotSpots(): PresetRegion[] {
-  const now = new Date();
-  const hour = now.getHours();
-  const day = now.getDay();
-  const isWeekend = day === 0 || day === 6;
-  const isEvening = hour >= 18;
-  const isLate = hour >= 22 || hour < 4;
-  const find = (id: string) => PRESET_REGIONS.find((r) => r.id === id) ?? PRESET_REGIONS[0];
-  if (isLate) return [find('hongdae'), find('itaewon'), find('gangnam')];
-  if (isWeekend && isEvening) return [find('seongsu'), find('hongdae'), find('gangnam')];
-  if (isWeekend) return [find('seongsu'), find('myeongdong'), find('jongno')];
-  if (isEvening) return [find('gangnam'), find('yeouido'), find('seongsu')];
-  return [find('seongsu'), find('hongdae'), find('myeongdong')];
-}
-
 export default function Home() {
   const [view, setView] = useState<View>('steps');
   const [step, setStep] = useState<Step>(0);
   const [locations, setLocations] = useState<LocationEntry[]>([]);
   const [purpose, setPurpose] = useState<PurposeValue | null>(null);
-  const [vibe, setVibe] = useState<Partial<VibeAnswers>>({});
+  const [vibe, setVibe] = useState<VibeState>({});
+  const [meetingLocation, setMeetingLocation] = useState<MeetingLocation | null>(null);
   const [loading, setLoading] = useState(false);
   const [loadingMsg, setLoadingMsg] = useState(0);
   const [result, setResult] = useState<PlaceRecommendation[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [midpointData, setMidpointData] = useState<{
+    midpoint: Coordinates;
+    areaName: string;
+    nearestAreas: string[];
+  } | null>(null);
+  const [resultTravelTimes, setResultTravelTimes] = useState<TravelResult[] | null>(null);
+  const [treasurer, setTreasurer] = useState<string | null>(null);
 
   useEffect(() => {
     if (!sessionStorage.getItem('mintSessionStart')) {
@@ -83,34 +78,45 @@ export default function Home() {
     }
   }, [view]);
 
-  const [midpointData, setMidpointData] = useState<{
-    midpoint: Coordinates;
-    areaName: string;
-    nearestAreas: string[];
-  } | null>(null);
-
-  const [resultTravelTimes, setResultTravelTimes] = useState<TravelResult[] | null>(null);
-  const [treasurer, setTreasurer] = useState<string | null>(null);
-  const [courseVisible, setCourseVisible] = useState(false);
-  const [courseData, setCourseData] = useState<CourseRecommendation | null>(null);
-  const [courseLoading, setCourseLoading] = useState(false);
-  const [courseError, setCourseError] = useState<string | null>(null);
-
   function canNext(): boolean {
     if (step === 0) return locations.length >= 2;
     if (step === 1) return !!purpose?.first;
-    if (step === 2) return Object.keys(vibe).length >= 1;
-    if (step === 3) return true;
+    if (step === 2) return Object.values(vibe).some((v) => v === 'first');
+    if (step === 3) return meetingLocation !== null;
     return false;
   }
 
   function handleNext() {
-    if (step < 3) setStep((s) => (s + 1) as Step);
-    else handleMidpointSelect();
+    if (step < 3) {
+      setStep((s) => (s + 1) as Step);
+    } else {
+      handleConfirmMeetingLocation();
+    }
   }
 
   function handleBack() {
     if (step > 0) setStep((s) => (s - 1) as Step);
+  }
+
+  function handleConfirmMeetingLocation() {
+    if (!meetingLocation) return;
+    if (meetingLocation.type === 'auto') {
+      handleMidpointSelect();
+    } else {
+      const region = PRESET_REGIONS.find((r) => r.id === meetingLocation.regionId);
+      if (region) {
+        handleMidpointSelect(region);
+      } else {
+        // 직접 입력 검색어 — 자동 중간지점 계산에 area 이름만 덮어씌움
+        const validLocs = locations.filter((l) => l.lat != null && l.lng != null);
+        const coords = validLocs.map((l) => ({ lat: l.lat!, lng: l.lng! }));
+        const balanced = findBalancedAreas(coords.length >= 2 ? coords : [{ lat: 37.5665, lng: 126.978 }]);
+        const nearestAreas = findNearestAreas(balanced.midpoint, 3);
+        setMidpointData({ midpoint: balanced.midpoint, areaName: meetingLocation.area, nearestAreas });
+        setResultTravelTimes(null);
+        handleRecommend(balanced.midpoint, nearestAreas, validLocs);
+      }
+    }
   }
 
   function handleMidpointSelect(presetRegion?: PresetRegion) {
@@ -150,15 +156,23 @@ export default function Home() {
     try {
       const congestionData = await getMultiAreaCongestion(nearestAreas);
 
+      const vibeFirst = Object.entries(vibe)
+        .filter(([, v]) => v === 'first')
+        .map(([k]) => VIBE_KEY_TO_LABEL[k] ?? k);
+      const vibeSecond = Object.entries(vibe)
+        .filter(([, v]) => v === 'second')
+        .map(([k]) => VIBE_KEY_TO_LABEL[k] ?? k);
+
       const input: UserInput = {
         locations,
         groupSize: deriveGroupSize(locations.length),
         purpose: { first: purpose!.first!, second: purpose!.second ?? null },
-        vibe: vibe as VibeAnswers,
+        vibe: { first: vibeFirst, second: vibeSecond },
       };
 
       const recommendation = await getAIRecommendation(input, midpoint, congestionData);
       setResult(recommendation);
+
       const namedLocs = locations.filter((l) => l.name);
       if (namedLocs.length > 0) {
         const picked = namedLocs[Math.floor(Math.random() * namedLocs.length)];
@@ -189,41 +203,10 @@ export default function Home() {
     }
   }
 
-  async function handleToggleCourse() {
-    if (courseVisible) {
-      setCourseVisible(false);
-      return;
-    }
-    if (courseData) {
-      setCourseVisible(true);
-      return;
-    }
-    setCourseVisible(true);
-    setCourseLoading(true);
-    setCourseError(null);
-    try {
-      const input: UserInput = {
-        locations,
-        groupSize: deriveGroupSize(locations.length),
-        purpose: { first: purpose!.first!, second: purpose!.second ?? null },
-        vibe: vibe as VibeAnswers,
-      };
-      const course = await getCourseRecommendation(input, result![0]);
-      setCourseData(course);
-    } catch (e) {
-      setCourseError((e as Error).message || '코스 추천을 가져오지 못했어요.');
-      setCourseVisible(false);
-    } finally {
-      setCourseLoading(false);
-    }
-  }
-
   function handleRetry() {
-    setCourseData(null);
-    setCourseVisible(false);
-    setCourseError(null);
     setTreasurer(null);
     setResultTravelTimes(null);
+    setMeetingLocation(null);
     setStep(3 as Step);
     setView('steps');
   }
@@ -276,6 +259,7 @@ export default function Home() {
       '이젠, MINT로 우리 모임 장소 정해봐요!',
       mlpUrl,
     ].join('\n');
+
     if (navigator.share) {
       navigator.share({ text: shareText });
     } else {
@@ -315,17 +299,6 @@ export default function Home() {
     );
   }
 
-  // 지역 선택 화면 (직접 선택 확장 모드)
-  if (view === 'region-select') {
-    return (
-      <RegionSelect
-        onAutoSelect={() => handleMidpointSelect()}
-        onRegionSelect={(region) => handleMidpointSelect(region)}
-        onBack={() => { setView('steps'); setStep(3 as Step); }}
-      />
-    );
-  }
-
   // 예약 페이지
   if (view === 'reserve' && result && result.length > 0) {
     return (
@@ -353,10 +326,8 @@ export default function Home() {
                 setLocations([]);
                 setPurpose(null);
                 setVibe({});
+                setMeetingLocation(null);
                 setMidpointData(null);
-                setCourseData(null);
-                setCourseVisible(false);
-                setCourseError(null);
                 setTreasurer(null);
               }}
               className="text-sm text-gray-400 hover:text-gray-600"
@@ -370,13 +341,8 @@ export default function Home() {
             results={result}
             travelTimes={resultTravelTimes}
             midpointAreaName={midpointData?.areaName}
-            purpose={purpose?.first ? { first: purpose.first, second: purpose.second } : undefined}
-            courseVisible={courseVisible}
-            courseLoading={courseLoading}
-            courseData={courseData}
-            courseError={courseError}
+            purpose={purpose?.first ? { first: purpose.first, second: purpose.second ?? null } : undefined}
             treasurer={treasurer}
-            onToggleCourse={handleToggleCourse}
             onRetry={handleRetry}
             onShare={handleShare}
             onReserve={() => setView('reserve')}
@@ -386,7 +352,7 @@ export default function Home() {
     );
   }
 
-  // 입력 플로우 — 3단계, 한 화면에 모든 UI
+  // 입력 플로우
   return (
     <div className="h-[100dvh] bg-[#F5FBF8] overflow-hidden">
       <div className="h-full max-w-md mx-auto flex flex-col">
@@ -398,7 +364,7 @@ export default function Home() {
 
         {/* 스텝 프로그레스 */}
         <div className="flex-shrink-0">
-          <StepProgress current={step} total={4} />
+          <StepProgress current={step} total={5} />
         </div>
 
         {/* 스텝 제목 */}
@@ -406,64 +372,35 @@ export default function Home() {
           <h2 className="text-xl font-black text-gray-800">
             {step === 0 && '각자의 출발지를 입력해주세요'}
             {step === 1 && '오늘의 코스 선택'}
-            {step === 2 && '오늘 어떤 분위기?'}
+            {step === 2 && '원하는 분위기를 골라봐요.'}
             {step === 3 && '어디서 만날까요?'}
           </h2>
-          {step === 3 && <p className="text-xs text-gray-400 mt-1">자동 추천 또는 지역을 직접 선택하세요</p>}
+          {step === 3 && (
+            <p className="text-xs text-gray-400 mt-1">자동 추천 또는 지역을 직접 선택하세요</p>
+          )}
         </div>
 
         {/* 콘텐츠 */}
         <div key={step} className="flex-1 min-h-0 overflow-y-auto animate-fade-in-up">
           {step === 0 && <LocationInput locations={locations} onChange={setLocations} />}
-          {step === 1 && <PurposeSelect value={purpose ?? { first: null, firstRaw: null, second: '없음', secondRaw: '없음' }} onChange={setPurpose} />}
-          {step === 2 && <VibeSelect value={vibe} onChange={setVibe} />}
+          {step === 1 && (
+            <PurposeSelect
+              value={purpose ?? { first: null, firstRaw: null, second: '없음', secondRaw: '없음' }}
+              onChange={setPurpose}
+            />
+          )}
+          {step === 2 && (
+            <VibeSelect
+              value={vibe}
+              onChange={setVibe}
+              purpose={purpose ? { first: purpose.first, second: purpose.second } : undefined}
+            />
+          )}
           {step === 3 && (
-            <div className="px-4 py-3 flex flex-col gap-3">
-              {/* 자동 중간지점 */}
-              <button
-                onClick={() => handleMidpointSelect()}
-                className="w-full text-left bg-gradient-to-r from-[#3CDBC0] to-[#2AB5A0] rounded-2xl p-4 flex items-center gap-3 active:scale-[0.98] transition-all shadow-lg shadow-[#3CDBC0]/30"
-              >
-                <div className="text-2xl">🧭</div>
-                <div className="flex-1">
-                  <div className="font-black text-white text-base">자동 중간지점 찾기</div>
-                  <div className="text-xs text-white/80 mt-0.5">모든 출발지 기준 최적 중간 지점 계산</div>
-                </div>
-                <div className="text-xs font-bold text-white bg-white/25 px-2.5 py-1 rounded-full">추천</div>
-              </button>
-
-              {/* 핫스팟 구분선 */}
-              <div className="flex items-center gap-2">
-                <div className="h-px flex-1 bg-gray-100" />
-                <span className="text-xs text-gray-400 font-medium">직접 선택</span>
-                <div className="h-px flex-1 bg-gray-100" />
-              </div>
-
-              {/* 지금 핫한 지역 3개 */}
-              <div>
-                <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-2">🔥 지금 핫한 지역</p>
-                <div className="grid grid-cols-3 gap-2">
-                  {getHotSpots().map((region) => (
-                    <button
-                      key={region.id}
-                      onClick={() => handleMidpointSelect(region)}
-                      className="bg-white border-2 border-gray-100 rounded-xl p-3 text-left hover:border-[#3CDBC0] hover:bg-[#E8F8F5] active:scale-[0.97] transition-all"
-                    >
-                      <div className="text-sm font-black text-gray-800 truncate">{region.label}</div>
-                      <div className="text-[10px] text-gray-400 mt-0.5 leading-tight">{region.sublabel}</div>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* 더 많은 지역 */}
-              <button
-                onClick={() => setView('region-select')}
-                className="text-center text-xs text-[#3CDBC0] font-bold hover:text-[#2AB5A0] transition-colors py-1"
-              >
-                다른 지역 선택하기 →
-              </button>
-            </div>
+            <MeetingLocationSelect
+              value={meetingLocation}
+              onSelect={setMeetingLocation}
+            />
           )}
         </div>
 
@@ -494,14 +431,11 @@ export default function Home() {
                   : 'bg-gray-200 text-gray-400 cursor-not-allowed'
               }`}
             >
-              {step === 3 ? '🧭 자동으로 추천받기' : '다음'}
+              {step === 3 ? '✨ 추천받기' : '다음'}
             </button>
           </div>
           {step === 1 && !canNext() && (
             <p className="text-xs text-gray-400 text-center">1차 목적을 선택해주세요</p>
-          )}
-          {step === 2 && !canNext() && (
-            <p className="text-xs text-gray-400 text-center">분위기를 1개 이상 선택해주세요</p>
           )}
         </div>
 
