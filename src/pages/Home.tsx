@@ -373,60 +373,49 @@ export default function Home() {
     );
   }
 
-  // 입력 플로우
+  // 입력 플로우 — 한 화면에 모든 UI가 보이는 구조
   return (
-    <div className="min-h-screen bg-[#F5FBF8]">
-      <div className="max-w-md mx-auto">
-        <div className="text-center pt-8 pb-2 px-4">
-          <h1 className="text-3xl font-black text-[#2AB5A0] tracking-tight">MINT</h1>
-          <p className="text-sm text-gray-500 mt-1">30초 만에 오늘 갈 곳 찾기</p>
+    <div className="h-[100dvh] bg-[#F5FBF8] overflow-hidden">
+      <div className="h-full max-w-md mx-auto flex flex-col">
+
+        {/* 헤더 */}
+        <div className="flex-shrink-0 text-center pt-5 px-4">
+          <h1 className="text-2xl font-black text-[#2AB5A0] tracking-tight">MINT</h1>
         </div>
 
-        <StepProgress current={step} total={4} />
-
-        <div className="mt-6">
-          {step === 0 && (
-            <div className="animate-fade-in-up">
-              <div className="text-center mb-6 px-4">
-                <h2 className="text-xl font-black text-gray-800">어디서 출발해요?</h2>
-                <p className="text-sm text-gray-400 mt-1">최소 2명의 출발지를 입력해주세요</p>
-              </div>
-              <LocationInput locations={locations} onChange={setLocations} />
-            </div>
-          )}
-          {step === 1 && (
-            <div className="animate-fade-in-up">
-              <div className="text-center mb-6 px-4">
-                <h2 className="text-xl font-black text-gray-800">몇 명이서 가요?</h2>
-              </div>
-              <GroupSizeSelect value={groupSize} onChange={setGroupSize} />
-            </div>
-          )}
-          {step === 2 && (
-            <div className="animate-fade-in-up">
-              <div className="text-center mb-6 px-4">
-                <h2 className="text-xl font-black text-gray-800">오늘의 목적은?</h2>
-              </div>
-              <PurposeSelect value={purpose ?? { first: null, second: null }} onChange={setPurpose} />
-            </div>
-          )}
-          {step === 3 && (
-            <div className="animate-fade-in-up">
-              <div className="text-center mb-6 px-4">
-                <h2 className="text-xl font-black text-gray-800">오늘 어떤 바이브?</h2>
-              </div>
-              <VibeSelect value={vibe} onChange={setVibe} />
-            </div>
-          )}
+        {/* 스텝 프로그레스 */}
+        <div className="flex-shrink-0">
+          <StepProgress current={step} total={4} />
         </div>
 
+        {/* 스텝 제목 */}
+        <div className="flex-shrink-0 text-center px-4 pt-3 pb-1">
+          <h2 className="text-xl font-black text-gray-800">
+            {step === 0 && '어디서 출발해요?'}
+            {step === 1 && '몇 명이서 가요?'}
+            {step === 2 && '오늘의 목적은?'}
+            {step === 3 && '오늘 어떤 바이브?'}
+          </h2>
+          {step === 0 && <p className="text-xs text-gray-400 mt-1">최소 2명의 출발지를 입력해주세요</p>}
+        </div>
+
+        {/* 콘텐츠 — flex-1로 남은 공간 채움, 각 스텝은 스크롤 없이 한눈에 */}
+        <div key={step} className="flex-1 min-h-0 overflow-y-auto animate-fade-in-up">
+          {step === 0 && <LocationInput locations={locations} onChange={setLocations} />}
+          {step === 1 && <GroupSizeSelect value={groupSize} onChange={setGroupSize} />}
+          {step === 2 && <PurposeSelect value={purpose ?? { first: null, second: null }} onChange={setPurpose} />}
+          {step === 3 && <VibeSelect value={vibe} onChange={setVibe} />}
+        </div>
+
+        {/* 에러 */}
         {error && (
-          <div className="mx-4 mb-4 p-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-600 text-center">
+          <div className="flex-shrink-0 mx-4 mb-2 p-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-600 text-center">
             {error}
           </div>
         )}
 
-        <div className="px-4 pb-10 pt-4 flex flex-col gap-2">
+        {/* 하단 버튼 */}
+        <div className="flex-shrink-0 px-4 pt-2 pb-8 flex flex-col gap-2">
           <div className="flex gap-3">
             {step > 0 && (
               <button
@@ -448,10 +437,14 @@ export default function Home() {
               {step === 3 ? '✨ 장소 추천받기' : '다음'}
             </button>
           </div>
+          {step === 2 && !canNext() && (
+            <p className="text-xs text-gray-400 text-center">1차 목적을 선택해주세요</p>
+          )}
           {step === 3 && !canNext() && (
-            <p className="text-xs text-gray-400 text-center mt-1">바이브를 1개 이상 선택해주세요</p>
+            <p className="text-xs text-gray-400 text-center">바이브를 1개 이상 선택해주세요</p>
           )}
         </div>
+
       </div>
     </div>
   );

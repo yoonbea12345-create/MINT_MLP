@@ -23,7 +23,6 @@ interface InputState {
   lng?: number;
 }
 
-// Rendered via portal to escape the stacking context created by animate-fade-in-up (transform)
 function SuggestionDropdown({
   suggestions,
   anchorEl,
@@ -34,18 +33,10 @@ function SuggestionDropdown({
   onSelect: (place: KakaoPlace) => void;
 }) {
   if (!suggestions.length || !anchorEl) return null;
-
   const rect = anchorEl.getBoundingClientRect();
-
   return createPortal(
     <div
-      style={{
-        position: 'fixed',
-        top: rect.bottom + 4,
-        left: rect.left,
-        width: rect.width,
-        zIndex: 9999,
-      }}
+      style={{ position: 'fixed', top: rect.bottom + 4, left: rect.left, width: rect.width, zIndex: 9999 }}
       className="bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden"
     >
       {suggestions.map((place) => (
@@ -55,9 +46,7 @@ function SuggestionDropdown({
           className="w-full text-left px-4 py-3 hover:bg-[#E8F8F5] transition-colors border-b border-gray-100 last:border-0"
         >
           <div className="text-sm font-medium text-gray-800">{place.place_name}</div>
-          <div className="text-xs text-gray-400 mt-0.5">
-            {place.road_address_name || place.address_name}
-          </div>
+          <div className="text-xs text-gray-400 mt-0.5">{place.road_address_name || place.address_name}</div>
         </button>
       ))}
     </div>,
@@ -81,9 +70,7 @@ export default function LocationInput({ locations, onChange }: Props) {
   function handleFocus(index: number) {
     const el = inputRefs.current[index];
     if (!el) return;
-    setTimeout(() => {
-      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }, 300);
+    setTimeout(() => { el.scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 300);
   }
 
   function update(index: number, partial: Partial<InputState>) {
@@ -95,10 +82,7 @@ export default function LocationInput({ locations, onChange }: Props) {
   }
 
   function addInput() {
-    setInputs((prev) => [
-      ...prev,
-      { value: '', suggestions: [], loading: false, selected: false },
-    ]);
+    setInputs((prev) => [...prev, { value: '', suggestions: [], loading: false, selected: false }]);
   }
 
   function removeInput(index: number) {
@@ -138,56 +122,47 @@ export default function LocationInput({ locations, onChange }: Props) {
     onChange(selected);
   }, [inputs]);
 
-  const canAdd = inputs.length < 6;
-
   return (
-    <div className="flex flex-col gap-3 px-4">
-      <div className="text-center mb-2">
-        <p className="text-sm text-gray-500">각자 출발하는 동네나 역을 입력해요</p>
-      </div>
+    <div className="flex flex-col gap-2.5 px-4 py-3">
       {inputs.map((inp, i) => (
-        <div key={i} className="animate-fade-in-up">
+        <div key={i} className="flex items-center gap-2">
+          <span className="w-6 h-6 rounded-full bg-[#E8F8F5] border border-[#3CDBC0]/50 text-[#3CDBC0] text-xs font-black flex items-center justify-center flex-shrink-0">
+            {i + 1}
+          </span>
           <div
             ref={(el) => { wrapperRefs.current[i] = el; }}
-            className="flex items-center gap-2"
+            className="flex-1 relative"
           >
-            <div className="flex-1 relative">
-              <div className="absolute inset-y-0 left-3 flex items-center">
-                <span className="text-[#3CDBC0] text-sm font-bold">{i + 1}</span>
+            <input
+              ref={(el) => { inputRefs.current[i] = el; }}
+              type="text"
+              value={inp.value}
+              onChange={(e) => handleChange(i, e.target.value)}
+              onFocus={() => handleFocus(i)}
+              placeholder={i === 0 ? '예: 성수역, 합정역...' : '예: 강남역, 이태원...'}
+              className={`w-full pl-4 pr-9 py-2.5 rounded-xl border-2 text-sm outline-none transition-all duration-200 bg-white ${
+                inp.selected ? 'border-[#3CDBC0] bg-[#E8F8F5]' : 'border-gray-200 focus:border-[#3CDBC0]'
+              }`}
+            />
+            {inp.loading && (
+              <div className="absolute inset-y-0 right-3 flex items-center">
+                <div className="w-4 h-4 border-2 border-[#3CDBC0] border-t-transparent rounded-full animate-spin-slow" />
               </div>
-              <input
-                ref={(el) => { inputRefs.current[i] = el; }}
-                type="text"
-                value={inp.value}
-                onChange={(e) => handleChange(i, e.target.value)}
-                onFocus={() => handleFocus(i)}
-                placeholder={i === 0 ? '예: 성수역, 합정역...' : '예: 강남역, 이태원...'}
-                className={`w-full pl-8 pr-10 py-3.5 rounded-xl border-2 text-sm outline-none transition-all duration-200 bg-white ${
-                  inp.selected
-                    ? 'border-[#3CDBC0] bg-[#E8F8F5]'
-                    : 'border-gray-200 focus:border-[#3CDBC0]'
-                }`}
-              />
-              {inp.loading && (
-                <div className="absolute inset-y-0 right-3 flex items-center">
-                  <div className="w-4 h-4 border-2 border-[#3CDBC0] border-t-transparent rounded-full animate-spin-slow" />
-                </div>
-              )}
-              {inp.selected && !inp.loading && (
-                <div className="absolute inset-y-0 right-3 flex items-center">
-                  <span className="text-[#3CDBC0]">✓</span>
-                </div>
-              )}
-            </div>
-            {inputs.length > 2 && (
-              <button
-                onClick={() => removeInput(i)}
-                className="w-9 h-9 rounded-full bg-gray-100 text-gray-400 flex items-center justify-center hover:bg-red-50 hover:text-red-400 transition-colors"
-              >
-                ×
-              </button>
+            )}
+            {inp.selected && !inp.loading && (
+              <div className="absolute inset-y-0 right-3 flex items-center">
+                <span className="text-[#3CDBC0] text-sm font-bold">✓</span>
+              </div>
             )}
           </div>
+          {inputs.length > 2 && (
+            <button
+              onClick={() => removeInput(i)}
+              className="w-7 h-7 rounded-full bg-gray-100 text-gray-400 flex items-center justify-center hover:bg-red-50 hover:text-red-400 transition-colors text-sm flex-shrink-0"
+            >
+              ×
+            </button>
+          )}
           <SuggestionDropdown
             suggestions={inp.suggestions}
             anchorEl={wrapperRefs.current[i] ?? null}
@@ -196,12 +171,12 @@ export default function LocationInput({ locations, onChange }: Props) {
         </div>
       ))}
 
-      {canAdd && (
+      {inputs.length < 6 && (
         <button
           onClick={addInput}
-          className="flex items-center justify-center gap-2 py-3 rounded-xl border-2 border-dashed border-[#3CDBC0] text-[#3CDBC0] text-sm font-medium hover:bg-[#E8F8F5] transition-colors"
+          className="flex items-center justify-center gap-2 py-2.5 rounded-xl border-2 border-dashed border-[#3CDBC0]/60 text-[#3CDBC0] text-sm font-medium hover:bg-[#E8F8F5] transition-colors"
         >
-          <span className="text-lg leading-none">+</span>
+          <span className="text-base leading-none">+</span>
           출발지 추가
         </button>
       )}

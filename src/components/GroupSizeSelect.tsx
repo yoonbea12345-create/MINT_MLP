@@ -13,20 +13,19 @@ const OPTIONS: { value: GroupSize; emoji: string; desc: string }[] = [
 
 export default function GroupSizeSelect({ value, onChange }: Props) {
   return (
-    <div className="px-4">
-      <p className="text-center text-sm text-gray-500 mb-4">오늘 몇 명이 모여요?</p>
+    <div className="px-4 h-full flex flex-col justify-center">
       <div className="grid grid-cols-3 gap-3">
         {OPTIONS.map((opt) => (
           <button
             key={opt.value}
             onClick={() => onChange(opt.value)}
-            className={`vibe-card flex flex-col items-center gap-2 py-5 rounded-2xl border-2 transition-all duration-200 ${
+            className={`vibe-card flex flex-col items-center gap-2.5 py-7 rounded-2xl border-2 transition-all duration-200 ${
               value === opt.value
                 ? 'border-[#3CDBC0] bg-[#E8F8F5] shadow-lg shadow-[#3CDBC0]/20'
                 : 'border-gray-200 bg-white hover:border-[#3CDBC0]/50'
             }`}
           >
-            <span className="text-3xl">{opt.emoji}</span>
+            <span className="text-4xl">{opt.emoji}</span>
             <span className={`text-base font-bold ${value === opt.value ? 'text-[#2AB5A0]' : 'text-gray-700'}`}>
               {opt.value}
             </span>
