@@ -77,9 +77,9 @@ function PlaceCard({ place, extraResults = [], gradient, shadowColor }: CardProp
       style={{ background: gradient }}
       onClick={() => window.open(url, '_blank')}
     >
-      <div className="py-4 px-4">
+      <div className="py-3 px-4">
         {/* 카테고리 + 혼잡도 */}
-        <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center justify-between mb-1.5">
           <span className="text-xs font-black bg-white/30 text-white px-3 py-0.5 rounded-full border border-white/30">
             {place.category}
           </span>
@@ -90,42 +90,42 @@ function PlaceCard({ place, extraResults = [], gradient, shadowColor }: CardProp
         </div>
 
         {/* 장소명 */}
-        <h2 className="text-2xl font-black leading-tight mb-1">{place.placeName}</h2>
+        <h2 className="text-xl font-black leading-tight mb-1.5">{place.placeName}</h2>
 
         {/* 해시태그 */}
         <div className="flex flex-wrap gap-1 mb-2">
-          {place.vibeTags.slice(0, 4).map((tag) => (
+          {place.vibeTags.slice(0, 3).map((tag) => (
             <span key={tag} className="text-xs text-white/80 bg-white/15 px-2 py-0.5 rounded-full">
               #{tag}
             </span>
           ))}
         </div>
 
-        <p className="text-sm text-white/90 mb-3 leading-relaxed">{place.description}</p>
-
         {/* 핵심 정보 */}
-        <div className="flex flex-col gap-1">
-          <div className="flex items-start gap-1.5 text-sm text-white/80">
-            <GpsPin className="mt-0.5 opacity-80" />
+        <div className="flex flex-col gap-0.5">
+          <div className="flex items-center gap-1.5 text-xs text-white/80">
+            <GpsPin className="opacity-80 shrink-0" />
             <span className="leading-tight">{place.address || place.area}</span>
           </div>
-          <div className="flex items-center gap-1.5 text-sm text-white/80">
-            <span>💰</span>
-            <span>{place.priceRange}</span>
+          <div className="flex items-center gap-3 text-xs text-white/80 flex-wrap">
+            <span className="flex items-center gap-1">
+              <span>💰</span>
+              <span>{place.priceRange}</span>
+            </span>
+            {place.openingHours && (
+              <span className="flex items-center gap-1">
+                <span>🕐</span>
+                <span>{place.openingHours}</span>
+                {openStatus && (
+                  <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${
+                    openStatus.isOpen ? 'bg-green-400 text-white' : 'bg-red-400/80 text-white'
+                  }`}>
+                    {openStatus.label}
+                  </span>
+                )}
+              </span>
+            )}
           </div>
-          {place.openingHours && (
-            <div className="flex items-center gap-1.5 text-sm text-white/80">
-              <span>🕐</span>
-              <span>{place.openingHours}</span>
-              {openStatus && (
-                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
-                  openStatus.isOpen ? 'bg-green-400 text-white' : 'bg-red-400/80 text-white'
-                }`}>
-                  {openStatus.label}
-                </span>
-              )}
-            </div>
-          )}
         </div>
 
         {/* 더보기 버튼 */}
@@ -229,17 +229,14 @@ export default function ResultCard({
         </div>
       )}
 
-      {/* 힌트 + 1차 라벨 같은 줄 */}
-      <div className="flex items-center justify-between -mt-1">
-        <p className="text-[11px] text-gray-400">
-          추천 카드를 터치하면 카카오맵에서 확인할 수 있어요
-        </p>
-        {hasSecond && (
-          <span className="text-xs font-black bg-[#3CDBC0] text-white px-3 py-1 rounded-full ml-2 shrink-0">
+      {/* 1차 라벨 */}
+      {hasSecond && (
+        <div className="flex justify-end -mt-1">
+          <span className="text-xs font-black bg-[#3CDBC0] text-white px-3 py-1 rounded-full">
             1차 추천 {purpose!.first}
           </span>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* 1차 카드 */}
       <PlaceCard
@@ -287,35 +284,35 @@ export default function ResultCard({
                   </div>
                 );
               })()}
-              <h2 className="text-xl font-black leading-tight mb-1">{secondResult.placeName}</h2>
+              <h2 className="text-xl font-black leading-tight mb-1.5">{secondResult.placeName}</h2>
               <div className="flex flex-wrap gap-1 mb-2">
-                {secondResult.vibeTags.slice(0, 2).map((tag) => (
+                {secondResult.vibeTags.slice(0, 3).map((tag) => (
                   <span key={tag} className="text-xs text-white/80 bg-white/15 px-2 py-0.5 rounded-full">
                     #{tag}
                   </span>
                 ))}
               </div>
-              <div className="flex flex-col gap-1">
-                <div className="flex items-start gap-1.5 text-sm text-white/80">
-                  <GpsPin className="mt-0.5 opacity-80" />
+              <div className="flex flex-col gap-0.5">
+                <div className="flex items-center gap-1.5 text-xs text-white/80">
+                  <GpsPin className="opacity-80 shrink-0" />
                   <span className="leading-tight">{secondResult.address || secondResult.area}</span>
                 </div>
-                <div className="flex items-center gap-1.5 text-sm text-white/80">
-                  <span>💰</span><span>{secondResult.priceRange}</span>
+                <div className="flex items-center gap-3 text-xs text-white/80 flex-wrap">
+                  <span className="flex items-center gap-1"><span>💰</span><span>{secondResult.priceRange}</span></span>
+                  {secondResult.openingHours && (
+                    <span className="flex items-center gap-1">
+                      <span>🕐</span><span>{secondResult.openingHours}</span>
+                      {(() => {
+                        const s = parseOpenStatus(secondResult.openingHours);
+                        return s ? (
+                          <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${s.isOpen ? 'bg-green-400 text-white' : 'bg-red-400/80 text-white'}`}>
+                            {s.label}
+                          </span>
+                        ) : null;
+                      })()}
+                    </span>
+                  )}
                 </div>
-                {secondResult.openingHours && (
-                  <div className="flex items-center gap-1.5 text-sm text-white/80">
-                    <span>🕐</span><span>{secondResult.openingHours}</span>
-                    {(() => {
-                      const s = parseOpenStatus(secondResult.openingHours);
-                      return s ? (
-                        <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${s.isOpen ? 'bg-green-400 text-white' : 'bg-red-400/80 text-white'}`}>
-                          {s.label}
-                        </span>
-                      ) : null;
-                    })()}
-                  </div>
-                )}
               </div>
 
               {/* 2차 추천 더보기 */}
