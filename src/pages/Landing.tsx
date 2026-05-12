@@ -6,15 +6,22 @@ function goToApp() {
   window.location.pathname = '/app';
 }
 
-function PhoneMockup({ src, alt, width = 'w-52', hideImage = false }: { src: string; alt: string; width?: string; hideImage?: boolean }) {
+function PhoneMockup({ src, alt, width = 'w-52' }: { src: string; alt: string; width?: string }) {
   return (
     <div className={`${width} mx-auto bg-white rounded-3xl shadow-xl border-2 border-gray-100 overflow-hidden`}>
       <div className="w-12 h-1 bg-gray-200 rounded-full mx-auto mt-2 mb-1" />
-      {hideImage
-        ? <div className="h-44" />
-        : <img src={src} alt={alt} className="w-full block" loading="lazy" />
-      }
+      <img src={src} alt={alt} className="w-full block" loading="lazy" />
     </div>
+  );
+}
+
+function KakaoTalkBubble({ className = 'w-6 h-6' }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 120 108" fill="none">
+      <ellipse cx="60" cy="46" rx="58" ry="44" fill="#000"/>
+      <text x="60" y="58" textAnchor="middle" fill="#FFE500" fontSize="26" fontWeight="900" fontFamily="Arial, sans-serif" letterSpacing="-0.5">TALK</text>
+      <path d="M 26 84 L 12 107 L 50 86 Z" fill="#000"/>
+    </svg>
   );
 }
 
@@ -93,8 +100,8 @@ export default function Landing() {
               <div className="text-xs text-gray-400 mt-0.5">서울 · 부산 · 제주</div>
             </div>
           </div>
-          {/* 폰 목업 절반 크기, 화면 없음 */}
-          <PhoneMockup src="" alt="" width="w-28" hideImage />
+          {/* 원래 폰 목업 높이의 절반 빈 공간 */}
+          <div className="h-48" />
         </section>
 
         {/* ── PROBLEM ── */}
@@ -261,13 +268,13 @@ export default function Landing() {
             <span className="bg-teal-50 border border-teal-200 text-[#36CFA0] text-sm font-bold px-4 py-2 rounded-full whitespace-nowrap">✨ AI 추천</span>
             <span className="text-[#36CFA0] font-bold flex-shrink-0">→</span>
             <div className="flex items-center gap-1.5 bg-teal-50 border border-teal-200 text-[#36CFA0] text-sm font-bold px-3 py-2 rounded-full whitespace-nowrap flex-shrink-0">
-              <img src="/image/kakao-logo.png" alt="카카오" className="w-4 h-4 object-contain" />
+              <KakaoTalkBubble className="w-4 h-4" />
               카톡 공유
             </div>
           </div>
-          {/* 카카오톡 로고 */}
+          {/* 카카오톡 말풍선 */}
           <div className="flex justify-center mb-6">
-            <img src="/image/kakao-logo.png" alt="카카오톡으로 공유" className="w-32 h-32 object-contain" />
+            <KakaoTalkBubble className="w-32 h-32" />
           </div>
           <p className="text-sm text-gray-400 text-center mt-2 leading-relaxed">
             더 이상 '어디로 갈까' 단톡방 폭격 없이,<br />
@@ -308,7 +315,7 @@ export default function Landing() {
             </div>
             {/* 카톡 공유 */}
             <div className="flex items-center gap-1 text-xs text-gray-400">
-              <img src="/image/kakao-logo.png" alt="카카오" className="w-3.5 h-3.5 object-contain" />
+              <KakaoTalkBubble className="w-3.5 h-3.5" />
               카톡 공유
             </div>
             {/* 완전 무료 */}
