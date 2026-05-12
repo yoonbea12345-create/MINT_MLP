@@ -223,14 +223,13 @@ ${commonInfo}
 
     const message = await client.messages.create({
       model: 'claude-opus-4-7',
-      max_tokens: 16000,
-      thinking: { type: 'enabled', budget_tokens: 10000 },
+      max_tokens: 4096,
       messages: [{ role: 'user', content: prompt }],
-    } as Parameters<typeof client.messages.create>[0]);
+    });
 
     const text = message.content
-      .filter((b) => b.type === 'text')
-      .map((b) => (b as { type: 'text'; text: string }).text)
+      .filter((b): b is { type: 'text'; text: string } => b.type === 'text')
+      .map((b) => b.text)
       .join('');
 
     const jsonMatch = text.match(/\{[\s\S]*\}/);
