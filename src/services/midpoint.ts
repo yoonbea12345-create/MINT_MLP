@@ -23,6 +23,41 @@ function estimateTransitMin(km: number): number {
   return        Math.round(65  + (km - 25) * 1.8);         // 65분~
 }
 
+// 전국 주요 도시 (수도권 외)
+const NATIONAL_AREAS: { name: string; lat: number; lng: number }[] = [
+  // 제주
+  { name: '제주시 연동',   lat: 33.4996, lng: 126.5312 },
+  { name: '제주 애월',     lat: 33.4601, lng: 126.3124 },
+  { name: '제주 중문',     lat: 33.2544, lng: 126.4120 },
+  { name: '서귀포시',      lat: 33.2534, lng: 126.5600 },
+  { name: '제주 성산',     lat: 33.4614, lng: 126.9199 },
+  // 부산
+  { name: '부산 해운대',   lat: 35.1631, lng: 129.1635 },
+  { name: '부산 서면',     lat: 35.1579, lng: 129.0586 },
+  { name: '부산 남포동',   lat: 35.0976, lng: 129.0319 },
+  { name: '부산역',        lat: 35.1151, lng: 129.0424 },
+  // 대구
+  { name: '대구 동성로',   lat: 35.8714, lng: 128.5958 },
+  { name: '대구 수성구',   lat: 35.8585, lng: 128.6313 },
+  // 광주
+  { name: '광주 상무지구', lat: 35.1544, lng: 126.8526 },
+  { name: '광주 충장로',   lat: 35.1467, lng: 126.9157 },
+  // 대전
+  { name: '대전 둔산동',   lat: 36.3504, lng: 127.3845 },
+  { name: '대전역',        lat: 36.3323, lng: 127.4343 },
+  // 울산
+  { name: '울산 삼산동',   lat: 35.5428, lng: 129.3320 },
+  // 강원
+  { name: '강릉 시내',     lat: 37.7519, lng: 128.8760 },
+  { name: '춘천 명동',     lat: 37.8813, lng: 127.7298 },
+  // 충청
+  { name: '청주 성안길',   lat: 36.6424, lng: 127.4890 },
+  // 전라
+  { name: '전주 한옥마을', lat: 35.8150, lng: 127.1531 },
+  // 경상
+  { name: '경주 시내',     lat: 35.8562, lng: 129.2247 },
+];
+
 // 수도권 도심 상업지역만 포함 (도시화 낮은 지역 제외)
 const METRO_AREAS: { name: string; lat: number; lng: number }[] = [
   // 서울
@@ -61,20 +96,48 @@ const METRO_AREAS: { name: string; lat: number; lng: number }[] = [
   { name: '인천 부평역',         lat: 37.4883, lng: 126.7238 },
 ];
 
+const ALL_AREAS = [...METRO_AREAS, ...NATIONAL_AREAS];
+
+// 서울 중심 기준점
+const SEOUL_CENTER: Coordinates = { lat: 37.5665, lng: 126.9780 };
+
 /**
  * 출발지들로부터 소요시간 편차가 가장 작은 도심 지역을 반환.
- *
- * 스코어 = 소요시간 범위(max-min) × 2  +  평균 소요시간 × 0.3
- *          + 평균 60분 초과 시 추가 패널티
- * → 스코어가 낮을수록 공평하고 접근성 좋은 지역
+ * 수도권 외 지역(지리 중심이 수도권에서 80km 초과)이면 전국 도시 목록으로 fallback.
  */
 export function findBalancedAreas(
   departures: Coordinates[],
   count = 3,
 ): { areas: string[]; midpoint: Coordinates; areaName: string } {
-  const fallback = { areas: ['명동', '홍대입구역', '강남역'], midpoint: { lat: 37.5665, lng: 126.9780 }, areaName: '서울 중심부' };
+  const fallback = { areas: ['명동', '홍대입구역', '강남역'], midpoint: SEOUL_CENTER, areaName: '서울 중심부' };
   if (departures.length === 0) return fallback;
 
+  // 1. 지리적 중심점 계산
+  const geoCenter: Coordinates = {
+    lat: departures.reduce((s, c) => s + c.lat, 0) / departures.length,
+    lng: departures.reduce((s, c) => s + c.lng, 0) / departures.length,
+  };
+
+  // 2. 수도권에서의 거리 확인
+  const distFromMetro = haversineKm(geoCenter.lat, geoCenter.lng, SEOUL_CENTER.lat, SEOUL_CENTER.lng);
+
+  // 3. 수도권 80km 초과 → 전국 목록에서 지리 중심에 가장 가까운 곳 선택
+  if (distFromMetro > 80) {
+    const candidates = ALL_AREAS
+      .map((area) => ({
+        ...area,
+        dist: haversineKm(geoCenter.lat, geoCenter.lng, area.lat, area.lng),
+      }))
+      .sort((a, b) => a.dist - b.dist);
+    const best = candidates[0];
+    return {
+      areas: candidates.slice(0, count).map((a) => a.name),
+      midpoint: { lat: best.lat, lng: best.lng },
+      areaName: best.name,
+    };
+  }
+
+  // 4. 수도권 내 → 기존 소요시간 편차 최소화 알고리즘
   const scored = METRO_AREAS.map((area) => {
     const times = departures.map((dep) =>
       estimateTransitMin(haversineKm(dep.lat, dep.lng, area.lat, area.lng))
@@ -83,7 +146,6 @@ export function findBalancedAreas(
     const minT = Math.min(...times);
     const range = maxT - minT;
     const avg = times.reduce((s, t) => s + t, 0) / times.length;
-    // 편차 최소화 + 과도하게 먼 지역 패널티
     const score = range * 2 + avg * 0.3 + Math.max(0, avg - 60) * 1.5;
     return { ...area, score };
   });
@@ -98,12 +160,12 @@ export function findBalancedAreas(
   };
 }
 
-// 프리셋 지역용: 특정 좌표 근처 지역명 반환 (기존 유지)
+// 특정 좌표 근처 지역명 반환 — 전국 목록 사용
 export function findNearestAreas(midpoint: Coordinates, count = 3): string[] {
-  return METRO_AREAS
+  return ALL_AREAS
     .map((area) => ({
       name: area.name,
-      dist: Math.sqrt((area.lat - midpoint.lat) ** 2 + (area.lng - midpoint.lng) ** 2),
+      dist: haversineKm(area.lat, area.lng, midpoint.lat, midpoint.lng),
     }))
     .sort((a, b) => a.dist - b.dist)
     .slice(0, count)
