@@ -29,8 +29,22 @@ function walkingMinutes(lat1: number, lng1: number, lat2: number, lng2: number):
   return Math.round((km / 4) * 60);
 }
 
-// 네이버 로컬 검색 — 실존 장소 목록 반환
-async function searchNaverLocal(query: string, display = 8): Promise<NaverPlace[]> {
+// 대형 프랜차이즈 체인 키워드 (이름에 포함되면 프랜차이즈로 판단)
+const FRANCHISE_KEYWORDS = [
+  '스타벅스','이디야','투썸','메가커피','빽다방','컴포즈','탐앤탐스','폴바셋','커피빈',
+  '맥도날드','버거킹','롯데리아','KFC','맘스터치','서브웨이','노브랜드버거',
+  '파리바게뜨','뚜레쥬르','던킨','크리스피크림',
+  'CJ올리브','올리브영','GS25','CU편의점','세븐일레븐',
+  '본죽','한솥','김밥천국','국민','놀부','BBQ','BHC','교촌','굽네','네네치킨',
+  '이마트24','홈플러스','롯데마트',
+];
+
+function isFranchise(name: string): boolean {
+  return FRANCHISE_KEYWORDS.some((kw) => name.includes(kw));
+}
+
+// 네이버 로컬 검색 — 실존 장소 목록 반환 (프랜차이즈 후순위)
+async function searchNaverLocal(query: string, display = 12): Promise<NaverPlace[]> {
   const clientId = process.env.NAVER_CLIENT_ID;
   const clientSecret = process.env.NAVER_CLIENT_SECRET;
   if (!clientId || !clientSecret) return [];
@@ -44,13 +58,17 @@ async function searchNaverLocal(query: string, display = 8): Promise<NaverPlace[
     });
     if (!res.ok) return [];
     const data = await res.json() as { items?: { title: string; category: string; roadAddress: string; address: string; mapx: string; mapy: string }[] };
-    return (data.items || []).map((item) => ({
+    const all = (data.items || []).map((item) => ({
       name: item.title.replace(/<[^>]*>/g, ''),
       category: item.category,
       address: item.roadAddress || item.address,
       lat: parseInt(item.mapy) / 1e7,
       lng: parseInt(item.mapx) / 1e7,
     }));
+    // 로컬 맛집 앞, 프랜차이즈 뒤로 정렬 후 상위 8개 반환
+    const local = all.filter((p) => !isFranchise(p.name));
+    const franchise = all.filter((p) => isFranchise(p.name));
+    return [...local, ...franchise].slice(0, 8);
   } catch {
     return [];
   }
@@ -152,10 +170,11 @@ ${hasTwoPurposes && naverSecondPlaces.length > 0 ? `
 ### 2차 목적 "${purpose.second}" 후보
 ${formatNaverPlaces(naverSecondPlaces)}` : ''}
 
-⚠️ 위 목록에 없는 장소는 절대 추천 금지. 목록 내 장소의 address·lat·lng는 위 데이터 그대로 사용.` : `
+⚠️ 위 목록에 없는 장소는 절대 추천 금지. 목록 내 장소의 address·lat·lng는 위 데이터 그대로 사용.
+⚠️ 로컬 맛집·개인 운영 식당을 최우선으로 선택. 스타벅스·이디야·맥도날드 등 대형 프랜차이즈는 전체 추천 중 최대 1개만 허용.` : `
 ## 절대 규칙
-1. 실제 존재하고 영업 중인 장소만 추천 — 불확실하면 유명 프랜차이즈 추천
-2. 프랜차이즈는 정확한 지점명 기재 (예: "이디야커피 부천중동점")
+1. 실제 존재하고 영업 중인 장소만 추천
+2. 로컬 맛집·개인 운영 식당 우선, 대형 프랜차이즈는 전체 추천 중 최대 1개
 3. address 불확실하면 동네명만, lat/lng 모르면 0 기재`;
 
     // 날씨 컨텍스트
