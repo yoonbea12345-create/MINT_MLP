@@ -73,7 +73,7 @@ export default function Landing() {
             onClick={goToApp}
             className="w-full max-w-xs bg-[#36CFA0] text-white font-black text-lg py-4 rounded-2xl shadow-lg shadow-teal-200 active:scale-95 transition-all hover:bg-[#2AB58C] mb-6"
           >
-            ✨ 지금 바로 시작하기
+            지금 바로 시작하기
           </button>
           <div className="flex justify-center gap-8 text-center mb-10">
             <div>
@@ -89,7 +89,8 @@ export default function Landing() {
               <div className="text-xs text-gray-400 mt-0.5">서울 · 부산 · 제주</div>
             </div>
           </div>
-          <PhoneMockup src="/image/step1.png" alt="출발지 입력 화면" />
+          {/* 폰 목업 절반 크기 */}
+          <PhoneMockup src="/image/step1.png" alt="출발지 입력 화면" width="w-28" />
         </section>
 
         {/* ── PROBLEM ── */}
@@ -109,7 +110,7 @@ export default function Landing() {
           <div className="rounded-2xl overflow-hidden shadow-md">
             <div className="bg-[#3B576E] px-4 py-3 flex items-center gap-2">
               <span className="text-white text-lg">‹</span>
-              <span className="text-white text-sm font-bold flex-1 text-center">대학 동기 모임</span>
+              <span className="text-white text-sm font-bold flex-1 text-center">화생공 24</span>
               <span className="bg-white/20 text-white text-xs px-2 py-0.5 rounded-full">4</span>
             </div>
             <div className="bg-[#B2C7D9] p-4 flex flex-col gap-3">
@@ -173,8 +174,8 @@ export default function Landing() {
               <h3 className="text-lg font-black text-gray-800 mb-1">목적 · 인원 · 바이브 선택</h3>
               <p className="text-sm text-gray-400 mb-5">밥? 술? 카페? 1차·2차 코스도 한 번에.<br />오늘 분위기에 맞는 조건을 골라요</p>
               <div className="flex gap-3 justify-center">
-                <PhoneMockup src="/image/step3.png" alt="목적 선택" width="w-36" />
-                <PhoneMockup src="/image/step4.png" alt="바이브 선택" width="w-36" />
+                <PhoneMockup src="/image/step3.png" alt="목적 선택" width="w-44" />
+                <PhoneMockup src="/image/step4.png" alt="바이브 선택" width="w-44" />
               </div>
             </div>
             <div className="w-0.5 h-8 bg-gradient-to-b from-[#36CFA0] to-transparent my-2" />
@@ -205,7 +206,10 @@ export default function Landing() {
           <div className="flex flex-col gap-4">
             <div className="rounded-2xl border border-gray-200 p-5">
               <div className="flex items-center gap-2 mb-4">
-                <span className="text-xl">🗺️</span>
+                {/* GPS 아이콘 */}
+                <svg className="w-6 h-6 text-gray-400" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+                </svg>
                 <span className="font-black text-gray-400">기존 지도 앱</span>
               </div>
               <ul className="flex flex-col gap-2">
@@ -218,7 +222,10 @@ export default function Landing() {
             </div>
             <div className="rounded-2xl border-2 border-[#36CFA0] bg-teal-50 p-5">
               <div className="flex items-center gap-2 mb-4">
-                <span className="text-xl">🍃</span>
+                {/* MINT 파비콘 */}
+                <div className="w-6 h-6 rounded-md bg-[#36CFA0] flex items-center justify-center flex-shrink-0">
+                  <span className="text-white text-[10px] font-black leading-none">M</span>
+                </div>
                 <span className="font-black text-[#36CFA0]">MINT</span>
               </div>
               <ul className="flex flex-col gap-2">
@@ -244,16 +251,28 @@ export default function Landing() {
           <p className="text-sm text-gray-400 mb-6 leading-relaxed">
             결과 나오면 버튼 하나로 단톡방에 공유.<br />'여기 어때?' 한 줄이면 약속 끝.
           </p>
-          <div className="flex items-center justify-center gap-2 mb-8 flex-wrap">
-            {['🍃 조건 선택', '✨ AI 추천', '💬 카톡 공유'].map((tag, i) => (
+          {/* 칩 한 줄 */}
+          <div className="flex items-center justify-center gap-2 mb-8">
+            {['🍃 조건 선택', '✨ AI 추천', '카톡 공유'].map((tag, i) => (
               <div key={tag} className="flex items-center gap-2">
-                <span className="bg-teal-50 border border-teal-200 text-[#36CFA0] text-sm font-bold px-4 py-2 rounded-full">{tag}</span>
+                {i === 2
+                  ? (
+                    <div className="flex items-center gap-1.5 bg-teal-50 border border-teal-200 text-[#36CFA0] text-sm font-bold px-3 py-2 rounded-full">
+                      <img src="/image/kakao-logo.png" alt="카카오톡" className="w-4 h-4 object-contain" />
+                      {tag}
+                    </div>
+                  )
+                  : <span className="bg-teal-50 border border-teal-200 text-[#36CFA0] text-sm font-bold px-4 py-2 rounded-full">{tag}</span>
+                }
                 {i < 2 && <span className="text-[#36CFA0] font-bold">→</span>}
               </div>
             ))}
           </div>
-          <PhoneMockup src="/image/step5.png" alt="카카오톡 공유" />
-          <p className="text-sm text-gray-400 text-center mt-6 leading-relaxed">
+          {/* 카카오톡 로고 */}
+          <div className="flex justify-center mb-6">
+            <img src="/image/kakao-logo.png" alt="카카오톡으로 공유" className="w-32 h-32 object-contain" />
+          </div>
+          <p className="text-sm text-gray-400 text-center mt-2 leading-relaxed">
             더 이상 '어디로 갈까' 단톡방 폭격 없이,<br />
             <strong className="text-gray-600">한 명이 정하고 모두가 편한</strong> 약속.
           </p>
@@ -272,7 +291,7 @@ export default function Landing() {
             onClick={goToApp}
             className="w-full max-w-xs bg-[#36CFA0] text-white font-black text-lg py-4 rounded-2xl shadow-lg shadow-teal-200 active:scale-95 transition-all hover:bg-[#2AB58C] mb-6"
           >
-            ✨ MINT 시작하기
+            MINT 시작하기
           </button>
           <div className="flex justify-center gap-5 flex-wrap">
             {['⚡ 30초면 끝', '🤖 AI 추천', '💬 카톡 공유', '🆓 완전 무료'].map((t) => (
