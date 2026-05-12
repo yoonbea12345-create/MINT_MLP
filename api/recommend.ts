@@ -79,23 +79,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const locationStr = input.locations.map((l: { name: string }) => l.name).join(', ');
     const primaryArea = (congestionData as { areaName: string }[])[0]?.areaName || areaNames;
 
-    // 서울에서 80km 초과 → 비수도권 → 네이버로 실존 장소 fetch
-    const distFromSeoul = Math.sqrt(
-      Math.pow(midpoint.lat - 37.5665, 2) + Math.pow(midpoint.lng - 126.978, 2)
-    ) * 111;
-    const isNonMetro = distFromSeoul > 80;
-
-    let naverFirstPlaces: NaverPlace[] = [];
-    let naverSecondPlaces: NaverPlace[] = [];
-
-    if (isNonMetro) {
-      [naverFirstPlaces, naverSecondPlaces] = await Promise.all([
-        searchNaverLocal(purposeToNaverQuery(purpose.first, primaryArea)),
-        hasTwoPurposes && purpose.second
-          ? searchNaverLocal(purposeToNaverQuery(purpose.second, primaryArea))
-          : Promise.resolve([]),
-      ]);
-    }
+    // 항상 네이버로 실존 장소 fetch (서울 포함 전국)
+    const [naverFirstPlaces, naverSecondPlaces] = await Promise.all([
+      searchNaverLocal(purposeToNaverQuery(purpose.first, primaryArea)),
+      hasTwoPurposes && purpose.second
+        ? searchNaverLocal(purposeToNaverQuery(purpose.second, primaryArea))
+        : Promise.resolve([]),
+    ]);
 
     const hasNaverData = naverFirstPlaces.length > 0;
 
