@@ -108,7 +108,7 @@ const SEOUL_CENTER: Coordinates = { lat: 37.5665, lng: 126.9780 };
 export function findBalancedAreas(
   departures: Coordinates[],
   count = 3,
-): { areas: string[]; midpoint: Coordinates; areaName: string } {
+): { areas: string[]; midpoint: Coordinates; areaName: string; compromiseMessage?: string } {
   const fallback = { areas: ['명동', '홍대입구역', '강남역'], midpoint: SEOUL_CENTER, areaName: '서울 중심부' };
   if (departures.length === 0) return fallback;
 
@@ -118,10 +118,19 @@ export function findBalancedAreas(
     lng: departures.reduce((s, c) => s + c.lng, 0) / departures.length,
   };
 
-  // 2. 수도권에서의 거리 확인
+  // 2. 출발지 간 최대 직선거리 계산
+  let maxPairDist = 0;
+  for (let i = 0; i < departures.length; i++) {
+    for (let j = i + 1; j < departures.length; j++) {
+      const d = haversineKm(departures[i].lat, departures[i].lng, departures[j].lat, departures[j].lng);
+      if (d > maxPairDist) maxPairDist = d;
+    }
+  }
+
+  // 3. 수도권에서의 거리 확인
   const distFromMetro = haversineKm(geoCenter.lat, geoCenter.lng, SEOUL_CENTER.lat, SEOUL_CENTER.lng);
 
-  // 3. 수도권 80km 초과 → 전국 목록에서 지리 중심에 가장 가까운 곳 선택
+  // 4. 수도권 80km 초과 → 전국 목록에서 지리 중심에 가장 가까운 곳 선택
   if (distFromMetro > 80) {
     const candidates = ALL_AREAS
       .map((area) => ({
@@ -130,14 +139,19 @@ export function findBalancedAreas(
       }))
       .sort((a, b) => a.dist - b.dist);
     const best = candidates[0];
+    // 출발지 간 거리가 150km 초과면 보완 메시지 표시
+    const compromiseMessage = maxPairDist > 150
+      ? `출발지 간 거리가 멀어 ${best.name}을(를) 중간 지점으로 보완했어요 📍`
+      : undefined;
     return {
       areas: candidates.slice(0, count).map((a) => a.name),
       midpoint: { lat: best.lat, lng: best.lng },
       areaName: best.name,
+      compromiseMessage,
     };
   }
 
-  // 4. 수도권 내 → 기존 소요시간 편차 최소화 알고리즘
+  // 5. 수도권 내 → 기존 소요시간 편차 최소화 알고리즘
   const scored = METRO_AREAS.map((area) => {
     const times = departures.map((dep) =>
       estimateTransitMin(haversineKm(dep.lat, dep.lng, area.lat, area.lng))
@@ -153,10 +167,16 @@ export function findBalancedAreas(
   scored.sort((a, b) => a.score - b.score);
   const best = scored[0];
 
+  // 수도권 내에서도 출발지 간 거리가 극심하면 메시지
+  const compromiseMessage = maxPairDist > 150
+    ? `출발지 간 거리가 멀어 ${best.name}을(를) 중간 지점으로 보완했어요 📍`
+    : undefined;
+
   return {
     areas: scored.slice(0, count).map((s) => s.name),
     midpoint: { lat: best.lat, lng: best.lng },
     areaName: best.name,
+    compromiseMessage,
   };
 }
 

@@ -61,6 +61,8 @@ export default function Home() {
   } | null>(null);
   const [resultTravelTimes, setResultTravelTimes] = useState<TravelResult[] | null>(null);
   const [treasurer, setTreasurer] = useState<string | null>(null);
+  const [compromiseMessage, setCompromiseMessage] = useState<string | null>(null);
+  const [showCompromiseToast, setShowCompromiseToast] = useState(false);
 
   useEffect(() => {
     if (!sessionStorage.getItem('mintSessionStart')) {
@@ -96,6 +98,14 @@ export default function Home() {
     if (step > 0) setStep((s) => (s - 1) as Step);
   }
 
+  function applyCompromiseMessage(msg?: string) {
+    if (msg) {
+      setCompromiseMessage(msg);
+      setShowCompromiseToast(true);
+      setTimeout(() => setShowCompromiseToast(false), 5000);
+    }
+  }
+
   function handleConfirmMeetingLocation(loc: MeetingLocation) {
     if (loc.type === 'auto') {
       handleMidpointSelect();
@@ -110,6 +120,7 @@ export default function Home() {
         const nearestAreas = findNearestAreas(balanced.midpoint, 3);
         setMidpointData({ midpoint: balanced.midpoint, areaName: loc.area, nearestAreas });
         setResultTravelTimes(null);
+        applyCompromiseMessage(balanced.compromiseMessage);
         handleRecommend(balanced.midpoint, nearestAreas, validLocs);
       }
     }
@@ -128,6 +139,7 @@ export default function Home() {
       const balanced = findBalancedAreas(coords.length >= 2 ? coords : [{ lat: 37.5665, lng: 126.978 }]);
       midpoint = balanced.midpoint;
       areaName = balanced.areaName;
+      applyCompromiseMessage(balanced.compromiseMessage);
     }
 
     const nearestAreas = findNearestAreas(midpoint, 3);
@@ -367,6 +379,15 @@ export default function Home() {
   if (view === 'result' && result && result.length > 0) {
     return (
       <div className="min-h-screen bg-[#F5FBF8]">
+        {/* 중간 지점 보완 토스트 */}
+        {compromiseMessage && (
+          <div className={`fixed top-4 left-1/2 -translate-x-1/2 z-50 w-[90%] max-w-sm transition-all duration-500 ${showCompromiseToast ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-2 pointer-events-none'}`}>
+            <div className="bg-[#1A7A6E] text-white text-xs font-bold px-4 py-3 rounded-2xl shadow-lg flex items-start gap-2">
+              <span className="text-base leading-none mt-0.5">📍</span>
+              <span className="leading-snug">{compromiseMessage}</span>
+            </div>
+          </div>
+        )}
         <div className="max-w-md mx-auto px-4 pb-6 pt-2">
           <div className="flex items-center justify-between mb-2">
             <button
