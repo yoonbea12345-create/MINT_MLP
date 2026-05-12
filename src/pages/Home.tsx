@@ -68,17 +68,6 @@ export default function Home() {
     }
   }, []);
 
-  useEffect(() => {
-    if (!loading) { setLoadingProgress(0); return; }
-    setLoadingProgress(0);
-    const interval = setInterval(() => {
-      setLoadingProgress((prev) => {
-        if (prev >= 88) return prev;
-        return Math.min(prev + Math.random() * 3.5 + 0.5, 88);
-      });
-    }, 220);
-    return () => clearInterval(interval);
-  }, [loading]);
 
   useEffect(() => {
     if (view === 'result') {
@@ -153,6 +142,7 @@ export default function Home() {
     validLocs: LocationEntry[],
   ) {
     setLoading(true);
+    setLoadingProgress(0);
     setError(null);
     setResult(null);
 
@@ -160,8 +150,13 @@ export default function Home() {
       setLoadingMsg((m) => (m + 1) % LOADING_MESSAGES.length);
     }, 1800);
 
+    let aiProgressInterval: ReturnType<typeof setInterval> | null = null;
+
     try {
+      // 실제 마일스톤 1: 혼잡도 데이터 fetch
+      setLoadingProgress(5);
       const congestionData = await getMultiAreaCongestion(nearestAreas);
+      setLoadingProgress(25); // 실제 완료
 
       const vibeFirst: string[] = [];
       const vibeSecond: string[] = [];
@@ -177,7 +172,21 @@ export default function Home() {
         vibe: { first: vibeFirst, second: vibeSecond },
       };
 
+      // AI 호출 동안 25→90% 타이머 (Claude 응답이 단일 fetch라 내부 진행도 불가)
+      aiProgressInterval = setInterval(() => {
+        setLoadingProgress((prev) => {
+          if (prev >= 90) return prev;
+          // 초반엔 빠르게, 90% 가까울수록 느리게
+          const gap = 90 - prev;
+          return prev + gap * 0.04;
+        });
+      }, 250);
+
+      // 실제 마일스톤 2: AI 추천 완료
       const recommendation = await getAIRecommendation(input, midpoint, congestionData);
+      clearInterval(aiProgressInterval);
+      setLoadingProgress(100); // 실제 완료
+
       setResult(recommendation);
 
       const namedLocs = locations.filter((l) => l.name);
@@ -203,10 +212,12 @@ export default function Home() {
         setResultTravelTimes([]);
       }
     } catch (e) {
+      if (aiProgressInterval) clearInterval(aiProgressInterval);
       setError((e as Error).message || '추천을 가져오지 못했어요. 다시 시도해주세요.');
     } finally {
       clearInterval(msgInterval);
       setLoading(false);
+      setLoadingProgress(0);
     }
   }
 
