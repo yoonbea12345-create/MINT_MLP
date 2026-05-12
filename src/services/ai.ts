@@ -52,7 +52,10 @@ export async function getAIRecommendation(
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ input, midpoint, congestionData }),
   });
-  if (!res.ok) throw new Error('AI 추천 요청 실패');
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.error || `AI 추천 요청 실패 (${res.status})`);
+  }
   const data = await res.json();
   if (data.error) throw new Error(data.error);
   return Array.isArray(data) ? data as PlaceRecommendation[] : [data as PlaceRecommendation];
