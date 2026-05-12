@@ -53,9 +53,7 @@ function congestionInfo(level: string): { dot: string; label: string } {
 }
 
 function kakaoUrl(place: PlaceRecommendation) {
-  return place.lat && place.lng
-    ? `https://map.kakao.com/link/to/${encodeURIComponent(place.placeName)},${place.lat},${place.lng}`
-    : `https://map.kakao.com/link/search/${encodeURIComponent(place.placeName)}`;
+  return `https://map.kakao.com/link/search/${encodeURIComponent(place.placeName)}`;
 }
 
 interface CardProps {
@@ -229,14 +227,15 @@ export default function ResultCard({
         </div>
       )}
 
-      {/* 1차 라벨 */}
-      {hasSecond && (
-        <div className="flex justify-end -mt-1">
+      {/* 1차 라벨 + 힌트 */}
+      <div className="flex items-center justify-between -mt-1">
+        {hasSecond ? (
           <span className="text-xs font-black bg-[#3CDBC0] text-white px-3 py-1 rounded-full">
             1차 추천 {purpose!.first}
           </span>
-        </div>
-      )}
+        ) : <span />}
+        <p className="text-[10px] text-gray-400 text-right">카드 터치 시 카카오맵에서 확인</p>
+      </div>
 
       {/* 1차 카드 */}
       <PlaceCard
@@ -246,16 +245,16 @@ export default function ResultCard({
         shadowColor="shadow-[#3CDBC0]/25"
       />
 
-      {/* 도보 + 2차 라벨 같은 줄 */}
+      {/* 도보 정중앙 + 2차 배지 왼쪽 */}
       {hasSecond && secondResult && (
-        <div className="flex items-center justify-between -my-0.5">
-          <div className="flex items-center gap-1 text-xs text-gray-400 font-medium">
-            <span className="text-[#3CDBC0] text-base leading-none">↓</span>
-            <span>도보 약 {result.walkingToNext ? `${result.walkingToNext}분` : '10~15분'}</span>
-          </div>
+        <div className="relative flex items-center py-1">
           <span className="text-xs font-black bg-[#1A7A6E] text-white px-3 py-1 rounded-full">
             2차 추천 {purpose!.second}
           </span>
+          <div className="absolute left-1/2 -translate-x-1/2 flex items-center gap-1 text-xs text-gray-400 font-medium pointer-events-none">
+            <span className="text-[#3CDBC0] text-base leading-none">↓</span>
+            <span>도보 약 {result.walkingToNext ? `${result.walkingToNext}분` : '10~15분'}</span>
+          </div>
         </div>
       )}
 
