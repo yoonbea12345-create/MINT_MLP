@@ -67,7 +67,7 @@ export default function PurposeSelect({ value, onChange }: Props) {
           <p className="text-[11px] font-bold text-gray-500 uppercase tracking-widest">1차 목적</p>
           <span className="text-[10px] font-bold text-red-400 bg-red-50 px-2 py-0.5 rounded-full">필수</span>
         </div>
-        <div className="grid grid-cols-2 gap-2.5">
+        <div className="grid grid-cols-4 gap-2">
           {OPTIONS.map((opt) => {
             const selected = value.firstRaw === opt.value;
             const showInput = selected && opt.value === '기타';
@@ -75,7 +75,7 @@ export default function PurposeSelect({ value, onChange }: Props) {
               <button
                 key={opt.value}
                 onClick={() => selectFirst(opt.value)}
-                className={`flex flex-col items-center justify-center h-20 rounded-2xl border-2 transition-all duration-200 ${
+                className={`flex flex-col items-center justify-center h-[72px] rounded-2xl border-2 transition-all duration-200 ${
                   selected
                     ? 'border-[#3CDBC0] bg-[#E8F8F5] shadow-md shadow-[#3CDBC0]/20'
                     : 'border-gray-200 bg-white hover:border-[#3CDBC0]/50'
@@ -87,15 +87,15 @@ export default function PurposeSelect({ value, onChange }: Props) {
                     value={firstText}
                     onClick={(e) => e.stopPropagation()}
                     onChange={(e) => handleFirstText(e.target.value)}
-                    placeholder="직접 입력"
+                    placeholder="입력"
                     maxLength={10}
-                    className="w-full px-4 text-center text-sm font-bold text-[#2AB5A0] bg-transparent outline-none placeholder:text-[#3CDBC0]/50 placeholder:font-medium"
+                    className="w-full px-1 text-center text-xs font-bold text-[#2AB5A0] bg-transparent outline-none placeholder:text-[#3CDBC0]/50 placeholder:font-medium"
                     autoFocus
                   />
                 ) : (
                   <>
-                    <span className="text-2xl mb-1.5 leading-none">{opt.emoji}</span>
-                    <span className={`text-sm font-bold ${selected ? 'text-[#2AB5A0]' : 'text-gray-700'}`}>
+                    <span className="text-xl mb-1 leading-none">{opt.emoji}</span>
+                    <span className={`text-xs font-bold ${selected ? 'text-[#2AB5A0]' : 'text-gray-700'}`}>
                       {opt.value}
                     </span>
                   </>
@@ -112,7 +112,7 @@ export default function PurposeSelect({ value, onChange }: Props) {
           <p className="text-[11px] font-bold text-gray-500 uppercase tracking-widest">2차 목적</p>
           <span className="text-[10px] text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full font-medium">선택사항</span>
         </div>
-        <div className="grid grid-cols-2 gap-2.5 mb-2.5">
+        <div className="grid grid-cols-4 gap-2 mb-2.5">
           {OPTIONS.map((opt) => {
             const isDisabled = opt.value !== '기타' && opt.value === value.firstRaw;
             const selected = value.secondRaw === opt.value;
@@ -122,7 +122,7 @@ export default function PurposeSelect({ value, onChange }: Props) {
                 key={opt.value}
                 onClick={() => !isDisabled && selectSecond(opt.value)}
                 disabled={isDisabled}
-                className={`flex flex-col items-center justify-center h-20 rounded-2xl border-2 transition-all duration-200 ${
+                className={`flex flex-col items-center justify-center h-[72px] rounded-2xl border-2 transition-all duration-200 ${
                   isDisabled
                     ? 'border-gray-100 bg-gray-50 opacity-40 cursor-not-allowed'
                     : selected
@@ -136,15 +136,15 @@ export default function PurposeSelect({ value, onChange }: Props) {
                     value={secondText}
                     onClick={(e) => e.stopPropagation()}
                     onChange={(e) => handleSecondText(e.target.value)}
-                    placeholder="직접 입력"
+                    placeholder="입력"
                     maxLength={10}
-                    className="w-full px-4 text-center text-sm font-bold text-[#2AB5A0] bg-transparent outline-none placeholder:text-[#3CDBC0]/50 placeholder:font-medium"
+                    className="w-full px-1 text-center text-xs font-bold text-[#2AB5A0] bg-transparent outline-none placeholder:text-[#3CDBC0]/50 placeholder:font-medium"
                     autoFocus
                   />
                 ) : (
                   <>
-                    <span className="text-2xl mb-1.5 leading-none">{opt.emoji}</span>
-                    <span className={`text-sm font-bold ${selected ? 'text-[#2AB5A0]' : 'text-gray-700'}`}>
+                    <span className="text-xl mb-1 leading-none">{opt.emoji}</span>
+                    <span className={`text-xs font-bold ${selected ? 'text-[#2AB5A0]' : 'text-gray-700'}`}>
                       {opt.value}
                     </span>
                   </>
