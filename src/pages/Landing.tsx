@@ -6,11 +6,14 @@ function goToApp() {
   window.location.pathname = '/app';
 }
 
-function PhoneMockup({ src, alt, width = 'w-52' }: { src: string; alt: string; width?: string }) {
+function PhoneMockup({ src, alt, width = 'w-52', hideImage = false }: { src: string; alt: string; width?: string; hideImage?: boolean }) {
   return (
     <div className={`${width} mx-auto bg-white rounded-3xl shadow-xl border-2 border-gray-100 overflow-hidden`}>
       <div className="w-12 h-1 bg-gray-200 rounded-full mx-auto mt-2 mb-1" />
-      <img src={src} alt={alt} className="w-full block" loading="lazy" />
+      {hideImage
+        ? <div className="h-44" />
+        : <img src={src} alt={alt} className="w-full block" loading="lazy" />
+      }
     </div>
   );
 }
@@ -40,7 +43,7 @@ export default function Landing() {
   const s6 = useFadeUp();
 
   return (
-    <div className="min-h-screen bg-[#F0FDF9] font-sans">
+    <div className="min-h-screen bg-[#F0FDF9]">
 
       {/* NAV */}
       <nav className="sticky top-0 z-50 bg-[#F0FDF9]/90 backdrop-blur border-b border-teal-100 px-5 py-3 flex items-center justify-between max-w-lg mx-auto">
@@ -60,7 +63,7 @@ export default function Landing() {
           <div className="inline-flex items-center gap-1.5 bg-teal-50 border border-teal-200 text-[#36CFA0] text-xs font-bold px-4 py-1.5 rounded-full mb-6">
             ✦ AI 장소 추천 서비스
           </div>
-          <h1 className="text-4xl font-black text-gray-800 leading-tight tracking-tight mb-3">
+          <h1 className="text-4xl font-black text-gray-800 leading-tight mb-3">
             약속은 잡았는데<br />
             <span className="text-[#36CFA0]">어디 가지?</span>
           </h1>
@@ -75,22 +78,23 @@ export default function Landing() {
           >
             지금 바로 시작하기
           </button>
-          <div className="flex justify-center gap-8 text-center mb-10">
+          {/* 통계 — 높이 맞춤 */}
+          <div className="flex justify-center gap-8 items-end text-center mb-10">
             <div>
-              <div className="text-2xl font-black text-[#36CFA0]">30초</div>
+              <div className="text-2xl font-black text-[#36CFA0] whitespace-nowrap">30초</div>
               <div className="text-xs text-gray-400 mt-0.5">추천까지 걸리는 시간</div>
             </div>
             <div>
-              <div className="text-2xl font-black text-[#36CFA0]">딱 1곳</div>
+              <div className="text-2xl font-black text-[#36CFA0] whitespace-nowrap">딱 1곳</div>
               <div className="text-xs text-gray-400 mt-0.5">선택 피로 제로</div>
             </div>
             <div>
-              <div className="text-2xl font-black text-[#36CFA0]">전국</div>
+              <div className="text-2xl font-black text-[#36CFA0] whitespace-nowrap">전국</div>
               <div className="text-xs text-gray-400 mt-0.5">서울 · 부산 · 제주</div>
             </div>
           </div>
-          {/* 폰 목업 절반 크기 */}
-          <PhoneMockup src="/image/step1.png" alt="출발지 입력 화면" width="w-28" />
+          {/* 폰 목업 절반 크기, 화면 없음 */}
+          <PhoneMockup src="" alt="" width="w-28" hideImage />
         </section>
 
         {/* ── PROBLEM ── */}
@@ -110,7 +114,7 @@ export default function Landing() {
           <div className="rounded-2xl overflow-hidden shadow-md">
             <div className="bg-[#3B576E] px-4 py-3 flex items-center gap-2">
               <span className="text-white text-lg">‹</span>
-              <span className="text-white text-sm font-bold flex-1 text-center">화생공 24</span>
+              <span className="text-white text-sm font-bold flex-1 text-center">화생공 24(4)</span>
               <span className="bg-white/20 text-white text-xs px-2 py-0.5 rounded-full">4</span>
             </div>
             <div className="bg-[#B2C7D9] p-4 flex flex-col gap-3">
@@ -206,7 +210,6 @@ export default function Landing() {
           <div className="flex flex-col gap-4">
             <div className="rounded-2xl border border-gray-200 p-5">
               <div className="flex items-center gap-2 mb-4">
-                {/* GPS 아이콘 */}
                 <svg className="w-6 h-6 text-gray-400" viewBox="0 0 24 24" fill="currentColor">
                   <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
                 </svg>
@@ -222,7 +225,6 @@ export default function Landing() {
             </div>
             <div className="rounded-2xl border-2 border-[#36CFA0] bg-teal-50 p-5">
               <div className="flex items-center gap-2 mb-4">
-                {/* MINT 파비콘 */}
                 <div className="w-6 h-6 rounded-md bg-[#36CFA0] flex items-center justify-center flex-shrink-0">
                   <span className="text-white text-[10px] font-black leading-none">M</span>
                 </div>
@@ -246,27 +248,22 @@ export default function Landing() {
         >
           <p className="text-xs font-bold tracking-widest text-[#36CFA0] mb-3">SHARE</p>
           <h2 className="text-2xl font-black text-gray-800 leading-tight mb-3">
-            추천 받자마자<br /><span className="text-[#36CFA0]">카카오톡으로 공유</span>
+            추천 받자마자<br />
+            <span className="text-[#36CFA0] whitespace-nowrap">카카오톡으로 공유</span>
           </h2>
           <p className="text-sm text-gray-400 mb-6 leading-relaxed">
             결과 나오면 버튼 하나로 단톡방에 공유.<br />'여기 어때?' 한 줄이면 약속 끝.
           </p>
           {/* 칩 한 줄 */}
-          <div className="flex items-center justify-center gap-2 mb-8">
-            {['🍃 조건 선택', '✨ AI 추천', '카톡 공유'].map((tag, i) => (
-              <div key={tag} className="flex items-center gap-2">
-                {i === 2
-                  ? (
-                    <div className="flex items-center gap-1.5 bg-teal-50 border border-teal-200 text-[#36CFA0] text-sm font-bold px-3 py-2 rounded-full">
-                      <img src="/image/kakao-logo.png" alt="카카오톡" className="w-4 h-4 object-contain" />
-                      {tag}
-                    </div>
-                  )
-                  : <span className="bg-teal-50 border border-teal-200 text-[#36CFA0] text-sm font-bold px-4 py-2 rounded-full">{tag}</span>
-                }
-                {i < 2 && <span className="text-[#36CFA0] font-bold">→</span>}
-              </div>
-            ))}
+          <div className="flex items-center justify-center gap-2 mb-8 flex-nowrap">
+            <span className="bg-teal-50 border border-teal-200 text-[#36CFA0] text-sm font-bold px-4 py-2 rounded-full whitespace-nowrap">🍃 조건 선택</span>
+            <span className="text-[#36CFA0] font-bold flex-shrink-0">→</span>
+            <span className="bg-teal-50 border border-teal-200 text-[#36CFA0] text-sm font-bold px-4 py-2 rounded-full whitespace-nowrap">✨ AI 추천</span>
+            <span className="text-[#36CFA0] font-bold flex-shrink-0">→</span>
+            <div className="flex items-center gap-1.5 bg-teal-50 border border-teal-200 text-[#36CFA0] text-sm font-bold px-3 py-2 rounded-full whitespace-nowrap flex-shrink-0">
+              <img src="/image/kakao-logo.png" alt="카카오" className="w-4 h-4 object-contain" />
+              카톡 공유
+            </div>
           </div>
           {/* 카카오톡 로고 */}
           <div className="flex justify-center mb-6">
@@ -293,10 +290,34 @@ export default function Landing() {
           >
             MINT 시작하기
           </button>
-          <div className="flex justify-center gap-5 flex-wrap">
-            {['⚡ 30초면 끝', '🤖 AI 추천', '💬 카톡 공유', '🆓 완전 무료'].map((t) => (
-              <span key={t} className="text-xs text-gray-400">{t}</span>
-            ))}
+          {/* 아이콘 칩 */}
+          <div className="flex justify-center gap-4 flex-wrap">
+            {/* 30초면 끝 */}
+            <div className="flex items-center gap-1 text-xs text-gray-400">
+              <svg className="w-3.5 h-3.5 text-[#36CFA0]" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M13 2.05V2c0-1.1-.9-2-2-2s-2 .9-2 2v.05C4.6 2.55 1 6.5 1 11.5 1 17.3 5.7 22 11.5 22S22 17.3 22 11.5c0-5-3.6-8.95-9-9.45zM11.5 20C6.81 20 3 16.19 3 11.5S6.81 3 11.5 3 20 6.81 20 11.5 16.19 20 11.5 20zm.5-10.31V7c0-.55-.45-1-1-1s-1 .45-1 1v3c0 .28.11.53.29.71l2 2c.39.39 1.02.39 1.41 0 .39-.39.39-1.02 0-1.41L12 9.69z"/>
+              </svg>
+              30초면 끝
+            </div>
+            {/* Claude AI 추천 */}
+            <div className="flex items-center gap-1 text-xs text-gray-400">
+              <svg className="w-3.5 h-3.5 text-[#CC785C]" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 2L9.5 9.5 2 12l7.5 2.5L12 22l2.5-7.5L22 12l-7.5-2.5z"/>
+              </svg>
+              AI 추천
+            </div>
+            {/* 카톡 공유 */}
+            <div className="flex items-center gap-1 text-xs text-gray-400">
+              <img src="/image/kakao-logo.png" alt="카카오" className="w-3.5 h-3.5 object-contain" />
+              카톡 공유
+            </div>
+            {/* 완전 무료 */}
+            <div className="flex items-center gap-1 text-xs text-gray-400">
+              <svg className="w-3.5 h-3.5 text-[#36CFA0]" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-2 16l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z"/>
+              </svg>
+              완전 무료
+            </div>
           </div>
         </section>
 
