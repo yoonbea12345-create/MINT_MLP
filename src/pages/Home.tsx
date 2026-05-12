@@ -29,11 +29,11 @@ interface TravelResult {
 }
 
 const LOADING_MESSAGES = [
-  '딱 맞는 곳 찾는 중...',
-  '실시간 혼잡도 확인 중...',
-  '분위기 분석 중...',
-  '최적 동선 계산 중...',
-  '거의 다 됐어요! ✨',
+  '🗺️ 서울 구석구석 탐색 중...',
+  '👥 우리 팀 취향 분석 중...',
+  '🔍 딱 맞는 곳 걸러내는 중...',
+  '💰 가격대 & 영업시간 체크 중...',
+  '✨ 오늘의 코스 완성 직전!',
 ];
 
 function deriveGroupSize(locationCount: number): UserInput['groupSize'] {
@@ -51,6 +51,7 @@ export default function Home() {
   const [meetingLocation, setMeetingLocation] = useState<MeetingLocation | null>(null);
   const [loading, setLoading] = useState(false);
   const [loadingMsg, setLoadingMsg] = useState(0);
+  const [loadingProgress, setLoadingProgress] = useState(0);
   const [result, setResult] = useState<PlaceRecommendation[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [midpointData, setMidpointData] = useState<{
@@ -66,6 +67,18 @@ export default function Home() {
       sessionStorage.setItem('mintSessionStart', Date.now().toString());
     }
   }, []);
+
+  useEffect(() => {
+    if (!loading) { setLoadingProgress(0); return; }
+    setLoadingProgress(0);
+    const interval = setInterval(() => {
+      setLoadingProgress((prev) => {
+        if (prev >= 88) return prev;
+        return Math.min(prev + Math.random() * 3.5 + 0.5, 88);
+      });
+    }, 220);
+    return () => clearInterval(interval);
+  }, [loading]);
 
   useEffect(() => {
     if (view === 'result') {
@@ -291,31 +304,37 @@ export default function Home() {
 
   // 로딩
   if (loading) {
+    const r = 52;
+    const circ = 2 * Math.PI * r;
+    const offset = circ - (loadingProgress / 100) * circ;
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-[#F5FBF8] px-4">
-        <div className="flex flex-col items-center gap-6">
-          <div className="relative w-20 h-20">
-            <div className="absolute inset-0 rounded-full border-4 border-[#E8F8F5]" />
-            <div className="absolute inset-0 rounded-full border-4 border-t-[#3CDBC0] border-r-[#3CDBC0] border-transparent animate-spin-slow" />
-            <div className="absolute inset-3 rounded-full bg-[#3CDBC0]/20 flex items-center justify-center">
-              <span className="text-2xl animate-mint-pulse">🌿</span>
-            </div>
+      <div className="min-h-screen flex flex-col items-center justify-center bg-[#F5FBF8] px-4 gap-6">
+        <p className="text-[#3CDBC0] font-black text-2xl tracking-widest">MINT</p>
+
+        {/* 원형 프로그레스 링 */}
+        <div className="relative w-36 h-36">
+          <svg className="w-full h-full -rotate-90" viewBox="0 0 120 120">
+            <circle cx="60" cy="60" r={r} fill="none" stroke="#E8F8F5" strokeWidth="10" />
+            <circle
+              cx="60" cy="60" r={r}
+              fill="none"
+              stroke="#3CDBC0"
+              strokeWidth="10"
+              strokeLinecap="round"
+              strokeDasharray={circ}
+              strokeDashoffset={offset}
+              className="transition-all duration-300 ease-out"
+            />
+          </svg>
+          <div className="absolute inset-0 flex items-center justify-center">
+            <span className="text-2xl font-black text-[#2AB5A0]">{Math.round(loadingProgress)}%</span>
           </div>
-          <div className="text-center">
-            <p className="text-lg font-bold text-[#2AB5A0] animate-mint-pulse">
-              {LOADING_MESSAGES[loadingMsg]}
-            </p>
-            <p className="text-sm text-gray-400 mt-1">잠시만 기다려주세요</p>
-          </div>
-          <div className="flex gap-1.5">
-            {[0, 1, 2].map((i) => (
-              <div
-                key={i}
-                className="w-2 h-2 rounded-full bg-[#3CDBC0] animate-bounce-dot"
-                style={{ animationDelay: `${i * 0.2}s` }}
-              />
-            ))}
-          </div>
+        </div>
+
+        {/* 메시지 */}
+        <div className="text-center">
+          <p className="text-base font-bold text-[#2AB5A0]">{LOADING_MESSAGES[loadingMsg]}</p>
+          <p className="text-xs text-gray-400 mt-1">AI가 서울을 탐색하고 있어요</p>
         </div>
       </div>
     );
