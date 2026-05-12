@@ -82,12 +82,7 @@ export default function VibeSelect({ value, onChange, purpose }: Props) {
     onChange({ ...value, [groupLabel]: { first, second } });
   }
 
-  let reminderText = '';
-  if (purpose?.first) {
-    reminderText = (purpose.second && purpose.second !== '없음')
-      ? `1차: ${purpose.first}  ·  2차: ${purpose.second}`
-      : `목적: ${purpose.first}`;
-  }
+  const hasSecond = purpose?.second && purpose.second !== '없음';
 
   return (
     <div className="px-4 py-3 flex flex-col gap-4">
@@ -95,20 +90,20 @@ export default function VibeSelect({ value, onChange, purpose }: Props) {
         const g = value[group.label] ?? { first: null, second: null };
         return (
           <div key={group.label}>
-            {/* 첫 번째 그룹: 리마인드 + 범례를 라벨 위/오른쪽에 배치 */}
-            {groupIdx === 0 && reminderText && (
-              <div className="flex justify-end mb-1">
-                <span className="text-[11px] text-gray-400 font-medium">{reminderText}</span>
-              </div>
-            )}
             <div className="flex items-center justify-between mb-2">
               <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest">
                 {group.label}
               </p>
               {groupIdx === 0 && (
                 <div className="flex items-center gap-1.5">
-                  <span className="text-[10px] font-black bg-green-600 text-white px-2 py-0.5 rounded-full">🍀 1차</span>
-                  <span className="text-[10px] font-black bg-[#3CDBC0] text-white px-2 py-0.5 rounded-full">🍀 2차</span>
+                  <span className="text-[10px] font-black bg-green-600 text-white px-2 py-0.5 rounded-full">
+                    🍀 {purpose?.first ? `1차: ${purpose.first}` : '1차'}
+                  </span>
+                  {hasSecond && (
+                    <span className="text-[10px] font-black bg-[#3CDBC0] text-white px-2 py-0.5 rounded-full">
+                      🍀 2차: {purpose!.second}
+                    </span>
+                  )}
                 </div>
               )}
             </div>
