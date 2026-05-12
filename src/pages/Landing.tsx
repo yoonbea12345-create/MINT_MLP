@@ -66,7 +66,8 @@ export default function Landing() {
           </h1>
           <p className="text-gray-500 text-base leading-relaxed mb-8">
             검색어가 없어도 괜찮아요.<br />
-            <strong className="text-gray-700">30초 만에 딱 하나</strong>, AI가 골라줍니다.
+            <strong className="text-gray-700">30초 만에 딱 하나</strong>, AI가 골라줍니다.<br />
+            <span className="text-sm">서울부터 제주까지, 전국 어디서든.</span>
           </p>
           <button
             onClick={goToApp}
@@ -74,7 +75,7 @@ export default function Landing() {
           >
             ✨ 지금 바로 시작하기
           </button>
-          <div className="flex justify-center gap-10 text-center mb-10">
+          <div className="flex justify-center gap-8 text-center mb-10">
             <div>
               <div className="text-2xl font-black text-[#36CFA0]">30초</div>
               <div className="text-xs text-gray-400 mt-0.5">추천까지 걸리는 시간</div>
@@ -82,6 +83,10 @@ export default function Landing() {
             <div>
               <div className="text-2xl font-black text-[#36CFA0]">딱 1곳</div>
               <div className="text-xs text-gray-400 mt-0.5">선택 피로 제로</div>
+            </div>
+            <div>
+              <div className="text-2xl font-black text-[#36CFA0]">전국</div>
+              <div className="text-xs text-gray-400 mt-0.5">서울 · 부산 · 제주</div>
             </div>
           </div>
           <PhoneMockup src="/image/step1.png" alt="출발지 입력 화면" />
@@ -165,8 +170,8 @@ export default function Landing() {
             {/* STEP 2 */}
             <div className="text-center w-full">
               <span className="inline-block bg-[#36CFA0] text-white text-xs font-bold px-3 py-1 rounded-full mb-3">STEP 2</span>
-              <h3 className="text-lg font-black text-gray-800 mb-1">인원 · 목적 · 바이브 선택</h3>
-              <p className="text-sm text-gray-400 mb-5">밥? 술? 카페? 오늘 분위기에 맞는 조건을 골라요</p>
+              <h3 className="text-lg font-black text-gray-800 mb-1">목적 · 인원 · 바이브 선택</h3>
+              <p className="text-sm text-gray-400 mb-5">밥? 술? 카페? 1차·2차 코스도 한 번에.<br />오늘 분위기에 맞는 조건을 골라요</p>
               <div className="flex gap-3 justify-center">
                 <PhoneMockup src="/image/step3.png" alt="목적 선택" width="w-36" />
                 <PhoneMockup src="/image/step4.png" alt="바이브 선택" width="w-36" />
@@ -178,7 +183,7 @@ export default function Landing() {
             <div className="text-center w-full">
               <span className="inline-block bg-[#36CFA0] text-white text-xs font-bold px-3 py-1 rounded-full mb-3">STEP 3</span>
               <h3 className="text-lg font-black text-gray-800 mb-1">AI가 딱 하나 골라줍니다</h3>
-              <p className="text-sm text-gray-400 mb-5">실시간 혼잡도 + 1차→2차 코스까지<br />카카오톡으로 바로 공유!</p>
+              <p className="text-sm text-gray-400 mb-5">네이버 검증 실존 장소 · 실시간 혼잡도 · 날씨까지 반영.<br />1차→2차 코스, 카카오톡으로 바로 공유!</p>
               <PhoneMockup src="/image/step5.png" alt="AI 추천 결과" />
             </div>
           </div>
@@ -204,7 +209,7 @@ export default function Landing() {
                 <span className="font-black text-gray-400">기존 지도 앱</span>
               </div>
               <ul className="flex flex-col gap-2">
-                {['검색어를 알아야 검색 가능', '결과 수십 개 → 또 고민', '중간 지점? 내가 계산해야 함', '친구들한테 따로 공유해야 함'].map((t) => (
+                {['검색어를 알아야 검색 가능', '결과 수십 개 → 또 고민', '중간 지점? 내가 계산해야 함', '광고성 상위 노출 — 진짜 맛집인지 모름'].map((t) => (
                   <li key={t} className="flex items-start gap-2 text-sm text-gray-400">
                     <span className="text-gray-300 mt-0.5">✕</span>{t}
                   </li>
@@ -217,7 +222,7 @@ export default function Landing() {
                 <span className="font-black text-[#36CFA0]">MINT</span>
               </div>
               <ul className="flex flex-col gap-2">
-                {['검색어 없이 조건만 선택하면 끝', 'AI가 딱 1곳만 추천', '중간 지점 자동 계산', '카카오톡 한 번이면 공유 완료'].map((t) => (
+                {['검색어 없이 조건만 선택하면 끝', 'AI가 딱 1곳만 추천 — 로컬 맛집 우선', '전국 어디서든 중간 지점 자동 계산', '혼잡도 · 날씨 · 그룹 규모까지 고려', '카카오톡 한 번이면 공유 완료'].map((t) => (
                   <li key={t} className="flex items-start gap-2 text-sm text-gray-800">
                     <span className="text-[#36CFA0] font-bold mt-0.5">✓</span>{t}
                   </li>
