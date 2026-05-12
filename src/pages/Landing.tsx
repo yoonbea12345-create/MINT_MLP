@@ -272,9 +272,9 @@ export default function Landing() {
               카톡 공유
             </div>
           </div>
-          {/* 카카오톡 말풍선 */}
+          {/* 카카오톡 로고 */}
           <div className="flex justify-center mb-6">
-            <KakaoTalkBubble className="w-32 h-32" />
+            <img src="/image/kakao-logo.png" alt="카카오톡" className="w-44 h-44 object-contain" />
           </div>
           <p className="text-sm text-gray-400 text-center mt-2 leading-relaxed">
             더 이상 '어디로 갈까' 단톡방 폭격 없이,<br />
