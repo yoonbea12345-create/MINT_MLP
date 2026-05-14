@@ -163,15 +163,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // 네이버 데이터 있을 때 전용 규칙
     const naverSection = hasNaverData ? `
-## 네이버에서 확인된 실존 장소 목록 (반드시 이 목록에서만 선택)
+## 네이버 검색으로 확인된 실존 장소 목록
 ### 1차 목적 "${purpose.first}" 후보
 ${formatNaverPlaces(naverFirstPlaces)}
 ${hasTwoPurposes && naverSecondPlaces.length > 0 ? `
 ### 2차 목적 "${purpose.second}" 후보
 ${formatNaverPlaces(naverSecondPlaces)}` : ''}
 
-⚠️ 위 목록에 없는 장소는 절대 추천 금지. 목록 내 장소의 address·lat·lng는 위 데이터 그대로 사용.
-⚠️ 로컬 맛집·개인 운영 식당을 최우선으로 선택. 스타벅스·이디야·맥도날드 등 대형 프랜차이즈는 전체 추천 중 최대 1개만 허용.` : `
+⚠️ 반드시 위 목록의 번호(1~N)에서만 선택. 목록 외 장소 생성 절대 금지.
+⚠️ sourceIndex는 선택한 목록 번호를 정확히 기재. 같은 목록 내 중복 사용 금지.
+⚠️ placeName·address·lat·lng는 위 데이터 그대로 복사. 절대 임의 생성 금지.
+⚠️ 로컬 맛집·개인 운영 식당 최우선. 대형 프랜차이즈 전체 중 최대 1개.` : `
 ## 절대 규칙
 1. 실제 존재하고 영업 중인 장소만 추천
 2. 로컬 맛집·개인 운영 식당 우선, 대형 프랜차이즈는 전체 추천 중 최대 1개
@@ -201,20 +203,23 @@ ${weatherSection}
 
     const placeSchema = `{
   "rank": 1,
-  "placeName": "장소명",
+  "sourceIndex": 1,
+  "placeName": "장소명 (목록에서 그대로)",
   "category": "카테고리",
   "description": "한 줄 설명 20자 내외",
   "priceRange": "1인 예상 가격대",
   "vibeTags": ["태그1", "태그2", "태그3"],
-  "address": "주소",
+  "address": "주소 (목록에서 그대로)",
   "area": "지역명",
   "congestionLevel": "혼잡도",
-  "openingHours": "HH:MM ~ HH:MM",
   "lat": 0,
   "lng": 0
 }`;
 
     const placeSchemaWithWalking = placeSchema.replace('"lng": 0', '"lng": 0,\n  "walkingToNext": 10');
+
+    const rankSchema = (rank: number) =>
+      placeSchema.replace('"rank": 1', `"rank": ${rank}`).replace('"sourceIndex": 1', `"sourceIndex": <목록번호>`);
 
     const prompt = hasTwoPurposes
       ? `당신은 한국 모임 장소 큐레이터입니다. 1차·2차 코스 장소를 추천해주세요.
@@ -222,23 +227,33 @@ ${naverSection}
 ${commonInfo}
 
 ## 응답 구성 (총 6곳)
-- rank 1: 1차 "${purpose.first}" 최적. walkingToNext에 rank 2까지 도보 분 기재
-- rank 2: 2차 "${purpose.second}" 최적 (rank 1과 도보 15분 이내)
-- rank 3, 4: 1차 대안
-- rank 5, 6: 2차 대안 (rank 2 인근)
-rank 1·2는 같은 동네 또는 인접 지역.
+- rank 1: 1차 "${purpose.first}" 최적 (1차 목록에서 선택). walkingToNext에 rank 2까지 도보 분 기재
+- rank 2: 2차 "${purpose.second}" 최적 (2차 목록에서 선택, rank 1과 도보 15분 이내)
+- rank 3, 4: 1차 대안 (1차 목록에서 선택)
+- rank 5, 6: 2차 대안 (2차 목록에서 선택)
 
-## 응답 형식 (JSON만)
-{"places": [${placeSchemaWithWalking}, {"rank": 2}, {"rank": 3}, {"rank": 4}, {"rank": 5}, {"rank": 6}]}`
+## 응답 형식 (JSON만, 다른 텍스트 없이)
+{"places": [
+  ${placeSchemaWithWalking},
+  ${rankSchema(2)},
+  ${rankSchema(3)},
+  ${rankSchema(4)},
+  ${rankSchema(5)},
+  ${rankSchema(6)}
+]}`
       : `당신은 한국 모임 장소 큐레이터입니다. "${purpose.first}" 장소 3곳을 추천해주세요.
 ${naverSection}
 ${commonInfo}
 
-## 응답 구성 (서로 다른 3곳)
-- rank 1: 최적, rank 2·3: 대안
+## 응답 구성 (서로 다른 3곳, 모두 1차 목록에서 선택)
+- rank 1: 최적, rank 2·3: 대안 (서로 다른 sourceIndex 사용)
 
-## 응답 형식 (JSON만)
-{"places": [${placeSchema}, {"rank": 2}, {"rank": 3}]}`;
+## 응답 형식 (JSON만, 다른 텍스트 없이)
+{"places": [
+  ${placeSchema},
+  ${rankSchema(2)},
+  ${rankSchema(3)}
+]}`;
 
     const message = await client.messages.create({
       model: 'claude-opus-4-7',
@@ -256,6 +271,46 @@ ${commonInfo}
 
     const parsed = JSON.parse(jsonMatch[0]);
     const places = Array.isArray(parsed.places) ? parsed.places : [parsed];
+
+    // 네이버 실존 데이터로 강제 덮어쓰기 (할류시네이션 방지)
+    if (hasNaverData) {
+      const usedFirst = new Set<number>();
+      const usedSecond = new Set<number>();
+
+      for (const place of places) {
+        const isSecond = hasTwoPurposes && [2, 5, 6].includes(place.rank);
+        const naverList: NaverPlace[] = isSecond ? naverSecondPlaces : naverFirstPlaces;
+        const used = isSecond ? usedSecond : usedFirst;
+        if (!naverList.length) continue;
+
+        // AI가 선택한 sourceIndex (1-based → 0-based)
+        let idx = typeof place.sourceIndex === 'number' ? place.sourceIndex - 1 : -1;
+
+        // sourceIndex가 잘못됐거나 중복이면 이름 매칭으로 대체
+        if (idx < 0 || idx >= naverList.length || used.has(idx)) {
+          const nameIdx = naverList.findIndex(
+            (p) => p.name.includes(place.placeName ?? '') || (place.placeName ?? '').includes(p.name)
+          );
+          idx = nameIdx >= 0 && !used.has(nameIdx)
+            ? nameIdx
+            : naverList.findIndex((_, i) => !used.has(i));
+        }
+
+        if (idx >= 0 && idx < naverList.length) {
+          used.add(idx);
+          const naver = naverList[idx];
+          place.placeName = naver.name;
+          place.address = naver.address;
+          place.lat = naver.lat;
+          place.lng = naver.lng;
+          if (naver.category) place.category = naver.category;
+        }
+
+        // openingHours는 Naver에 없어서 항상 할류시네이션 → 제거
+        delete place.openingHours;
+        delete place.sourceIndex;
+      }
+    }
 
     // 1차·2차 도보 시간 haversine으로 보정 (rank 1 → rank 2)
     if (hasTwoPurposes) {
