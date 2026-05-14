@@ -43,35 +43,113 @@ function isFranchise(name: string): boolean {
   return FRANCHISE_KEYWORDS.some((kw) => name.includes(kw));
 }
 
-// 네이버 로컬 검색 — 실존 장소 목록 반환 (프랜차이즈 후순위)
-async function searchNaverLocal(query: string, display = 12): Promise<NaverPlace[]> {
-  const clientId = process.env.NAVER_CLIENT_ID;
-  const clientSecret = process.env.NAVER_CLIENT_SECRET;
-  if (!clientId || !clientSecret) return [];
+// 목적별 검색 키워드 (각 10개, 병렬 쿼리로 최대 50개 장소 확보)
+const PURPOSE_KEYWORDS: Record<string, string[]> = {
+  '밥':    ['맛집', '식당', '한식', '일식당', '고깃집', '파스타', '이탈리안', '삼겹살', '스시', '해산물'],
+  '술':    ['이자카야', '술집', '포차', '호프', '와인바', '칵테일바', '맥주집', '펍', '바', '소주방'],
+  '카페':  ['카페', '커피', '브런치', '디저트', '베이커리', '루프탑카페', '감성카페', '티카페', '핸드드립', '스페셜티'],
+  '기타':  ['맛집', '음식점', '식당', '카페', '바', '이자카야', '포차', '브런치', '고깃집', '커피'],
+};
+
+// 혼잡도 area명 → 네이버 검색에 효과적인 동네명으로 매핑
+const AREA_SEARCH_NAME: Record<string, string> = {
+  '강남 MICE 관광특구': '강남역',
+  '동대문 관광특구':    '동대문',
+  '이태원 관광특구':    '이태원',
+  '잠실 관광특구':      '잠실',
+  '신촌·이대역':        '신촌',
+  '한남·이태원':        '한남동',
+  '합정역':             '합정',
+  '성수역':             '성수동',
+  '건대입구역':         '건대',
+  '북촌한옥마을':       '북촌',
+  '고양 정발산역':      '일산',
+};
+
+function toSearchName(area: string): string {
+  return AREA_SEARCH_NAME[area] ?? area;
+}
+
+// 단일 Naver 쿼리 → raw items 반환 (display=5 is API max for local search)
+async function fetchNaverQuery(
+  query: string,
+  clientId: string,
+  clientSecret: string,
+): Promise<NaverPlace[]> {
   try {
-    const url = `https://openapi.naver.com/v1/search/local.json?query=${encodeURIComponent(query)}&display=${display}&sort=comment`;
+    const url = `https://openapi.naver.com/v1/search/local.json?query=${encodeURIComponent(query)}&display=5&start=1&sort=comment`;
     const res = await fetch(url, {
-      headers: {
-        'X-Naver-Client-Id': clientId,
-        'X-Naver-Client-Secret': clientSecret,
-      },
+      headers: { 'X-Naver-Client-Id': clientId, 'X-Naver-Client-Secret': clientSecret },
     });
     if (!res.ok) return [];
-    const data = await res.json() as { items?: { title: string; category: string; roadAddress: string; address: string; mapx: string; mapy: string }[] };
-    const all = (data.items || []).map((item) => ({
+    const data = await res.json() as {
+      items?: { title: string; category: string; roadAddress: string; address: string; mapx: string; mapy: string }[];
+    };
+    return (data.items ?? []).map((item) => ({
       name: item.title.replace(/<[^>]*>/g, ''),
       category: item.category,
       address: item.roadAddress || item.address,
       lat: parseInt(item.mapy) / 1e7,
       lng: parseInt(item.mapx) / 1e7,
     }));
-    // 로컬 맛집 앞, 프랜차이즈 뒤로 정렬 후 상위 8개 반환
-    const local = all.filter((p) => !isFranchise(p.name));
-    const franchise = all.filter((p) => isFranchise(p.name));
-    return [...local, ...franchise].slice(0, 8);
   } catch {
     return [];
   }
+}
+
+/**
+ * 목적별 다중 키워드로 네이버 검색 → 중복 제거 + 거리순 정렬 → 최대 50개 반환.
+ * - 1순위 지역: 전체 키워드(10개) × display=5 → 최대 50개 raw
+ * - 2순위 지역: 상위 5개 키워드 추가
+ * - 3순위 지역: 상위 3개 키워드 추가
+ * 프랜차이즈는 로컬 뒤에 정렬.
+ */
+async function searchNaverMulti(
+  purpose: string,
+  areas: string[],
+  groupSize: number,
+  midLat: number,
+  midLng: number,
+): Promise<NaverPlace[]> {
+  const clientId     = process.env.NAVER_CLIENT_ID;
+  const clientSecret = process.env.NAVER_CLIENT_SECRET;
+  if (!clientId || !clientSecret) return [];
+
+  const isLargeGroup = groupSize >= 5;
+  const groupPrefix  = isLargeGroup ? '단체 ' : '';
+  const keywords     = PURPOSE_KEYWORDS[purpose] ?? PURPOSE_KEYWORDS['기타'];
+  const searchAreas  = areas.map(toSearchName).filter(Boolean);
+
+  // 쿼리 빌드: 1순위×10, 2순위×5, 3순위×3
+  const queries: string[] = [];
+  if (searchAreas[0]) keywords.forEach((kw) => queries.push(`${searchAreas[0]} ${groupPrefix}${kw}`));
+  if (searchAreas[1]) keywords.slice(0, 5).forEach((kw) => queries.push(`${searchAreas[1]} ${groupPrefix}${kw}`));
+  if (searchAreas[2]) keywords.slice(0, 3).forEach((kw) => queries.push(`${searchAreas[2]} ${groupPrefix}${kw}`));
+
+  const batches = await Promise.all(queries.map((q) => fetchNaverQuery(q, clientId, clientSecret)));
+
+  // 중복 제거 (이름+주소 기준)
+  const seen = new Set<string>();
+  const all: (NaverPlace & { dist: number })[] = [];
+  for (const batch of batches) {
+    for (const p of batch) {
+      const key = `${p.name}|${p.address}`;
+      if (seen.has(key) || !p.lat || !p.lng) continue;
+      seen.add(key);
+      const dist = Math.hypot(p.lat - midLat, p.lng - midLng);
+      all.push({ ...p, dist });
+    }
+  }
+
+  // 거리 가까운 순으로 정렬, 로컬 앞 / 프랜차이즈 뒤
+  all.sort((a, b) => {
+    const af = isFranchise(a.name) ? 1 : 0;
+    const bf = isFranchise(b.name) ? 1 : 0;
+    if (af !== bf) return af - bf;
+    return a.dist - b.dist;
+  });
+
+  return all.slice(0, 50);
 }
 
 // OpenWeatherMap 날씨 조회
@@ -99,18 +177,6 @@ async function fetchWeather(lat: number, lng: number): Promise<WeatherInfo | nul
   } catch {
     return null;
   }
-}
-
-function purposeToNaverQuery(purpose: string, areaName: string, groupSize: number): string {
-  const isLargeGroup = groupSize >= 5;
-  const groupPrefix = isLargeGroup ? '단체 ' : '';
-  const map: Record<string, string> = {
-    '밥': `${areaName} ${groupPrefix}맛집`,
-    '술': `${areaName} ${groupPrefix}${isLargeGroup ? '단체 술집 포차' : '술집 이자카야 포차'}`,
-    '카페': `${areaName} ${groupPrefix}카페`,
-    '기타': `${areaName} ${groupPrefix}음식점`,
-  };
-  return map[purpose] ?? `${areaName} ${groupPrefix}${purpose}`;
 }
 
 function formatNaverPlaces(places: NaverPlace[]): string {
@@ -151,11 +217,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const midLat: number = midpoint?.lat ?? 37.5665;
     const midLng: number = midpoint?.lng ?? 126.9780;
 
+    // 검색 지역 목록 (primaryArea + nearestAreas, 최대 3개)
+    const searchAreas = [
+      primaryArea,
+      ...((congestionData as { areaName: string }[]).map((c) => c.areaName).filter((a) => a !== primaryArea)),
+    ].slice(0, 3);
+
     const [weather, naverFirstPlaces, naverSecondPlaces] = await Promise.all([
       fetchWeather(midLat, midLng),
-      searchNaverLocal(purposeToNaverQuery(purpose.first, primaryArea, groupSize)),
+      searchNaverMulti(purpose.first, searchAreas, groupSize, midLat, midLng),
       hasTwoPurposes && purpose.second
-        ? searchNaverLocal(purposeToNaverQuery(purpose.second, primaryArea, groupSize))
+        ? searchNaverMulti(purpose.second, searchAreas, groupSize, midLat, midLng)
         : Promise.resolve([]),
     ]);
 
@@ -163,7 +235,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // 네이버 데이터 있을 때 전용 규칙
     const naverSection = hasNaverData ? `
-## 네이버 검색으로 확인된 실존 장소 목록
+## 네이버 검색으로 확인된 실존 장소 목록 (총 ${naverFirstPlaces.length}개 중 최적 선택)
 ### 1차 목적 "${purpose.first}" 후보
 ${formatNaverPlaces(naverFirstPlaces)}
 ${hasTwoPurposes && naverSecondPlaces.length > 0 ? `
