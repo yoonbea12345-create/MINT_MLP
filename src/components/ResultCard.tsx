@@ -53,6 +53,9 @@ function congestionInfo(level: string): { dot: string; label: string } {
 }
 
 function kakaoUrl(place: PlaceRecommendation) {
+  if (place.kakaoPlaceUrl) return place.kakaoPlaceUrl;
+  if (place.lat && place.lng && place.lat !== 0 && place.lng !== 0)
+    return `https://map.kakao.com/link/map/${encodeURIComponent(place.placeName)},${place.lat},${place.lng}`;
   return `https://map.kakao.com/link/search/${encodeURIComponent(place.placeName)}`;
 }
 

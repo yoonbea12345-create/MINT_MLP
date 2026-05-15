@@ -20,6 +20,7 @@ export interface PlaceRecommendation {
   congestionLevel: string;
   openingHours?: string;
   kakaoPlaceId?: string;
+  kakaoPlaceUrl?: string;
   lat?: number;
   lng?: number;
   nearbySpots?: string[];

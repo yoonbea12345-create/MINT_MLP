@@ -186,6 +186,23 @@ async function fetchWeather(lat: number, lng: number): Promise<WeatherInfo | nul
   }
 }
 
+async function searchKakaoPlaceUrl(
+  name: string,
+  lat: number,
+  lng: number,
+  restApiKey: string,
+): Promise<string | null> {
+  try {
+    const url = `https://dapi.kakao.com/v2/local/search/keyword.json?query=${encodeURIComponent(name)}&x=${lng}&y=${lat}&radius=300&size=1`;
+    const res = await fetch(url, { headers: { Authorization: `KakaoAK ${restApiKey}` } });
+    if (!res.ok) return null;
+    const data = await res.json() as { documents?: { place_url: string }[] };
+    return data.documents?.[0]?.place_url ?? null;
+  } catch {
+    return null;
+  }
+}
+
 function formatNaverPlaces(places: NaverPlace[]): string {
   return places.map((p, i) =>
     `${i + 1}. ${p.name} | ${p.category} | ${p.address} | lat:${p.lat.toFixed(4)}, lng:${p.lng.toFixed(4)}`
@@ -403,6 +420,19 @@ ${commonInfo}
         delete place.openingHours;
         delete place.sourceIndex;
       }
+    }
+
+    // Kakao 장소 URL 병렬 보강 (place_url 있으면 정식 카카오 페이지 연결)
+    const kakaoRestKey = process.env.VITE_KAKAO_REST_API_KEY;
+    if (kakaoRestKey) {
+      await Promise.all(
+        places.map(async (place: { placeName: string; lat: number; lng: number; kakaoPlaceUrl?: string }) => {
+          if (place.lat && place.lng && place.lat !== 0 && place.lng !== 0) {
+            const placeUrl = await searchKakaoPlaceUrl(place.placeName, place.lat, place.lng, kakaoRestKey);
+            if (placeUrl) place.kakaoPlaceUrl = placeUrl;
+          }
+        })
+      );
     }
 
     // 1차·2차 도보 시간 haversine으로 보정 (rank 1 → rank 2)
