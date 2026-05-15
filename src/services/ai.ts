@@ -58,7 +58,10 @@ export async function getAIRecommendation(
   }
   const data = await res.json();
   if (data.error) throw new Error(data.error);
-  return Array.isArray(data) ? data as PlaceRecommendation[] : [data as PlaceRecommendation];
+  // API returns { places, _debug } or legacy plain array
+  const places = Array.isArray(data) ? data : (data.places ?? [data]);
+  if (data._debug) console.log('[recommend] debug', data._debug);
+  return places as PlaceRecommendation[];
 }
 
 export async function getCourseRecommendation(

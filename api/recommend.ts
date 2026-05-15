@@ -81,18 +81,25 @@ async function fetchNaverQuery(
     const res = await fetch(url, {
       headers: { 'X-Naver-Client-Id': clientId, 'X-Naver-Client-Secret': clientSecret },
     });
-    if (!res.ok) return [];
+    if (!res.ok) {
+      const errText = await res.text().catch(() => '');
+      console.error(`[Naver API] FAIL query="${query}" status=${res.status} body=${errText.slice(0, 200)}`);
+      return [];
+    }
     const data = await res.json() as {
       items?: { title: string; category: string; roadAddress: string; address: string; mapx: string; mapy: string }[];
     };
-    return (data.items ?? []).map((item) => ({
+    const items = data.items ?? [];
+    console.log(`[Naver API] OK query="${query}" count=${items.length}`);
+    return items.map((item) => ({
       name: item.title.replace(/<[^>]*>/g, ''),
       category: item.category,
       address: item.roadAddress || item.address,
       lat: parseInt(item.mapy) / 1e7,
       lng: parseInt(item.mapx) / 1e7,
     }));
-  } catch {
+  } catch (e) {
+    console.error(`[Naver API] ERROR query="${query}"`, e);
     return [];
   }
 }
@@ -232,6 +239,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     ]);
 
     const hasNaverData = naverFirstPlaces.length > 0;
+    console.log(`[recommend] naverFirst=${naverFirstPlaces.length} naverSecond=${naverSecondPlaces.length} hasNaverData=${hasNaverData}`);
 
     // 네이버 데이터 있을 때 전용 규칙
     const naverSection = hasNaverData ? `
@@ -394,7 +402,7 @@ ${commonInfo}
       }
     }
 
-    return res.status(200).json(places);
+    return res.status(200).json({ places, _debug: { naverPlacesCount: naverFirstPlaces.length } });
   } catch (e) {
     return res.status(500).json({ error: (e as Error).message });
   }
