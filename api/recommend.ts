@@ -335,11 +335,24 @@ ${commonInfo}
   ${rankSchema(3)}
 ]}`;
 
-    const message = await client.messages.create({
-      model: 'claude-opus-4-7',
-      max_tokens: 4096,
-      messages: [{ role: 'user', content: prompt }],
-    });
+    let message;
+    try {
+      message = await client.messages.create({
+        model: 'claude-opus-4-7',
+        max_tokens: 4096,
+        messages: [{ role: 'user', content: prompt }],
+      });
+    } catch (e) {
+      if (e instanceof Anthropic.APIError && e.status === 529) {
+        message = await client.messages.create({
+          model: 'claude-sonnet-4-6',
+          max_tokens: 4096,
+          messages: [{ role: 'user', content: prompt }],
+        });
+      } else {
+        throw e;
+      }
+    }
 
     const text = message.content
       .filter((b): b is { type: 'text'; text: string } => b.type === 'text')
