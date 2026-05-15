@@ -59,7 +59,10 @@ export default function Home() {
     areaName: string;
     nearestAreas: string[];
   } | null>(null);
-  const [resultTravelTimes, setResultTravelTimes] = useState<TravelResult[] | null>(null);
+  const [resultTravelTimes, setResultTravelTimes] = useState<{
+    first: { transit: TravelResult[]; driving: TravelResult[] };
+    second: { transit: TravelResult[]; driving: TravelResult[] } | null;
+  } | null>(null);
   const [treasurer, setTreasurer] = useState<string | null>(null);
   const [compromiseMessage, setCompromiseMessage] = useState<string | null>(null);
   const [showCompromiseToast, setShowCompromiseToast] = useState(false);
@@ -209,19 +212,27 @@ export default function Home() {
       setView('result');
 
       if (validLocs.length >= 2) {
+        const firstPlace = recommendation[0];
+        const secondPlace = recommendation[1];
+        const firstDest = firstPlace?.lat && firstPlace.lat !== 0
+          ? { lat: firstPlace.lat, lng: firstPlace.lng! }
+          : midpoint;
+        const secondDest = secondPlace?.lat && secondPlace.lat !== 0
+          ? { lat: secondPlace.lat, lng: secondPlace.lng! }
+          : undefined;
         fetch('/api/travel-time', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             origins: validLocs.map((l) => ({ lat: l.lat!, lng: l.lng!, label: l.name })),
-            destination: midpoint,
+            destinations: { first: firstDest, ...(secondDest ? { second: secondDest } : {}) },
           }),
         })
           .then((r) => r.json())
-          .then((data: TravelResult[]) => setResultTravelTimes(data))
-          .catch(() => setResultTravelTimes([]));
+          .then((data) => setResultTravelTimes(data))
+          .catch(() => setResultTravelTimes(null));
       } else {
-        setResultTravelTimes([]);
+        setResultTravelTimes(null);
       }
     } catch (e) {
       if (aiProgressInterval) clearInterval(aiProgressInterval);

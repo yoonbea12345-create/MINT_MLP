@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import type { PlaceRecommendation } from '../services/ai';
 import { congestionDotClass } from '../services/seoulData';
 import type { CongestionLevel } from '../services/seoulData';
@@ -10,9 +10,14 @@ interface TravelResult {
   error?: boolean;
 }
 
+interface TravelTimeData {
+  first: { transit: TravelResult[]; driving: TravelResult[] };
+  second: { transit: TravelResult[]; driving: TravelResult[] } | null;
+}
+
 interface Props {
   results: PlaceRecommendation[];
-  travelTimes: TravelResult[] | null;
+  travelTimes: TravelTimeData | null;
   midpointAreaName?: string;
   purpose?: { first: string; second: string | null };
   treasurer: string | null;
@@ -188,12 +193,32 @@ export default function ResultCard({
 }: Props) {
   const [secondMoreVisible, setSecondMoreVisible] = useState(false);
   const [showTreasurerPopup, setShowTreasurerPopup] = useState(false);
+  const [destTarget, setDestTarget] = useState<'first' | 'second'>('first');
+  const [transportMode, setTransportMode] = useState<'transit' | 'driving'>('transit');
 
   const hasSecond = !!(purpose?.second && purpose.second !== '없음');
   const result = results[0];
   const secondResult = hasSecond ? results[1] : null;
   const extraFirstResults = hasSecond ? results.slice(2, 4) : results.slice(1);
   const extraSecondResults = hasSecond ? results.slice(4) : [];
+
+  const toggleDest = useCallback(() => {
+    if (hasSecond && travelTimes?.second) setDestTarget((d) => d === 'first' ? 'second' : 'first');
+  }, [hasSecond, travelTimes]);
+
+  const toggleTransport = useCallback(() => {
+    setTransportMode((m) => m === 'transit' ? 'driving' : 'transit');
+  }, []);
+
+  const activeTimes = travelTimes
+    ? (destTarget === 'first' ? travelTimes.first : travelTimes.second)?.[transportMode] ?? []
+    : null;
+
+  const destLabel = destTarget === 'first'
+    ? `1차 ${result.placeName}`
+    : `2차 ${secondResult?.placeName ?? ''}`;
+
+  const canToggleDest = hasSecond && !!(travelTimes?.second);
 
   return (
     <div className="flex flex-col gap-2 animate-fade-in-up">
@@ -202,21 +227,34 @@ export default function ResultCard({
       {midpointAreaName && (
         <div className="bg-white rounded-2xl border border-gray-100 p-3 shadow-sm">
           <div className="flex items-center justify-between mb-1.5">
-            <span className="text-xs font-black text-gray-700 flex items-center gap-1">
-              <GpsPin className="text-[#3CDBC0]" /> {midpointAreaName} 기준
-            </span>
-            <span className="text-xs text-gray-400">대중교통 예상</span>
+            {/* 왼쪽: 목적지 토글 */}
+            <button
+              onClick={toggleDest}
+              className={`flex items-center gap-1 text-xs font-black px-2 py-0.5 rounded-full transition-colors ${canToggleDest ? 'text-[#2AB5A0] bg-[#E8F8F5] active:bg-[#3CDBC0]/20' : 'text-gray-700'}`}
+            >
+              <GpsPin className="text-[#3CDBC0]" />
+              <span className="truncate max-w-[140px]">{destLabel}까지</span>
+              {canToggleDest && <span className="text-[#3CDBC0] text-[10px]">⇅</span>}
+            </button>
+            {/* 오른쪽: 교통수단 토글 */}
+            <button
+              onClick={toggleTransport}
+              className="flex items-center gap-0.5 text-xs text-gray-400 active:text-gray-600 transition-colors"
+            >
+              <span>{transportMode === 'transit' ? '대중교통 예상' : '자차 이동'}</span>
+              <span className="text-[10px]">▽</span>
+            </button>
           </div>
-          {travelTimes === null ? (
+          {activeTimes === null ? (
             <div className="flex items-center gap-2 text-sm text-gray-400">
               <div className="w-3.5 h-3.5 border-2 border-[#3CDBC0] border-t-transparent rounded-full animate-spin-slow" />
               계산 중...
             </div>
-          ) : travelTimes.length === 0 ? (
+          ) : activeTimes.length === 0 ? (
             <p className="text-xs text-gray-400">소요시간을 가져올 수 없어요</p>
           ) : (
             <div className="flex flex-wrap gap-x-3 gap-y-1">
-              {travelTimes.map((t, i) => (
+              {activeTimes.map((t, i) => (
                 <div key={i} className="flex items-center gap-1 text-xs">
                   <span className="text-gray-500 truncate max-w-[80px]">{t.label}</span>
                   <span className="text-gray-400">→ 약</span>
