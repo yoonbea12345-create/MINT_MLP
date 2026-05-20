@@ -6,8 +6,8 @@ export interface KakaoPlace {
   road_address_name: string;
   phone: string;
   place_url: string;
-  x: string; // lng
-  y: string; // lat
+  x: string;
+  y: string;
 }
 
 declare global {
@@ -24,28 +24,34 @@ export function searchKakaoKeyword(
   if (cache.has(cacheKey)) return Promise.resolve(cache.get(cacheKey)!);
 
   return new Promise((resolve, reject) => {
-    const ps = new window.kakao.maps.services.Places();
-    const opts: Record<string, unknown> = { size: 5 };
-    if (options?.x) opts.x = Number(options.x);
-    if (options?.y) opts.y = Number(options.y);
-    if (options?.radius) opts.radius = options.radius;
-
-    ps.keywordSearch(
-      keyword,
-      (results: KakaoPlace[], status: string) => {
-        const { OK, ZERO_RESULT } = window.kakao.maps.services.Status;
-        if (status === OK) {
-          cache.set(cacheKey, results);
-          resolve(results);
-        } else if (status === ZERO_RESULT) {
-          cache.set(cacheKey, []);
-          resolve([]);
-        } else {
-          reject(new Error('카카오 장소 검색 실패'));
-        }
-      },
-      opts
-    );
+    const trySearch = () => {
+      if (!window.kakao || !window.kakao.maps || !window.kakao.maps.services) {
+        setTimeout(trySearch, 300);
+        return;
+      }
+      const ps = new window.kakao.maps.services.Places();
+      const opts: Record<string, unknown> = { size: 5 };
+      if (options?.x) opts.x = Number(options.x);
+      if (options?.y) opts.y = Number(options.y);
+      if (options?.radius) opts.radius = options.radius;
+      ps.keywordSearch(
+        keyword,
+        (results: KakaoPlace[], status: string) => {
+          const { OK, ZERO_RESULT } = window.kakao.maps.services.Status;
+          if (status === OK) {
+            cache.set(cacheKey, results);
+            resolve(results);
+          } else if (status === ZERO_RESULT) {
+            cache.set(cacheKey, []);
+            resolve([]);
+          } else {
+            reject(new Error('카카오 장소 검색 실패'));
+          }
+        },
+        opts
+      );
+    };
+    trySearch();
   });
 }
 

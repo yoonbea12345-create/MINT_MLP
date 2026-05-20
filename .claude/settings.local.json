@@ -6,7 +6,30 @@
       "Bash(git add *)",
       "Bash(git commit *)",
       "Bash(npx tsc *)",
-      "Bash(npm run *)"
+      "Bash(npm run *)",
+      "Bash(node *)",
+      "Bash(git pull *)",
+      "Bash(git stash *)",
+      "Bash(dir C:\\\\Users\\\\HKEDU\\\\Desktop\\\\피드백* *)",
+      "Bash(git -C \"C:\\\\Users\\\\HKEDU\\\\mint\" status)",
+      "Bash(git -C \"C:\\\\Users\\\\HKEDU\\\\mint\" diff)",
+      "Bash(git -C \"C:\\\\Users\\\\HKEDU\\\\mint\" add src/components/PurposeSelect.tsx)",
+      "Bash(git -C 'C:\\\\Users\\\\HKEDU\\\\mint' commit -m ' *)",
+      "Bash(git -C \"C:\\\\Users\\\\HKEDU\\\\mint\" push origin main)",
+      "Bash(git -C \"C:\\\\Users\\\\HKEDU\\\\mint\" add src/components/VibeSelect.tsx)",
+      "Bash(git -C \"C:\\\\Users\\\\HKEDU\\\\mint\" add src/components/ResultCard.tsx)",
+      "Bash(git -C \"C:\\\\Users\\\\HKEDU\\\\mint\" add src/pages/Home.tsx)",
+      "Bash(git -C \"C:\\\\Users\\\\HKEDU\\\\mint\" add src/services/midpoint.ts)",
+      "Bash(git -C \"C:\\\\Users\\\\HKEDU\\\\mint\" add api/recommend.ts)",
+      "Bash(git -C \"C:\\\\Users\\\\HKEDU\\\\mint\" add src/services/midpoint.ts src/pages/Home.tsx)",
+      "Bash(cp \"C:/Users/HKEDU/Downloads/mint-mlp-4vm9.vercel.app_app\\(Samsung Galaxy S8+\\) \\(6\\).png\" \"C:/Users/HKEDU/mint/public/image/step1.png\")",
+      "Bash(cp \"C:/Users/HKEDU/Downloads/mint-mlp-4vm9.vercel.app_app\\(Samsung Galaxy S8+\\) \\(7\\).png\" \"C:/Users/HKEDU/mint/public/image/step3.png\")",
+      "Bash(cp \"C:/Users/HKEDU/Downloads/mint-mlp-4vm9.vercel.app_app\\(Samsung Galaxy S8+\\) \\(8\\).png\" \"C:/Users/HKEDU/mint/public/image/step4.png\")",
+      "Bash(cp \"C:/Users/HKEDU/Downloads/mint-mlp-4vm9.vercel.app_app\\(Samsung Galaxy S8+\\) \\(9\\).png\" \"C:/Users/HKEDU/mint/public/image/step5.png\")",
+      "PowerShell(Get-ChildItem \"C:\\\\Users\\\\HKEDU\\\\Desktop\\\\\" | ForEach-Object { $_.Name })",
+      "PowerShell(Get-ChildItem \"C:\\\\Users\\\\HKEDU\\\\Desktop\\\\카카오톡 받은 파일\\\\\" | ForEach-Object { $_.Name })",
+      "PowerShell(Copy-Item *)",
+      "Bash(npx repomix *)"
     ]
   }
 }
