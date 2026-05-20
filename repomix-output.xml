@@ -1,0 +1,4839 @@
+This file is a merged representation of the entire codebase, combined into a single document by Repomix.
+
+<file_summary>
+This section contains a summary of this file.
+
+<purpose>
+This file contains a packed representation of the entire repository's contents.
+It is designed to be easily consumable by AI systems for analysis, code review,
+or other automated processes.
+</purpose>
+
+<file_format>
+The content is organized as follows:
+1. This summary section
+2. Repository information
+3. Directory structure
+4. Repository files (if enabled)
+5. Multiple file entries, each consisting of:
+  - File path as an attribute
+  - Full contents of the file
+</file_format>
+
+<usage_guidelines>
+- This file should be treated as read-only. Any changes should be made to the
+  original repository files, not this packed version.
+- When processing this file, use the file path to distinguish
+  between different files in the repository.
+- Be aware that this file may contain sensitive information. Handle it with
+  the same level of security as you would the original repository.
+</usage_guidelines>
+
+<notes>
+- Some files may have been excluded based on .gitignore rules and Repomix's configuration
+- Binary files are not included in this packed representation. Please refer to the Repository Structure section for a complete list of file paths, including binary files
+- Files matching patterns in .gitignore are excluded
+- Files matching default ignore patterns are excluded
+- Files are sorted by Git change count (files with more changes are at the bottom)
+</notes>
+
+</file_summary>
+
+<directory_structure>
+.claude/settings.local.json
+.gitignore
+api/course.ts
+api/recommend.ts
+api/travel-time.ts
+eslint.config.js
+index.html
+package.json
+public/favicon.png
+public/favicon.svg
+public/icons.svg
+public/image/kakao-logo.png
+public/image/step1.png
+public/image/step2.png
+public/image/step3.png
+public/image/step4.png
+public/image/step5.png
+README.md
+src/App.css
+src/App.tsx
+src/assets/hero.png
+src/assets/react.svg
+src/assets/vite.svg
+src/components/GroupSizeSelect.tsx
+src/components/LocationInput.tsx
+src/components/MeetingLocationSelect.tsx
+src/components/MidpointConfirm.tsx
+src/components/MiniMap.tsx
+src/components/PurposeSelect.tsx
+src/components/RegionSelect.tsx
+src/components/ResultCard.tsx
+src/components/StepProgress.tsx
+src/components/VibeSelect.tsx
+src/index.css
+src/main.tsx
+src/pages/Admin.tsx
+src/pages/Home.tsx
+src/pages/Landing.tsx
+src/pages/Reserve.tsx
+src/pages/SharedResult.tsx
+src/services/ai.ts
+src/services/kakaoMap.ts
+src/services/midpoint.ts
+src/services/seoulData.ts
+src/utils/analytics.ts
+src/utils/supabase.ts
+tsconfig.app.json
+tsconfig.json
+tsconfig.node.json
+vercel.json
+vite.config.ts
+</directory_structure>
+
+<files>
+This section contains the contents of the repository's files.
+
+<file path=".claude/settings.local.json">
+{
+  "permissions": {
+    "allow": [
+      "Bash(git push *)",
+      "Bash(npm install *)",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(npx tsc *)",
+      "Bash(npm run *)",
+      "Bash(node *)",
+      "Bash(git pull *)",
+      "Bash(git stash *)",
+      "Bash(dir C:\\\\Users\\\\HKEDU\\\\Desktop\\\\피드백* *)",
+      "Bash(git -C \"C:\\\\Users\\\\HKEDU\\\\mint\" status)",
+      "Bash(git -C \"C:\\\\Users\\\\HKEDU\\\\mint\" diff)",
+      "Bash(git -C \"C:\\\\Users\\\\HKEDU\\\\mint\" add src/components/PurposeSelect.tsx)",
+      "Bash(git -C 'C:\\\\Users\\\\HKEDU\\\\mint' commit -m ' *)",
+      "Bash(git -C \"C:\\\\Users\\\\HKEDU\\\\mint\" push origin main)",
+      "Bash(git -C \"C:\\\\Users\\\\HKEDU\\\\mint\" add src/components/VibeSelect.tsx)",
+      "Bash(git -C \"C:\\\\Users\\\\HKEDU\\\\mint\" add src/components/ResultCard.tsx)",
+      "Bash(git -C \"C:\\\\Users\\\\HKEDU\\\\mint\" add src/pages/Home.tsx)",
+      "Bash(git -C \"C:\\\\Users\\\\HKEDU\\\\mint\" add src/services/midpoint.ts)",
+      "Bash(git -C \"C:\\\\Users\\\\HKEDU\\\\mint\" add api/recommend.ts)",
+      "Bash(git -C \"C:\\\\Users\\\\HKEDU\\\\mint\" add src/services/midpoint.ts src/pages/Home.tsx)",
+      "Bash(cp \"C:/Users/HKEDU/Downloads/mint-mlp-4vm9.vercel.app_app\\(Samsung Galaxy S8+\\) \\(6\\).png\" \"C:/Users/HKEDU/mint/public/image/step1.png\")",
+      "Bash(cp \"C:/Users/HKEDU/Downloads/mint-mlp-4vm9.vercel.app_app\\(Samsung Galaxy S8+\\) \\(7\\).png\" \"C:/Users/HKEDU/mint/public/image/step3.png\")",
+      "Bash(cp \"C:/Users/HKEDU/Downloads/mint-mlp-4vm9.vercel.app_app\\(Samsung Galaxy S8+\\) \\(8\\).png\" \"C:/Users/HKEDU/mint/public/image/step4.png\")",
+      "Bash(cp \"C:/Users/HKEDU/Downloads/mint-mlp-4vm9.vercel.app_app\\(Samsung Galaxy S8+\\) \\(9\\).png\" \"C:/Users/HKEDU/mint/public/image/step5.png\")",
+      "PowerShell(Get-ChildItem \"C:\\\\Users\\\\HKEDU\\\\Desktop\\\\\" | ForEach-Object { $_.Name })",
+      "PowerShell(Get-ChildItem \"C:\\\\Users\\\\HKEDU\\\\Desktop\\\\카카오톡 받은 파일\\\\\" | ForEach-Object { $_.Name })",
+      "PowerShell(Copy-Item *)",
+      "Bash(npx repomix *)"
+    ]
+  }
+}
+</file>
+
+<file path=".gitignore">
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+node_modules
+dist
+dist-ssr
+*.local
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+</file>
+
+<file path="api/course.ts">
+import Anthropic from '@anthropic-ai/sdk';
+import type { VercelRequest, VercelResponse } from '@vercel/node';
+
+const purposeFlowGuide: Record<string, string> = {
+  '밥+술': '1차는 밥집, 2차는 분위기 좋은 술집으로 연결',
+  '밥': '1차는 밥집, 2차는 근처 디저트 카페 또는 야경 명소',
+  '술': '1차는 술집, 2차는 다른 분위기의 바 또는 칵테일 바',
+  '카페': '1차는 카페, 2차는 분위기 다른 카페 또는 디저트 가게',
+};
+
+export default async function handler(req: VercelRequest, res: VercelResponse) {
+  if (req.method !== 'POST') return res.status(405).end();
+
+  try {
+    const { input, firstPlace } = req.body;
+
+    const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+
+    const courseSchema = `{
+  "places": [
+    {
+      "placeName": "${firstPlace.placeName}",
+      "category": "${firstPlace.category}",
+      "description": "1차 장소 한줄 설명 (20자 내외)",
+      "vibeTags": ["바이브 태그 3개"],
+      "address": "${firstPlace.address || firstPlace.area}",
+      "walkingMinutes": 0,
+      "lat": ${firstPlace.lat ?? 'null'},
+      "lng": ${firstPlace.lng ?? 'null'}
+    },
+    {
+      "placeName": "2차 실제 장소명",
+      "category": "카테고리",
+      "description": "한줄 설명 (20자 내외)",
+      "vibeTags": ["바이브 태그 3개"],
+      "address": "도로명 주소",
+      "walkingMinutes": 0,
+      "lat": 37.5,
+      "lng": 127.0
+    }
+  ],
+  "totalMinutes": 150
+}`;
+
+    const prompt = `당신은 서울 코스 큐레이터입니다. 1차 장소를 기준으로 최적의 2차 코스를 추천해주세요.
+
+## 1차 장소 정보
+- 장소명: ${firstPlace.placeName}
+- 카테고리: ${firstPlace.category}
+- 주소: ${firstPlace.address || firstPlace.area}
+${firstPlace.lat ? `- 좌표: 위도 ${firstPlace.lat}, 경도 ${firstPlace.lng}` : ''}
+
+## 모임 정보
+- 출발지: ${input.locations.map((l: { name: string }) => l.name).join(', ')}
+- 인원: ${input.groupSize}
+- 목적: ${input.purpose}
+- 바이브: ${input.vibe.noise}, ${input.vibe.pace}, ${input.vibe.novelty}
+
+## 코스 구성 가이드
+- ${purposeFlowGuide[input.purpose] ?? '자유로운 코스로 구성'}
+- 2차 장소는 1차에서 도보 10분 이내 위치
+- 실제 서울에 존재하는 장소만 추천
+- 바이브 연속성을 유지하되 적절한 분위기 변화를 줄 것
+- totalMinutes: 1차 체류(60~90분) + 이동 + 2차 체류(60~90분) 합산
+
+## 응답 형식 (JSON만 반환, 다른 텍스트 없이)
+${courseSchema}`;
+
+    const message = await client.messages.create({
+      model: 'claude-opus-4-7',
+      max_tokens: 1024,
+      messages: [{ role: 'user', content: prompt }],
+    });
+
+    const text = message.content[0].type === 'text' ? message.content[0].text : '';
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) return res.status(500).json({ error: '코스 추천 응답 파싱 실패' });
+
+    return res.status(200).json(JSON.parse(jsonMatch[0]));
+  } catch (e) {
+    return res.status(500).json({ error: (e as Error).message });
+  }
+}
+</file>
+
+<file path="eslint.config.js">
+import js from '@eslint/js'
+import globals from 'globals'
+import reactHooks from 'eslint-plugin-react-hooks'
+import reactRefresh from 'eslint-plugin-react-refresh'
+import tseslint from 'typescript-eslint'
+import { defineConfig, globalIgnores } from 'eslint/config'
+
+export default defineConfig([
+  globalIgnores(['dist']),
+  {
+    files: ['**/*.{ts,tsx}'],
+    extends: [
+      js.configs.recommended,
+      tseslint.configs.recommended,
+      reactHooks.configs.flat.recommended,
+      reactRefresh.configs.vite,
+    ],
+    languageOptions: {
+      globals: globals.browser,
+    },
+  },
+])
+</file>
+
+<file path="public/icons.svg">
+<svg xmlns="http://www.w3.org/2000/svg">
+  <symbol id="bluesky-icon" viewBox="0 0 16 17">
+    <g clip-path="url(#bluesky-clip)"><path fill="#08060d" d="M7.75 7.735c-.693-1.348-2.58-3.86-4.334-5.097-1.68-1.187-2.32-.981-2.74-.79C.188 2.065.1 2.812.1 3.251s.241 3.602.398 4.13c.52 1.744 2.367 2.333 4.07 2.145-2.495.37-4.71 1.278-1.805 4.512 3.196 3.309 4.38-.71 4.987-2.746.608 2.036 1.307 5.91 4.93 2.746 2.72-2.746.747-4.143-1.747-4.512 1.702.189 3.55-.4 4.07-2.145.156-.528.397-3.691.397-4.13s-.088-1.186-.575-1.406c-.42-.19-1.06-.395-2.741.79-1.755 1.24-3.64 3.752-4.334 5.099"/></g>
+    <defs><clipPath id="bluesky-clip"><path fill="#fff" d="M.1.85h15.3v15.3H.1z"/></clipPath></defs>
+  </symbol>
+  <symbol id="discord-icon" viewBox="0 0 20 19">
+    <path fill="#08060d" d="M16.224 3.768a14.5 14.5 0 0 0-3.67-1.153c-.158.286-.343.67-.47.976a13.5 13.5 0 0 0-4.067 0c-.128-.306-.317-.69-.476-.976A14.4 14.4 0 0 0 3.868 3.77C1.546 7.28.916 10.703 1.231 14.077a14.7 14.7 0 0 0 4.5 2.306q.545-.748.965-1.587a9.5 9.5 0 0 1-1.518-.74q.191-.14.372-.293c2.927 1.369 6.107 1.369 8.999 0q.183.152.372.294-.723.437-1.52.74.418.838.963 1.588a14.6 14.6 0 0 0 4.504-2.308c.37-3.911-.63-7.302-2.644-10.309m-9.13 8.234c-.878 0-1.599-.82-1.599-1.82 0-.998.705-1.82 1.6-1.82.894 0 1.614.82 1.599 1.82.001 1-.705 1.82-1.6 1.82m5.91 0c-.878 0-1.599-.82-1.599-1.82 0-.998.705-1.82 1.6-1.82.893 0 1.614.82 1.599 1.82 0 1-.706 1.82-1.6 1.82"/>
+  </symbol>
+  <symbol id="documentation-icon" viewBox="0 0 21 20">
+    <path fill="none" stroke="#aa3bff" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.35" d="m15.5 13.333 1.533 1.322c.645.555.967.833.967 1.178s-.322.623-.967 1.179L15.5 18.333m-3.333-5-1.534 1.322c-.644.555-.966.833-.966 1.178s.322.623.966 1.179l1.534 1.321"/>
+    <path fill="none" stroke="#aa3bff" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.35" d="M17.167 10.836v-4.32c0-1.41 0-2.117-.224-2.68-.359-.906-1.118-1.621-2.08-1.96-.599-.21-1.349-.21-2.848-.21-2.623 0-3.935 0-4.983.369-1.684.591-3.013 1.842-3.641 3.428C3 6.449 3 7.684 3 10.154v2.122c0 2.558 0 3.838.706 4.726q.306.383.713.671c.76.536 1.79.64 3.581.66"/>
+    <path fill="none" stroke="#aa3bff" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.35" d="M3 10a2.78 2.78 0 0 1 2.778-2.778c.555 0 1.209.097 1.748-.047.48-.129.854-.503.982-.982.145-.54.048-1.194.048-1.749a2.78 2.78 0 0 1 2.777-2.777"/>
+  </symbol>
+  <symbol id="github-icon" viewBox="0 0 19 19">
+    <path fill="#08060d" fill-rule="evenodd" d="M9.356 1.85C5.05 1.85 1.57 5.356 1.57 9.694a7.84 7.84 0 0 0 5.324 7.44c.387.079.528-.168.528-.376 0-.182-.013-.805-.013-1.454-2.165.467-2.616-.935-2.616-.935-.349-.91-.864-1.143-.864-1.143-.71-.48.051-.48.051-.48.787.051 1.2.805 1.2.805.695 1.194 1.817.857 2.268.649.064-.507.27-.857.49-1.052-1.728-.182-3.545-.857-3.545-3.87 0-.857.31-1.558.8-2.104-.078-.195-.349-1 .077-2.078 0 0 .657-.208 2.14.805a7.5 7.5 0 0 1 1.946-.26c.657 0 1.328.092 1.946.26 1.483-1.013 2.14-.805 2.14-.805.426 1.078.155 1.883.078 2.078.502.546.799 1.247.799 2.104 0 3.013-1.818 3.675-3.558 3.87.284.247.528.714.528 1.454 0 1.052-.012 1.896-.012 2.156 0 .208.142.455.528.377a7.84 7.84 0 0 0 5.324-7.441c.013-4.338-3.48-7.844-7.773-7.844" clip-rule="evenodd"/>
+  </symbol>
+  <symbol id="social-icon" viewBox="0 0 20 20">
+    <path fill="none" stroke="#aa3bff" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.35" d="M12.5 6.667a4.167 4.167 0 1 0-8.334 0 4.167 4.167 0 0 0 8.334 0"/>
+    <path fill="none" stroke="#aa3bff" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.35" d="M2.5 16.667a5.833 5.833 0 0 1 8.75-5.053m3.837.474.513 1.035c.07.144.257.282.414.309l.93.155c.596.1.736.536.307.965l-.723.73a.64.64 0 0 0-.152.531l.207.903c.164.715-.213.991-.84.618l-.872-.52a.63.63 0 0 0-.577 0l-.872.52c-.624.373-1.003.094-.84-.618l.207-.903a.64.64 0 0 0-.152-.532l-.723-.729c-.426-.43-.289-.864.306-.964l.93-.156a.64.64 0 0 0 .412-.31l.513-1.034c.28-.562.735-.562 1.012 0"/>
+  </symbol>
+  <symbol id="x-icon" viewBox="0 0 19 19">
+    <path fill="#08060d" fill-rule="evenodd" d="M1.893 1.98c.052.072 1.245 1.769 2.653 3.77l2.892 4.114c.183.261.333.48.333.486s-.068.089-.152.183l-.522.593-.765.867-3.597 4.087c-.375.426-.734.834-.798.905a1 1 0 0 0-.118.148c0 .01.236.017.664.017h.663l.729-.83c.4-.457.796-.906.879-.999a692 692 0 0 0 1.794-2.038c.034-.037.301-.34.594-.675l.551-.624.345-.392a7 7 0 0 1 .34-.374c.006 0 .93 1.306 2.052 2.903l2.084 2.965.045.063h2.275c1.87 0 2.273-.003 2.266-.021-.008-.02-1.098-1.572-3.894-5.547-2.013-2.862-2.28-3.246-2.273-3.266.008-.019.282-.332 2.085-2.38l2-2.274 1.567-1.782c.022-.028-.016-.03-.65-.03h-.674l-.3.342a871 871 0 0 1-1.782 2.025c-.067.075-.405.458-.75.852a100 100 0 0 1-.803.91c-.148.172-.299.344-.99 1.127-.304.343-.32.358-.345.327-.015-.019-.904-1.282-1.976-2.808L6.365 1.85H1.8zm1.782.91 8.078 11.294c.772 1.08 1.413 1.973 1.425 1.984.016.017.241.02 1.05.017l1.03-.004-2.694-3.766L7.796 5.75 5.722 2.852l-1.039-.004-1.039-.004z" clip-rule="evenodd"/>
+  </symbol>
+</svg>
+</file>
+
+<file path="README.md">
+# React + TypeScript + Vite
+
+This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+
+Currently, two official plugins are available:
+
+- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
+- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+
+## React Compiler
+
+The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+
+## Expanding the ESLint configuration
+
+If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+
+```js
+export default defineConfig([
+  globalIgnores(['dist']),
+  {
+    files: ['**/*.{ts,tsx}'],
+    extends: [
+      // Other configs...
+
+      // Remove tseslint.configs.recommended and replace with this
+      tseslint.configs.recommendedTypeChecked,
+      // Alternatively, use this for stricter rules
+      tseslint.configs.strictTypeChecked,
+      // Optionally, add this for stylistic rules
+      tseslint.configs.stylisticTypeChecked,
+
+      // Other configs...
+    ],
+    languageOptions: {
+      parserOptions: {
+        project: ['./tsconfig.node.json', './tsconfig.app.json'],
+        tsconfigRootDir: import.meta.dirname,
+      },
+      // other options...
+    },
+  },
+])
+```
+
+You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+
+```js
+// eslint.config.js
+import reactX from 'eslint-plugin-react-x'
+import reactDom from 'eslint-plugin-react-dom'
+
+export default defineConfig([
+  globalIgnores(['dist']),
+  {
+    files: ['**/*.{ts,tsx}'],
+    extends: [
+      // Other configs...
+      // Enable lint rules for React
+      reactX.configs['recommended-typescript'],
+      // Enable lint rules for React DOM
+      reactDom.configs.recommended,
+    ],
+    languageOptions: {
+      parserOptions: {
+        project: ['./tsconfig.node.json', './tsconfig.app.json'],
+        tsconfigRootDir: import.meta.dirname,
+      },
+      // other options...
+    },
+  },
+])
+```
+</file>
+
+<file path="src/App.css">
+.counter {
+  font-size: 16px;
+  padding: 5px 10px;
+  border-radius: 5px;
+  color: var(--accent);
+  background: var(--accent-bg);
+  border: 2px solid transparent;
+  transition: border-color 0.3s;
+  margin-bottom: 24px;
+
+  &:hover {
+    border-color: var(--accent-border);
+  }
+  &:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+}
+
+.hero {
+  position: relative;
+
+  .base,
+  .framework,
+  .vite {
+    inset-inline: 0;
+    margin: 0 auto;
+  }
+
+  .base {
+    width: 170px;
+    position: relative;
+    z-index: 0;
+  }
+
+  .framework,
+  .vite {
+    position: absolute;
+  }
+
+  .framework {
+    z-index: 1;
+    top: 34px;
+    height: 28px;
+    transform: perspective(2000px) rotateZ(300deg) rotateX(44deg) rotateY(39deg)
+      scale(1.4);
+  }
+
+  .vite {
+    z-index: 0;
+    top: 107px;
+    height: 26px;
+    width: auto;
+    transform: perspective(2000px) rotateZ(300deg) rotateX(40deg) rotateY(39deg)
+      scale(0.8);
+  }
+}
+
+#center {
+  display: flex;
+  flex-direction: column;
+  gap: 25px;
+  place-content: center;
+  place-items: center;
+  flex-grow: 1;
+
+  @media (max-width: 1024px) {
+    padding: 32px 20px 24px;
+    gap: 18px;
+  }
+}
+
+#next-steps {
+  display: flex;
+  border-top: 1px solid var(--border);
+  text-align: left;
+
+  & > div {
+    flex: 1 1 0;
+    padding: 32px;
+    @media (max-width: 1024px) {
+      padding: 24px 20px;
+    }
+  }
+
+  .icon {
+    margin-bottom: 16px;
+    width: 22px;
+    height: 22px;
+  }
+
+  @media (max-width: 1024px) {
+    flex-direction: column;
+    text-align: center;
+  }
+}
+
+#docs {
+  border-right: 1px solid var(--border);
+
+  @media (max-width: 1024px) {
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+  }
+}
+
+#next-steps ul {
+  list-style: none;
+  padding: 0;
+  display: flex;
+  gap: 8px;
+  margin: 32px 0 0;
+
+  .logo {
+    height: 18px;
+  }
+
+  a {
+    color: var(--text-h);
+    font-size: 16px;
+    border-radius: 6px;
+    background: var(--social-bg);
+    display: flex;
+    padding: 6px 12px;
+    align-items: center;
+    gap: 8px;
+    text-decoration: none;
+    transition: box-shadow 0.3s;
+
+    &:hover {
+      box-shadow: var(--shadow);
+    }
+    .button-icon {
+      height: 18px;
+      width: 18px;
+    }
+  }
+
+  @media (max-width: 1024px) {
+    margin-top: 20px;
+    flex-wrap: wrap;
+    justify-content: center;
+
+    li {
+      flex: 1 1 calc(50% - 8px);
+    }
+
+    a {
+      width: 100%;
+      justify-content: center;
+      box-sizing: border-box;
+    }
+  }
+}
+
+#spacer {
+  height: 88px;
+  border-top: 1px solid var(--border);
+  @media (max-width: 1024px) {
+    height: 48px;
+  }
+}
+
+.ticks {
+  position: relative;
+  width: 100%;
+
+  &::before,
+  &::after {
+    content: '';
+    position: absolute;
+    top: -4.5px;
+    border: 5px solid transparent;
+  }
+
+  &::before {
+    left: 0;
+    border-left-color: var(--border);
+  }
+  &::after {
+    right: 0;
+    border-right-color: var(--border);
+  }
+}
+</file>
+
+<file path="src/assets/react.svg">
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" aria-hidden="true" role="img" class="iconify iconify--logos" width="35.93" height="32" preserveAspectRatio="xMidYMid meet" viewBox="0 0 256 228"><path fill="#00D8FF" d="M210.483 73.824a171.49 171.49 0 0 0-8.24-2.597c.465-1.9.893-3.777 1.273-5.621c6.238-30.281 2.16-54.676-11.769-62.708c-13.355-7.7-35.196.329-57.254 19.526a171.23 171.23 0 0 0-6.375 5.848a155.866 155.866 0 0 0-4.241-3.917C100.759 3.829 77.587-4.822 63.673 3.233C50.33 10.957 46.379 33.89 51.995 62.588a170.974 170.974 0 0 0 1.892 8.48c-3.28.932-6.445 1.924-9.474 2.98C17.309 83.498 0 98.307 0 113.668c0 15.865 18.582 31.778 46.812 41.427a145.52 145.52 0 0 0 6.921 2.165a167.467 167.467 0 0 0-2.01 9.138c-5.354 28.2-1.173 50.591 12.134 58.266c13.744 7.926 36.812-.22 59.273-19.855a145.567 145.567 0 0 0 5.342-4.923a168.064 168.064 0 0 0 6.92 6.314c21.758 18.722 43.246 26.282 56.54 18.586c13.731-7.949 18.194-32.003 12.4-61.268a145.016 145.016 0 0 0-1.535-6.842c1.62-.48 3.21-.974 4.76-1.488c29.348-9.723 48.443-25.443 48.443-41.52c0-15.417-17.868-30.326-45.517-39.844Zm-6.365 70.984c-1.4.463-2.836.91-4.3 1.345c-3.24-10.257-7.612-21.163-12.963-32.432c5.106-11 9.31-21.767 12.459-31.957c2.619.758 5.16 1.557 7.61 2.4c23.69 8.156 38.14 20.213 38.14 29.504c0 9.896-15.606 22.743-40.946 31.14Zm-10.514 20.834c2.562 12.94 2.927 24.64 1.23 33.787c-1.524 8.219-4.59 13.698-8.382 15.893c-8.067 4.67-25.32-1.4-43.927-17.412a156.726 156.726 0 0 1-6.437-5.87c7.214-7.889 14.423-17.06 21.459-27.246c12.376-1.098 24.068-2.894 34.671-5.345a134.17 134.17 0 0 1 1.386 6.193ZM87.276 214.515c-7.882 2.783-14.16 2.863-17.955.675c-8.075-4.657-11.432-22.636-6.853-46.752a156.923 156.923 0 0 1 1.869-8.499c10.486 2.32 22.093 3.988 34.498 4.994c7.084 9.967 14.501 19.128 21.976 27.15a134.668 134.668 0 0 1-4.877 4.492c-9.933 8.682-19.886 14.842-28.658 17.94ZM50.35 144.747c-12.483-4.267-22.792-9.812-29.858-15.863c-6.35-5.437-9.555-10.836-9.555-15.216c0-9.322 13.897-21.212 37.076-29.293c2.813-.98 5.757-1.905 8.812-2.773c3.204 10.42 7.406 21.315 12.477 32.332c-5.137 11.18-9.399 22.249-12.634 32.792a134.718 134.718 0 0 1-6.318-1.979Zm12.378-84.26c-4.811-24.587-1.616-43.134 6.425-47.789c8.564-4.958 27.502 2.111 47.463 19.835a144.318 144.318 0 0 1 3.841 3.545c-7.438 7.987-14.787 17.08-21.808 26.988c-12.04 1.116-23.565 2.908-34.161 5.309a160.342 160.342 0 0 1-1.76-7.887Zm110.427 27.268a347.8 347.8 0 0 0-7.785-12.803c8.168 1.033 15.994 2.404 23.343 4.08c-2.206 7.072-4.956 14.465-8.193 22.045a381.151 381.151 0 0 0-7.365-13.322Zm-45.032-43.861c5.044 5.465 10.096 11.566 15.065 18.186a322.04 322.04 0 0 0-30.257-.006c4.974-6.559 10.069-12.652 15.192-18.18ZM82.802 87.83a323.167 323.167 0 0 0-7.227 13.238c-3.184-7.553-5.909-14.98-8.134-22.152c7.304-1.634 15.093-2.97 23.209-3.984a321.524 321.524 0 0 0-7.848 12.897Zm8.081 65.352c-8.385-.936-16.291-2.203-23.593-3.793c2.26-7.3 5.045-14.885 8.298-22.6a321.187 321.187 0 0 0 7.257 13.246c2.594 4.48 5.28 8.868 8.038 13.147Zm37.542 31.03c-5.184-5.592-10.354-11.779-15.403-18.433c4.902.192 9.899.29 14.978.29c5.218 0 10.376-.117 15.453-.343c-4.985 6.774-10.018 12.97-15.028 18.486Zm52.198-57.817c3.422 7.8 6.306 15.345 8.596 22.52c-7.422 1.694-15.436 3.058-23.88 4.071a382.417 382.417 0 0 0 7.859-13.026a347.403 347.403 0 0 0 7.425-13.565Zm-16.898 8.101a358.557 358.557 0 0 1-12.281 19.815a329.4 329.4 0 0 1-23.444.823c-7.967 0-15.716-.248-23.178-.732a310.202 310.202 0 0 1-12.513-19.846h.001a307.41 307.41 0 0 1-10.923-20.627a310.278 310.278 0 0 1 10.89-20.637l-.001.001a307.318 307.318 0 0 1 12.413-19.761c7.613-.576 15.42-.876 23.31-.876H128c7.926 0 15.743.303 23.354.883a329.357 329.357 0 0 1 12.335 19.695a358.489 358.489 0 0 1 11.036 20.54a329.472 329.472 0 0 1-11 20.722Zm22.56-122.124c8.572 4.944 11.906 24.881 6.52 51.026c-.344 1.668-.73 3.367-1.15 5.09c-10.622-2.452-22.155-4.275-34.23-5.408c-7.034-10.017-14.323-19.124-21.64-27.008a160.789 160.789 0 0 1 5.888-5.4c18.9-16.447 36.564-22.941 44.612-18.3ZM128 90.808c12.625 0 22.86 10.235 22.86 22.86s-10.235 22.86-22.86 22.86s-22.86-10.235-22.86-22.86s10.235-22.86 22.86-22.86Z"></path></svg>
+</file>
+
+<file path="src/assets/vite.svg">
+<svg xmlns="http://www.w3.org/2000/svg" width="77" height="47" fill="none" aria-labelledby="vite-logo-title" viewBox="0 0 77 47"><title id="vite-logo-title">Vite</title><style>.parenthesis{fill:#000}@media (prefers-color-scheme:dark){.parenthesis{fill:#fff}}</style><path fill="#9135ff" d="M40.151 45.71c-.663.844-2.02.374-2.02-.699V34.708a2.26 2.26 0 0 0-2.262-2.262H24.493c-.92 0-1.457-1.04-.92-1.788l7.479-10.471c1.07-1.498 0-3.578-1.842-3.578H15.443c-.92 0-1.456-1.04-.92-1.788l9.696-13.576c.213-.297.556-.474.92-.474h28.894c.92 0 1.456 1.04.92 1.788l-7.48 10.472c-1.07 1.497 0 3.578 1.842 3.578h11.376c.944 0 1.474 1.087.89 1.83L40.153 45.712z"/><mask id="a" width="48" height="47" x="14" y="0" maskUnits="userSpaceOnUse" style="mask-type:alpha"><path fill="#000" d="M40.047 45.71c-.663.843-2.02.374-2.02-.699V34.708a2.26 2.26 0 0 0-2.262-2.262H24.389c-.92 0-1.457-1.04-.92-1.788l7.479-10.472c1.07-1.497 0-3.578-1.842-3.578H15.34c-.92 0-1.456-1.04-.92-1.788l9.696-13.575c.213-.297.556-.474.92-.474H53.93c.92 0 1.456 1.04.92 1.788L47.37 13.03c-1.07 1.498 0 3.578 1.842 3.578h11.376c.944 0 1.474 1.088.89 1.831L40.049 45.712z"/></mask><g mask="url(#a)"><g filter="url(#b)"><ellipse cx="5.508" cy="14.704" fill="#eee6ff" rx="5.508" ry="14.704" transform="rotate(269.814 20.96 11.29)scale(-1 1)"/></g><g filter="url(#c)"><ellipse cx="10.399" cy="29.851" fill="#eee6ff" rx="10.399" ry="29.851" transform="rotate(89.814 -16.902 -8.275)scale(1 -1)"/></g><g filter="url(#d)"><ellipse cx="5.508" cy="30.487" fill="#8900ff" rx="5.508" ry="30.487" transform="rotate(89.814 -19.197 -7.127)scale(1 -1)"/></g><g filter="url(#e)"><ellipse cx="5.508" cy="30.599" fill="#8900ff" rx="5.508" ry="30.599" transform="rotate(89.814 -25.928 4.177)scale(1 -1)"/></g><g filter="url(#f)"><ellipse cx="5.508" cy="30.599" fill="#8900ff" rx="5.508" ry="30.599" transform="rotate(89.814 -25.738 5.52)scale(1 -1)"/></g><g filter="url(#g)"><ellipse cx="14.072" cy="22.078" fill="#eee6ff" rx="14.072" ry="22.078" transform="rotate(93.35 31.245 55.578)scale(-1 1)"/></g><g filter="url(#h)"><ellipse cx="3.47" cy="21.501" fill="#8900ff" rx="3.47" ry="21.501" transform="rotate(89.009 35.419 55.202)scale(-1 1)"/></g><g filter="url(#i)"><ellipse cx="3.47" cy="21.501" fill="#8900ff" rx="3.47" ry="21.501" transform="rotate(89.009 35.419 55.202)scale(-1 1)"/></g><g filter="url(#j)"><ellipse cx="14.592" cy="9.743" fill="#8900ff" rx="4.407" ry="29.108" transform="rotate(39.51 14.592 9.743)"/></g><g filter="url(#k)"><ellipse cx="61.728" cy="-5.321" fill="#8900ff" rx="4.407" ry="29.108" transform="rotate(37.892 61.728 -5.32)"/></g><g filter="url(#l)"><ellipse cx="55.618" cy="7.104" fill="#00c2ff" rx="5.971" ry="9.665" transform="rotate(37.892 55.618 7.104)"/></g><g filter="url(#m)"><ellipse cx="12.326" cy="39.103" fill="#8900ff" rx="4.407" ry="29.108" transform="rotate(37.892 12.326 39.103)"/></g><g filter="url(#n)"><ellipse cx="12.326" cy="39.103" fill="#8900ff" rx="4.407" ry="29.108" transform="rotate(37.892 12.326 39.103)"/></g><g filter="url(#o)"><ellipse cx="49.857" cy="30.678" fill="#8900ff" rx="4.407" ry="29.108" transform="rotate(37.892 49.857 30.678)"/></g><g filter="url(#p)"><ellipse cx="52.623" cy="33.171" fill="#00c2ff" rx="5.971" ry="15.297" transform="rotate(37.892 52.623 33.17)"/></g></g><path d="M6.919 0c-9.198 13.166-9.252 33.575 0 46.789h6.215c-9.25-13.214-9.196-33.623 0-46.789zm62.424 0h-6.215c9.198 13.166 9.252 33.575 0 46.789h6.215c9.25-13.214 9.196-33.623 0-46.789" class="parenthesis"/><defs><filter id="b" width="60.045" height="41.654" x="-5.564" y="16.92" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse"><feFlood flood-opacity="0" result="BackgroundImageFix"/><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"/><feGaussianBlur result="effect1_foregroundBlur_2002_17286" stdDeviation="7.659"/></filter><filter id="c" width="90.34" height="51.437" x="-40.407" y="-6.762" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse"><feFlood flood-opacity="0" result="BackgroundImageFix"/><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"/><feGaussianBlur result="effect1_foregroundBlur_2002_17286" stdDeviation="7.659"/></filter><filter id="d" width="79.355" height="29.4" x="-35.435" y="2.801" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse"><feFlood flood-opacity="0" result="BackgroundImageFix"/><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"/><feGaussianBlur result="effect1_foregroundBlur_2002_17286" stdDeviation="4.596"/></filter><filter id="e" width="79.579" height="29.4" x="-30.84" y="20.8" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse"><feFlood flood-opacity="0" result="BackgroundImageFix"/><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"/><feGaussianBlur result="effect1_foregroundBlur_2002_17286" stdDeviation="4.596"/></filter><filter id="f" width="79.579" height="29.4" x="-29.307" y="21.949" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse"><feFlood flood-opacity="0" result="BackgroundImageFix"/><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"/><feGaussianBlur result="effect1_foregroundBlur_2002_17286" stdDeviation="4.596"/></filter><filter id="g" width="74.749" height="58.852" x="29.961" y="-17.13" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse"><feFlood flood-opacity="0" result="BackgroundImageFix"/><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"/><feGaussianBlur result="effect1_foregroundBlur_2002_17286" stdDeviation="7.659"/></filter><filter id="h" width="61.377" height="25.362" x="37.754" y="3.055" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse"><feFlood flood-opacity="0" result="BackgroundImageFix"/><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"/><feGaussianBlur result="effect1_foregroundBlur_2002_17286" stdDeviation="4.596"/></filter><filter id="i" width="61.377" height="25.362" x="37.754" y="3.055" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse"><feFlood flood-opacity="0" result="BackgroundImageFix"/><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"/><feGaussianBlur result="effect1_foregroundBlur_2002_17286" stdDeviation="4.596"/></filter><filter id="j" width="56.045" height="63.649" x="-13.43" y="-22.082" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse"><feFlood flood-opacity="0" result="BackgroundImageFix"/><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"/><feGaussianBlur result="effect1_foregroundBlur_2002_17286" stdDeviation="4.596"/></filter><filter id="k" width="54.814" height="64.646" x="34.321" y="-37.644" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse"><feFlood flood-opacity="0" result="BackgroundImageFix"/><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"/><feGaussianBlur result="effect1_foregroundBlur_2002_17286" stdDeviation="4.596"/></filter><filter id="l" width="33.541" height="35.313" x="38.847" y="-10.552" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse"><feFlood flood-opacity="0" result="BackgroundImageFix"/><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"/><feGaussianBlur result="effect1_foregroundBlur_2002_17286" stdDeviation="4.596"/></filter><filter id="m" width="54.814" height="64.646" x="-15.081" y="6.78" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse"><feFlood flood-opacity="0" result="BackgroundImageFix"/><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"/><feGaussianBlur result="effect1_foregroundBlur_2002_17286" stdDeviation="4.596"/></filter><filter id="n" width="54.814" height="64.646" x="-15.081" y="6.78" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse"><feFlood flood-opacity="0" result="BackgroundImageFix"/><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"/><feGaussianBlur result="effect1_foregroundBlur_2002_17286" stdDeviation="4.596"/></filter><filter id="o" width="54.814" height="64.646" x="22.45" y="-1.645" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse"><feFlood flood-opacity="0" result="BackgroundImageFix"/><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"/><feGaussianBlur result="effect1_foregroundBlur_2002_17286" stdDeviation="4.596"/></filter><filter id="p" width="39.409" height="43.623" x="32.919" y="11.36" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse"><feFlood flood-opacity="0" result="BackgroundImageFix"/><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"/><feGaussianBlur result="effect1_foregroundBlur_2002_17286" stdDeviation="4.596"/></filter></defs></svg>
+</file>
+
+<file path="src/components/MidpointConfirm.tsx">
+import { useState, useEffect } from 'react';
+import type { Coordinates } from '../services/midpoint';
+import type { LocationEntry } from './LocationInput';
+
+interface TravelResult {
+  label: string;
+  formatted: string;
+  durationSeconds?: number;
+  error?: boolean;
+}
+
+interface Props {
+  areaName: string;
+  midpoint: Coordinates;
+  locations: LocationEntry[];
+  onConfirm: () => void;
+  onBack: () => void;
+}
+
+export default function MidpointConfirm({ areaName, midpoint, locations, onConfirm, onBack }: Props) {
+  const [travelTimes, setTravelTimes] = useState<TravelResult[]>([]);
+  const [fetching, setFetching] = useState(true);
+
+  useEffect(() => {
+    const validLocs = locations.filter((l) => l.lat != null && l.lng != null);
+    if (validLocs.length === 0) { setFetching(false); return; }
+
+    fetch('/api/travel-time', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        origins: validLocs.map((l) => ({ lat: l.lat!, lng: l.lng!, label: l.name })),
+        destination: midpoint,
+      }),
+    })
+      .then((r) => r.json())
+      .then((data: TravelResult[]) => { setTravelTimes(data); })
+      .catch(() => {})
+      .finally(() => setFetching(false));
+  }, []);
+
+  return (
+    <div className="min-h-screen bg-[#F5FBF8]">
+      <div className="max-w-md mx-auto px-4 pt-8 pb-10">
+
+        <div className="flex items-center justify-between mb-8">
+          <button onClick={onBack} className="text-sm text-gray-400 hover:text-gray-600">← 이전</button>
+          <span className="text-[#3CDBC0] font-black text-lg">MINT</span>
+          <div className="w-12" />
+        </div>
+
+        <div className="text-center mb-6">
+          <h2 className="text-xl font-black text-gray-800">이 지점은 어때요?</h2>
+          <p className="text-sm text-gray-400 mt-1">모두의 출발지에서 계산했어요</p>
+        </div>
+
+        {/* 중간지점 카드 */}
+        <div className="bg-white rounded-2xl border-2 border-[#3CDBC0] p-5 mb-4 shadow-sm">
+          <div className="text-xs text-[#3CDBC0] font-bold mb-2">중간 지점</div>
+          <div className="text-2xl font-black text-gray-800">📍 {areaName}</div>
+          <div className="text-sm text-gray-400 mt-1">이 지역 인근 장소를 추천해드려요</div>
+        </div>
+
+        {/* 소요시간 카드 */}
+        <div className="bg-white rounded-2xl border border-gray-100 p-5 mb-6 shadow-sm">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-sm font-black text-gray-600">출발지별 소요시간</span>
+            <span className="text-xs text-gray-400">자동차 기준</span>
+          </div>
+
+          {fetching ? (
+            <div className="flex items-center gap-2 text-sm text-gray-400 py-1">
+              <div className="w-4 h-4 border-2 border-[#3CDBC0] border-t-transparent rounded-full animate-spin-slow" />
+              계산 중...
+            </div>
+          ) : travelTimes.length === 0 ? (
+            <p className="text-sm text-gray-400">출발지 좌표 정보가 없어요</p>
+          ) : (
+            <div className="flex flex-col gap-2.5">
+              {travelTimes.map((t, i) => (
+                <div key={i} className="flex items-center justify-between">
+                  <span className="text-sm text-gray-700 truncate max-w-[55%]">{t.label}</span>
+                  <span className={`text-sm font-black ${t.error ? 'text-gray-400' : 'text-[#3CDBC0]'}`}>
+                    {t.formatted}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <button
+          onClick={onConfirm}
+          className="w-full py-4 bg-[#3CDBC0] text-white font-black text-base rounded-2xl shadow-lg shadow-[#3CDBC0]/30 hover:bg-[#2AB5A0] transition-all active:scale-95"
+        >
+          이 지점으로 추천받기 ✨
+        </button>
+      </div>
+    </div>
+  );
+}
+</file>
+
+<file path="src/index.css">
+@import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css');
+@import "tailwindcss";
+
+:root {
+  --color-mint: #3CDBC0;
+  --color-mint-dark: #2AB5A0;
+  --color-mint-light: #E8F8F5;
+  --color-bg: #F5FBF8;
+  --color-text: #333333;
+}
+
+* {
+  -webkit-tap-highlight-color: transparent;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, sans-serif;
+  background-color: var(--color-bg);
+  color: var(--color-text);
+  margin: 0;
+  padding: 0;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes mintPulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.4; }
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+@keyframes shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes bounce {
+  0%, 100% { transform: translateY(0); }
+  50%       { transform: translateY(-6px); }
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 0.4s ease both;
+}
+
+.animate-mint-pulse {
+  animation: mintPulse 1.5s ease-in-out infinite;
+}
+
+.animate-spin-slow {
+  animation: spin 2s linear infinite;
+}
+
+.animate-bounce-dot {
+  animation: bounce 1s ease-in-out infinite;
+}
+
+.shimmer {
+  background: linear-gradient(90deg, #E8F8F5 25%, #C8F0E8 50%, #E8F8F5 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+.vibe-card {
+  transition: all 0.2s ease;
+  cursor: pointer;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.vibe-card:active {
+  transform: scale(0.97);
+}
+
+.result-gradient {
+  background: linear-gradient(135deg, #3CDBC0 0%, #2AB5A0 100%);
+}
+
+::-webkit-scrollbar {
+  width: 4px;
+}
+
+::-webkit-scrollbar-track {
+  background: #F5FBF8;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #3CDBC0;
+  border-radius: 2px;
+}
+</file>
+
+<file path="src/main.tsx">
+import { StrictMode } from 'react'
+import { createRoot } from 'react-dom/client'
+import './index.css'
+import App from './App.tsx'
+
+createRoot(document.getElementById('root')!).render(
+  <StrictMode>
+    <App />
+  </StrictMode>,
+)
+</file>
+
+<file path="src/services/seoulData.ts">
+const API_KEY = import.meta.env.VITE_SEOUL_DATA_API_KEY;
+
+export type CongestionLevel = '여유' | '보통' | '약간 붐빔' | '붐빔' | '알 수 없음';
+
+export interface AreaCongestion {
+  areaName: string;
+  level: CongestionLevel;
+  message: string;
+}
+
+export async function getCongestion(areaName: string): Promise<AreaCongestion> {
+  try {
+    const encoded = encodeURIComponent(areaName);
+    const res = await fetch(
+      `/api/seoul/${API_KEY}/json/citydata_ppltn/1/1/${encoded}`
+    );
+    if (!res.ok) throw new Error('서울 데이터 API 오류');
+    const data = await res.json();
+    const ppltn = data?.SeoulRtd?.row?.[0];
+    if (!ppltn) throw new Error('데이터 없음');
+
+    const level = ppltn.AREA_CONGEST_LVL as CongestionLevel;
+    const message = ppltn.AREA_CONGEST_MSG ?? '';
+    return { areaName, level, message };
+  } catch {
+    return { areaName, level: '알 수 없음', message: '' };
+  }
+}
+
+export async function getMultiAreaCongestion(
+  areaNames: string[]
+): Promise<AreaCongestion[]> {
+  const results = await Promise.allSettled(areaNames.map(getCongestion));
+  return results.map((r, i) =>
+    r.status === 'fulfilled'
+      ? r.value
+      : { areaName: areaNames[i], level: '알 수 없음' as CongestionLevel, message: '' }
+  );
+}
+
+export function congestionColor(level: CongestionLevel): string {
+  switch (level) {
+    case '여유': return '#22c55e';
+    case '보통': return '#eab308';
+    case '약간 붐빔': return '#f97316';
+    case '붐빔': return '#ef4444';
+    default: return '#9ca3af';
+  }
+}
+
+export function congestionDotClass(level: CongestionLevel): string {
+  switch (level) {
+    case '여유': return 'bg-green-400';
+    case '보통': return 'bg-yellow-400';
+    case '약간 붐빔': return 'bg-orange-400';
+    case '붐빔': return 'bg-red-400';
+    default: return 'bg-gray-400';
+  }
+}
+</file>
+
+<file path="tsconfig.app.json">
+{
+  "compilerOptions": {
+    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.app.tsbuildinfo",
+    "target": "es2023",
+    "lib": ["ES2023", "DOM"],
+    "module": "esnext",
+    "types": ["vite/client"],
+    "skipLibCheck": true,
+
+    /* Bundler mode */
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "verbatimModuleSyntax": true,
+    "moduleDetection": "force",
+    "noEmit": true,
+    "jsx": "react-jsx",
+
+    /* Linting */
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "erasableSyntaxOnly": true,
+    "noFallthroughCasesInSwitch": true
+  },
+  "include": ["src"]
+}
+</file>
+
+<file path="tsconfig.json">
+{
+  "files": [],
+  "references": [
+    { "path": "./tsconfig.app.json" },
+    { "path": "./tsconfig.node.json" }
+  ]
+}
+</file>
+
+<file path="tsconfig.node.json">
+{
+  "compilerOptions": {
+    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.node.tsbuildinfo",
+    "target": "es2023",
+    "lib": ["ES2023"],
+    "module": "esnext",
+    "types": ["node"],
+    "skipLibCheck": true,
+
+    /* Bundler mode */
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "verbatimModuleSyntax": true,
+    "moduleDetection": "force",
+    "noEmit": true,
+
+    /* Linting */
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "erasableSyntaxOnly": true,
+    "noFallthroughCasesInSwitch": true
+  },
+  "include": ["vite.config.ts"]
+}
+</file>
+
+<file path="public/favicon.svg">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 90">
+  <!-- Left leaf -->
+  <path fill="#3CDBC0" d="
+    M50 84
+    C40 74, 14 60, 10 38
+    C6 20, 18 8, 32 10
+    C41 11, 49 21, 51 36
+    Z
+  "/>
+  <!-- Right leaf -->
+  <path fill="#3CDBC0" d="
+    M50 84
+    C60 74, 86 60, 90 38
+    C94 20, 82 8, 68 10
+    C59 11, 51 21, 49 36
+    Z
+  "/>
+  <!-- Small back-center leaf -->
+  <path fill="#2AB5A0" d="
+    M50 84
+    C46 68, 44 50, 48 30
+    C50 20, 54 16, 56 22
+    C60 32, 56 58, 50 84
+    Z
+  "/>
+  <!-- Left vein -->
+  <path stroke="white" stroke-width="2.2" fill="none" stroke-linecap="round"
+        d="M32 12 C38 24, 46 50, 50 82"/>
+  <!-- Right vein -->
+  <path stroke="white" stroke-width="2.2" fill="none" stroke-linecap="round"
+        d="M68 12 C62 24, 54 50, 50 82"/>
+</svg>
+</file>
+
+<file path="src/components/GroupSizeSelect.tsx">
+type GroupSize = '2명' | '3~4명' | '5명 이상';
+
+interface Props {
+  value: GroupSize | null;
+  onChange: (v: GroupSize) => void;
+}
+
+const OPTIONS: { value: GroupSize; emoji: string; desc: string }[] = [
+  { value: '2명', emoji: '👫', desc: '둘이서' },
+  { value: '3~4명', emoji: '👥', desc: '소규모' },
+  { value: '5명 이상', emoji: '🎉', desc: '단체로' },
+];
+
+export default function GroupSizeSelect({ value, onChange }: Props) {
+  return (
+    <div className="px-4 h-full flex flex-col justify-center">
+      <div className="grid grid-cols-3 gap-3">
+        {OPTIONS.map((opt) => (
+          <button
+            key={opt.value}
+            onClick={() => onChange(opt.value)}
+            className={`vibe-card flex flex-col items-center gap-2.5 py-7 rounded-2xl border-2 transition-all duration-200 ${
+              value === opt.value
+                ? 'border-[#3CDBC0] bg-[#E8F8F5] shadow-lg shadow-[#3CDBC0]/20'
+                : 'border-gray-200 bg-white hover:border-[#3CDBC0]/50'
+            }`}
+          >
+            <span className="text-4xl">{opt.emoji}</span>
+            <span className={`text-base font-bold ${value === opt.value ? 'text-[#2AB5A0]' : 'text-gray-700'}`}>
+              {opt.value}
+            </span>
+            <span className="text-xs text-gray-400">{opt.desc}</span>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+</file>
+
+<file path="src/components/MiniMap.tsx">
+import { useEffect, useRef } from 'react';
+
+declare global {
+  interface Window {
+    kakao: any;
+  }
+}
+
+interface KakaoMapInstance {
+  setCenter: (latlng: KakaoLatLng) => void;
+  setLevel: (level: number) => void;
+}
+interface KakaoLatLng { getLat: () => number; getLng: () => number }
+interface KakaoMarker { setMap: (map: KakaoMapInstance | null) => void }
+interface KakaoInfoWindow {
+  open: (map: KakaoMapInstance, marker: KakaoMarker) => void;
+  close: () => void;
+  setContent: (content: string) => void;
+}
+
+interface Props {
+  lat: number;
+  lng: number;
+  placeName: string;
+}
+
+export default function MiniMap({ lat, lng, placeName }: Props) {
+  const mapRef = useRef<HTMLDivElement>(null);
+  const mapInstance = useRef<KakaoMapInstance | null>(null);
+  const markerInstance = useRef<KakaoMarker | null>(null);
+  const infoWindowInstance = useRef<KakaoInfoWindow | null>(null);
+  const jsKey = import.meta.env.VITE_KAKAO_JS_API_KEY;
+
+  function renderMap() {
+    if (!mapRef.current || !window.kakao?.maps) return;
+
+    const center = new window.kakao.maps.LatLng(lat, lng);
+
+    if (mapInstance.current) {
+      // 지도 이미 존재 → 센터 이동 + 마커 갱신
+      mapInstance.current.setCenter(center);
+      if (markerInstance.current) markerInstance.current.setMap(null);
+      const marker = new window.kakao.maps.Marker({ position: center, map: mapInstance.current });
+      markerInstance.current = marker;
+      infoWindowInstance.current?.setContent(infoContent(placeName));
+      infoWindowInstance.current?.open(mapInstance.current, marker);
+      return;
+    }
+
+    // 최초 생성
+    const map = new window.kakao.maps.Map(mapRef.current, { center, level: 4 });
+    mapInstance.current = map;
+
+    const marker = new window.kakao.maps.Marker({ position: center, map });
+    markerInstance.current = marker;
+
+    const infoWindow = new window.kakao.maps.InfoWindow({ content: infoContent(placeName) });
+    infoWindowInstance.current = infoWindow;
+    infoWindow.open(map, marker);
+  }
+
+  function infoContent(name: string) {
+    return `<div style="padding:6px 10px;font-size:12px;font-weight:700;color:#2AB5A0;font-family:'Pretendard',sans-serif;">${name}</div>`;
+  }
+
+  useEffect(() => {
+    const init = () => window.kakao.maps.load(renderMap);
+
+    if (window.kakao?.maps) {
+      init();
+      return;
+    }
+
+    // SDK 스크립트 중복 삽입 방지
+    const existing = document.querySelector('script[src*="dapi.kakao.com/v2/maps"]');
+    if (existing) {
+      existing.addEventListener('load', init);
+      return () => existing.removeEventListener('load', init);
+    }
+
+    const script = document.createElement('script');
+    script.src = `//dapi.kakao.com/v2/maps/sdk.js?appkey=${jsKey}&autoload=false`;
+    script.async = true;
+    script.onload = init;
+    document.head.appendChild(script);
+  }, [lat, lng, placeName]);
+
+  return (
+    <div className="rounded-2xl overflow-hidden border border-gray-200 shadow-sm">
+      <div ref={mapRef} className="w-full h-52" />
+      <a
+        href={`https://map.kakao.com/link/map/${encodeURIComponent(placeName)},${lat},${lng}`}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="flex items-center justify-center gap-1.5 py-2.5 bg-[#FFE812] text-[#3A1D1D] text-sm font-bold hover:bg-[#FFD700] transition-colors"
+      >
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5S10.62 6.5 12 6.5s2.5 1.12 2.5 2.5S13.38 11.5 12 11.5z"/>
+        </svg>
+        카카오맵에서 길찾기
+      </a>
+    </div>
+  );
+}
+</file>
+
+<file path="src/pages/SharedResult.tsx">
+import { useEffect, useState } from 'react';
+import type { PlaceRecommendation } from '../services/ai';
+import { congestionDotClass } from '../services/seoulData';
+import MiniMap from '../components/MiniMap';
+
+export default function SharedResult() {
+  const [result, setResult] = useState<PlaceRecommendation | null>(null);
+  const [error, setError] = useState(false);
+
+  useEffect(() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const data = params.get('data');
+      if (!data) throw new Error('no data');
+      setResult(JSON.parse(decodeURIComponent(data)));
+    } catch {
+      setError(true);
+    }
+  }, []);
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-[#F5FBF8] flex flex-col items-center justify-center p-8 text-center">
+        <div className="text-4xl mb-4">😔</div>
+        <p className="text-gray-600 mb-6">링크가 올바르지 않아요.</p>
+        <a href="/" className="px-6 py-3 bg-[#3CDBC0] text-white rounded-2xl font-bold">
+          MINT로 직접 정하기
+        </a>
+      </div>
+    );
+  }
+
+  if (!result) {
+    return (
+      <div className="min-h-screen bg-[#F5FBF8] flex items-center justify-center">
+        <div className="w-10 h-10 border-3 border-[#3CDBC0] border-t-transparent rounded-full animate-spin-slow" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-[#F5FBF8]">
+      <div className="max-w-md mx-auto px-4 pb-10 pt-8">
+        <div className="text-center mb-6">
+          <h1 className="text-2xl font-black text-[#2AB5A0]">MINT</h1>
+          <p className="text-sm text-gray-400 mt-1">오늘의 추천 장소</p>
+        </div>
+
+        {/* 메인 카드 */}
+        <div className="result-gradient rounded-3xl p-5 text-white shadow-xl shadow-[#3CDBC0]/30 mb-4 animate-fade-in-up">
+          <div className="flex items-center justify-between mb-1">
+            <span className="text-xs font-semibold opacity-80 bg-white/20 px-2.5 py-1 rounded-full">
+              {result.category}
+            </span>
+            <div className="flex items-center gap-1.5">
+              <div className={`w-2 h-2 rounded-full ${congestionDotClass(result.congestionLevel as Parameters<typeof congestionDotClass>[0])}`} />
+              <span className="text-xs opacity-90">{result.congestionLevel}</span>
+            </div>
+          </div>
+
+          <h2 className="text-2xl font-black mt-3 mb-1 leading-tight">
+            오늘은<br /><span className="text-3xl">{result.placeName}</span>
+          </h2>
+          <p className="text-sm opacity-90 mb-3">{result.description}</p>
+
+          <div className="flex flex-wrap gap-1.5 mb-4">
+            {result.vibeTags.map((tag) => (
+              <span key={tag} className="text-xs bg-white/20 px-2.5 py-1 rounded-full font-medium">
+                #{tag}
+              </span>
+            ))}
+          </div>
+
+          <div className="bg-white/15 rounded-2xl p-3 flex flex-col gap-1.5">
+            <div className="flex items-start gap-2 text-sm">
+              <span className="opacity-70 shrink-0">📍</span>
+              <span className="opacity-90">{result.address || result.area}</span>
+            </div>
+            <div className="flex items-center gap-2 text-sm">
+              <span className="opacity-70">💰</span>
+              <span className="opacity-90">{result.priceRange}</span>
+            </div>
+          </div>
+        </div>
+
+        {result.lat && result.lng && (
+          <div className="mb-4 animate-fade-in-up">
+            <MiniMap lat={result.lat} lng={result.lng} placeName={result.placeName} />
+          </div>
+        )}
+
+        <a
+          href="/"
+          className="block w-full py-4 rounded-2xl bg-[#3CDBC0] text-white font-black text-base text-center shadow-lg shadow-[#3CDBC0]/30 hover:bg-[#2AB5A0] transition-colors"
+        >
+          🌿 나도 MINT로 정하기
+        </a>
+      </div>
+    </div>
+  );
+}
+</file>
+
+<file path="src/utils/supabase.ts">
+import { createClient } from '@supabase/supabase-js';
+
+export const supabase = createClient(
+  import.meta.env.VITE_SUPABASE_URL ?? 'https://placeholder.supabase.co',
+  import.meta.env.VITE_SUPABASE_ANON_KEY ?? 'placeholder'
+);
+</file>
+
+<file path="vite.config.ts">
+import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react'
+import tailwindcss from '@tailwindcss/vite'
+
+export default defineConfig({
+  plugins: [
+    react(),
+    tailwindcss(),
+  ],
+  server: {
+    proxy: {
+      '/api/seoul': {
+        target: 'http://openapi.seoul.go.kr:8088',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api\/seoul/, ''),
+      },
+    },
+  },
+})
+</file>
+
+<file path="package.json">
+{
+  "name": "mint",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "lint": "eslint .",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.91.1",
+    "@supabase/supabase-js": "^2.105.0",
+    "@tailwindcss/vite": "^4.2.4",
+    "axios": "^1.15.2",
+    "react": "^19.2.5",
+    "react-dom": "^19.2.5",
+    "tailwindcss": "^4.2.4"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/node": "^24.12.2",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "@vercel/node": "^5.7.13",
+    "@vitejs/plugin-react": "^6.0.1",
+    "eslint": "^10.2.1",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "eslint-plugin-react-refresh": "^0.5.2",
+    "globals": "^17.5.0",
+    "typescript": "~6.0.2",
+    "typescript-eslint": "^8.58.2",
+    "vite": "^8.0.10"
+  }
+}
+</file>
+
+<file path="src/App.tsx">
+import { Component, type ReactNode } from 'react';
+import Home from './pages/Home';
+import Landing from './pages/Landing';
+import SharedResult from './pages/SharedResult';
+import Admin from './pages/Admin';
+
+class ErrorBoundary extends Component<{ children: ReactNode }, { error: Error | null }> {
+  state = { error: null };
+  static getDerivedStateFromError(error: Error) { return { error }; }
+  render() {
+    if (this.state.error) {
+      return (
+        <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '20px', fontFamily: 'sans-serif' }}>
+          <p style={{ fontSize: '32px', marginBottom: '12px' }}>😓</p>
+          <p style={{ fontWeight: 'bold', color: '#333', marginBottom: '8px' }}>페이지를 불러오지 못했어요</p>
+          <p style={{ color: '#888', fontSize: '13px', marginBottom: '20px' }}>{(this.state.error as Error).message}</p>
+          <button onClick={() => window.location.reload()} style={{ background: '#36CFA0', color: '#fff', border: 'none', borderRadius: '12px', padding: '10px 24px', fontWeight: 'bold', cursor: 'pointer' }}>
+            새로고침
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+function Router() {
+  const path = window.location.pathname;
+  if (path === '/admin') return <Admin />;
+  if (path === '/shared' || window.location.search.includes('data=')) return <SharedResult />;
+  if (path === '/app') return <Home />;
+  return <Landing />;
+}
+
+export default function App() {
+  return (
+    <ErrorBoundary>
+      <Router />
+    </ErrorBoundary>
+  );
+}
+</file>
+
+<file path="src/components/RegionSelect.tsx">
+import { useState } from 'react';
+import type { PresetRegion } from '../services/midpoint';
+import { PRESET_REGIONS } from '../services/midpoint';
+
+interface Props {
+  onAutoSelect: () => void;
+  onRegionSelect: (region: PresetRegion) => void;
+  onBack: () => void;
+}
+
+// 전국 주요 지역 (검색용)
+const SEARCH_REGIONS: PresetRegion[] = [
+  // 서울 주요 지역 (PRESET_REGIONS 포함)
+  ...PRESET_REGIONS,
+  // 서울 추가 구역
+  { id: 'seoul-center', label: '서울 중심부', sublabel: '광화문·시청·종로', midpoint: { lat: 37.5665, lng: 126.9780 } },
+  { id: 'nowon',        label: '노원/도봉',   sublabel: '노원역·도봉산·창동',   midpoint: { lat: 37.6543, lng: 127.0568 } },
+  { id: 'dobong',       label: '도봉/강북',   sublabel: '쌍문역·수유역·미아',   midpoint: { lat: 37.6688, lng: 127.0471 } },
+  { id: 'mapo',         label: '마포/공덕',   sublabel: '공덕역·마포역·대흥역', midpoint: { lat: 37.5442, lng: 126.9514 } },
+  { id: 'yongsan',      label: '용산',        sublabel: '용산역·이촌·한강진',   midpoint: { lat: 37.5311, lng: 126.9658 } },
+  { id: 'gwangjin',     label: '광진/구의',   sublabel: '구의역·자양동·광장동', midpoint: { lat: 37.5450, lng: 127.0850 } },
+  { id: 'songpa',       label: '송파/문정',   sublabel: '가락시장·문정역·오금', midpoint: { lat: 37.4760, lng: 127.1218 } },
+  { id: 'gangseo',      label: '강서/화곡',   sublabel: '발산역·화곡역·마곡',   midpoint: { lat: 37.5512, lng: 126.8496 } },
+  { id: 'yangcheon',    label: '양천/목동',   sublabel: '목동역·신정역·오목교', midpoint: { lat: 37.5170, lng: 126.8680 } },
+  { id: 'dongdaemun',   label: '동대문',      sublabel: '동대문역·청량리·답십리', midpoint: { lat: 37.5714, lng: 127.0407 } },
+  { id: 'jungnang',     label: '중랑/면목',   sublabel: '면목역·상봉역·중화',   midpoint: { lat: 37.5947, lng: 127.0943 } },
+  { id: 'eunpyeong',    label: '은평/불광',   sublabel: '불광역·연신내·구산',   midpoint: { lat: 37.6176, lng: 126.9278 } },
+  { id: 'seodaemun',    label: '서대문/연희', sublabel: '서대문역·독립문·연희', midpoint: { lat: 37.5793, lng: 126.9368 } },
+  { id: 'seocho',       label: '서초/방배',   sublabel: '방배역·서초역·교대',   midpoint: { lat: 37.4836, lng: 126.9820 } },
+  // 경기도
+  { id: 'suwon',        label: '수원',        sublabel: '수원역·팔달문·인계동', midpoint: { lat: 37.2636, lng: 127.0286 } },
+  { id: 'seongnam',     label: '성남',        sublabel: '모란역·서현역·분당',   midpoint: { lat: 37.4340, lng: 127.1290 } },
+  { id: 'bundang',      label: '분당/판교',   sublabel: '판교역·서현역·야탑',   midpoint: { lat: 37.3838, lng: 127.1228 } },
+  { id: 'goyang',       label: '고양/일산',   sublabel: '정발산역·일산역·화정', midpoint: { lat: 37.6579, lng: 126.8320 } },
+  { id: 'uijeongbu',    label: '의정부',      sublabel: '의정부역·호원동·녹양', midpoint: { lat: 37.7381, lng: 127.0439 } },
+  { id: 'bucheon',      label: '부천',        sublabel: '부천역·중동·소사',     midpoint: { lat: 37.5033, lng: 126.7613 } },
+  { id: 'anyang',       label: '안양',        sublabel: '안양역·범계역·평촌',   midpoint: { lat: 37.3943, lng: 126.9528 } },
+  { id: 'ansan',        label: '안산',        sublabel: '안산역·중앙역·고잔',   midpoint: { lat: 37.3219, lng: 126.8308 } },
+  { id: 'hwaseong',     label: '화성/동탄',   sublabel: '동탄역·병점역·향남',   midpoint: { lat: 37.2005, lng: 127.0721 } },
+  { id: 'yongin',       label: '용인',        sublabel: '기흥역·죽전역·수지',   midpoint: { lat: 37.2411, lng: 127.1776 } },
+  { id: 'gwangmyeong',  label: '광명',        sublabel: '광명역·소하동·철산',   midpoint: { lat: 37.4784, lng: 126.8643 } },
+  { id: 'siheung',      label: '시흥',        sublabel: '정왕역·오이도·월곶',   midpoint: { lat: 37.3800, lng: 126.8030 } },
+  { id: 'gimpo',        label: '김포',        sublabel: '김포공항·풍무·걸포',   midpoint: { lat: 37.6151, lng: 126.7163 } },
+  { id: 'hanam',        label: '하남',        sublabel: '미사역·덕풍·풍산',     midpoint: { lat: 37.5397, lng: 127.2148 } },
+  { id: 'namyangju',    label: '남양주',      sublabel: '도농역·별내·퇴계원',   midpoint: { lat: 37.6360, lng: 127.2160 } },
+  { id: 'gapyeong',     label: '가평',        sublabel: '가평역·청평·대성리',   midpoint: { lat: 37.8317, lng: 127.5108 } },
+  { id: 'yangpyeong',   label: '양평',        sublabel: '양평역·용문·양수',     midpoint: { lat: 37.4916, lng: 127.4876 } },
+  { id: 'paju',         label: '파주',        sublabel: '운정역·교하·탄현',     midpoint: { lat: 37.7600, lng: 126.7800 } },
+  { id: 'pocheon',      label: '포천',        sublabel: '포천시내·소흘·내촌',   midpoint: { lat: 37.8944, lng: 127.2003 } },
+  { id: 'osan',         label: '오산',        sublabel: '오산역·세교·궐동',     midpoint: { lat: 37.1500, lng: 127.0770 } },
+  { id: 'pyeongtaek',   label: '평택',        sublabel: '평택역·지제역·송탄',   midpoint: { lat: 37.0174, lng: 127.0733 } },
+  { id: 'icheon',       label: '이천',        sublabel: '이천시내·부발·마장',   midpoint: { lat: 37.2720, lng: 127.4350 } },
+  { id: 'gwangju-gyeonggi', label: '광주(경기)', sublabel: '경기광주역·곤지암·오포', midpoint: { lat: 37.4296, lng: 127.2550 } },
+  // 인천
+  { id: 'incheon-center', label: '인천 중심', sublabel: '인천역·동인천·인하대', midpoint: { lat: 37.4738, lng: 126.6216 } },
+  { id: 'bupyeong',     label: '부평',        sublabel: '부평역·산곡·작전',     midpoint: { lat: 37.4883, lng: 126.7238 } },
+  { id: 'songdo',       label: '송도',        sublabel: '송도역·인천대입구·테크노', midpoint: { lat: 37.3830, lng: 126.6566 } },
+  { id: 'seogu-incheon', label: '인천 서구',  sublabel: '검단·원당·마전',       midpoint: { lat: 37.5456, lng: 126.6735 } },
+  // 대전/충청
+  { id: 'daejeon',      label: '대전',        sublabel: '대전역·둔산·서구',     midpoint: { lat: 36.3504, lng: 127.3845 } },
+  { id: 'daejeon-dunsan', label: '대전 둔산', sublabel: '둔산동·탄방·정림',     midpoint: { lat: 36.3510, lng: 127.3730 } },
+  { id: 'cheongju',     label: '청주',        sublabel: '청주역·복대·율량',     midpoint: { lat: 36.6424, lng: 127.4890 } },
+  { id: 'cheonan',      label: '천안',        sublabel: '천안역·쌍용·불당',     midpoint: { lat: 36.8151, lng: 127.1139 } },
+  { id: 'asan',         label: '아산',        sublabel: '아산역·온양온천·배방', midpoint: { lat: 36.7897, lng: 126.9817 } },
+  { id: 'sejong',       label: '세종',        sublabel: '세종시·조치원·반곡',   midpoint: { lat: 36.4801, lng: 127.2890 } },
+  { id: 'gongju',       label: '공주',        sublabel: '공주시·신관·유구',     midpoint: { lat: 36.4465, lng: 127.1190 } },
+  // 부산/경남
+  { id: 'busan',        label: '부산',        sublabel: '부산역·서면·해운대',   midpoint: { lat: 35.1796, lng: 129.0756 } },
+  { id: 'busan-seomyeon', label: '부산 서면', sublabel: '서면역·부전·전포',     midpoint: { lat: 35.1580, lng: 129.0590 } },
+  { id: 'haeundae',     label: '해운대',      sublabel: '해운대역·센텀·마린시티', midpoint: { lat: 35.1631, lng: 129.1636 } },
+  { id: 'changwon',     label: '창원',        sublabel: '창원역·마산·진해',     midpoint: { lat: 35.2280, lng: 128.6812 } },
+  { id: 'gimhae',       label: '김해',        sublabel: '장유·내외·부원',       midpoint: { lat: 35.2283, lng: 128.8893 } },
+  { id: 'ulsan',        label: '울산',        sublabel: '울산역·삼산·남구',     midpoint: { lat: 35.5384, lng: 129.3114 } },
+  // 대구/경북
+  { id: 'daegu',        label: '대구',        sublabel: '동대구역·반월당·수성', midpoint: { lat: 35.8714, lng: 128.6014 } },
+  { id: 'daegu-dongseong', label: '대구 동성로', sublabel: '동성로·반월당·명덕', midpoint: { lat: 35.8700, lng: 128.5950 } },
+  { id: 'gumi',         label: '구미',        sublabel: '구미역·원평·공단',     midpoint: { lat: 36.1198, lng: 128.3445 } },
+  { id: 'pohang',       label: '포항',        sublabel: '포항역·지곡·남구',     midpoint: { lat: 36.0190, lng: 129.3435 } },
+  { id: 'gyeongju',     label: '경주',        sublabel: '경주역·황리단길·보문', midpoint: { lat: 35.8562, lng: 129.2247 } },
+  { id: 'andong',       label: '안동',        sublabel: '안동역·구시가지·하회', midpoint: { lat: 36.5684, lng: 128.7294 } },
+  // 광주/전라
+  { id: 'gwangju',      label: '광주',        sublabel: '광주역·상무·충장로',   midpoint: { lat: 35.1595, lng: 126.8526 } },
+  { id: 'gwangju-sangmu', label: '광주 상무', sublabel: '상무역·치평·마륵',     midpoint: { lat: 35.1525, lng: 126.8480 } },
+  { id: 'jeonju',       label: '전주',        sublabel: '전주역·한옥마을·금암', midpoint: { lat: 35.8242, lng: 127.1480 } },
+  { id: 'mokpo',        label: '목포',        sublabel: '목포역·하당·원도심',   midpoint: { lat: 34.8118, lng: 126.3922 } },
+  { id: 'yeosu',        label: '여수',        sublabel: '여수엑스포역·돌산·웅천', midpoint: { lat: 34.7604, lng: 127.6622 } },
+  { id: 'suncheon',     label: '순천',        sublabel: '순천역·왕지·행동',     midpoint: { lat: 34.9507, lng: 127.4872 } },
+  { id: 'iksan',        label: '익산',        sublabel: '익산역·영등·모현',     midpoint: { lat: 35.9483, lng: 126.9576 } },
+  // 강원
+  { id: 'chuncheon',    label: '춘천',        sublabel: '춘천역·명동·효자',     midpoint: { lat: 37.8813, lng: 127.7298 } },
+  { id: 'wonju',        label: '원주',        sublabel: '원주역·단계·무실',     midpoint: { lat: 37.3422, lng: 127.9202 } },
+  { id: 'gangneung',    label: '강릉',        sublabel: '강릉역·교동·포남',     midpoint: { lat: 37.7519, lng: 128.8761 } },
+  // 제주
+  { id: 'jeju',         label: '제주',        sublabel: '제주시·연동·노형',     midpoint: { lat: 33.4996, lng: 126.5312 } },
+  { id: 'seogwipo',     label: '서귀포',      sublabel: '서귀포시·중문·표선',   midpoint: { lat: 33.2541, lng: 126.5600 } },
+];
+
+// 중복 제거 (PRESET_REGIONS가 이미 포함되어 있으므로)
+const ALL_REGIONS = Array.from(new Map(SEARCH_REGIONS.map((r) => [r.id, r])).values());
+
+export default function RegionSelect({ onAutoSelect, onRegionSelect, onBack }: Props) {
+  const [query, setQuery] = useState('');
+
+  const filtered = query.trim().length > 0
+    ? ALL_REGIONS.filter(
+        (r) =>
+          r.label.includes(query.trim()) ||
+          r.sublabel.includes(query.trim())
+      )
+    : PRESET_REGIONS;
+
+  return (
+    <div className="min-h-screen bg-[#F5FBF8]">
+      <div className="max-w-md mx-auto px-4 pt-8 pb-10">
+
+        <div className="flex items-center justify-between mb-8">
+          <button onClick={onBack} className="text-sm text-gray-400 hover:text-gray-600">
+            ← 이전
+          </button>
+          <span className="text-[#3CDBC0] font-black text-lg">MINT</span>
+          <div className="w-12" />
+        </div>
+
+        <div className="text-center mb-8">
+          <h2 className="text-xl font-black text-gray-800">어느 지역에서 만날까요?</h2>
+          <p className="text-sm text-gray-400 mt-1">추천 방식을 선택해주세요</p>
+        </div>
+
+        {/* 자동 중간지점 */}
+        <button
+          onClick={onAutoSelect}
+          className="w-full text-left bg-white border-2 border-[#3CDBC0] rounded-2xl p-5 shadow-sm hover:bg-[#E8F8F5] transition-all active:scale-[0.98] mb-5"
+        >
+          <div className="flex items-start gap-4">
+            <div className="text-3xl">🧭</div>
+            <div>
+              <div className="font-black text-gray-800 text-base">자동 중간지점 찾기</div>
+              <div className="text-sm text-gray-500 mt-1 leading-relaxed">
+                모두의 출발지 기준으로<br />
+                최적의 중간 지점을 계산해드려요
+              </div>
+              <div className="mt-2 inline-block text-xs font-bold text-[#3CDBC0] bg-[#E8F8F5] px-2 py-0.5 rounded-full">
+                추천
+              </div>
+            </div>
+          </div>
+        </button>
+
+        {/* 지역 검색 + 그리드 */}
+        <div>
+          <div className="flex items-center gap-2 mb-3">
+            <span className="text-sm font-black text-gray-700">지역 직접 선택</span>
+            <span className="text-xs text-gray-400">대전, 부산, 강남 등 검색</span>
+          </div>
+
+          {/* 검색창 */}
+          <div className="relative mb-4">
+            <input
+              type="text"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="지역명 검색 (예: 대전, 강남, 부산...)"
+              className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-[#3CDBC0] text-sm outline-none transition-all bg-white"
+            />
+            {query && (
+              <button
+                onClick={() => setQuery('')}
+                className="absolute inset-y-0 right-3 flex items-center text-gray-400 hover:text-gray-600 text-lg"
+              >
+                ×
+              </button>
+            )}
+          </div>
+
+          {/* 지역 그리드 */}
+          {filtered.length === 0 ? (
+            <div className="text-center text-sm text-gray-400 py-8">
+              검색 결과가 없어요
+            </div>
+          ) : (
+            <div className="grid grid-cols-3 gap-2">
+              {filtered.map((region) => (
+                <button
+                  key={region.id}
+                  onClick={() => onRegionSelect(region)}
+                  className="bg-white border-2 border-gray-100 rounded-xl p-3 text-left hover:border-[#3CDBC0] hover:bg-[#E8F8F5] transition-all active:scale-[0.97]"
+                >
+                  <div className="text-sm font-black text-gray-800 truncate">{region.label}</div>
+                  <div className="text-[10px] text-gray-400 mt-0.5 truncate">{region.sublabel}</div>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+</file>
+
+<file path="src/pages/Reserve.tsx">
+import { useState } from 'react';
+import { trackEvent } from '../utils/analytics';
+import { supabase } from '../utils/supabase';
+
+export interface ReservationRecord {
+  id: string;
+  placeName: string;
+  address: string;
+  guestName: string;
+  people: string;
+  arrivalTime: string;
+  createdAt: string;
+}
+
+interface Props {
+  placeName: string;
+  address: string;
+  openingHours: string;
+  onBack: () => void;
+}
+
+type Status = 'form' | 'unavailable';
+
+export default function Reserve({ placeName, address, openingHours, onBack }: Props) {
+  const [name, setName] = useState('');
+  const [people, setPeople] = useState('');
+  const [status, setStatus] = useState<Status>('form');
+  const [error, setError] = useState('');
+
+  function handleSubmit() {
+    if (!name.trim() || !people.trim()) {
+      setError('이름과 인원수를 입력해주세요.');
+      return;
+    }
+
+    // 데이터 저장 (admin에서 확인용)
+    const record: ReservationRecord = {
+      id: Date.now().toString(),
+      placeName,
+      address,
+      guestName: name.trim(),
+      people: people.trim(),
+      arrivalTime: '-',
+      createdAt: new Date().toISOString(),
+    };
+    supabase.from('reservations').insert({
+      id: record.id,
+      place_name: record.placeName,
+      address: record.address,
+      guest_name: record.guestName,
+      people: record.people,
+      arrival_time: record.arrivalTime,
+      created_at: record.createdAt,
+    }).then(() => {});
+
+    // 트래킹
+    trackEvent('reservation_attempt');
+
+    // 사용자에게는 예약 불가 메시지
+    setStatus('unavailable');
+  }
+
+  return (
+    <div className="min-h-screen bg-[#F5FBF8]">
+      <div className="max-w-md mx-auto px-4 pt-6 pb-16">
+
+        {/* 헤더 */}
+        <div className="flex items-center gap-3 mb-6">
+          <button
+            onClick={onBack}
+            className="w-10 h-10 rounded-2xl border-2 border-gray-200 bg-white flex items-center justify-center text-gray-500 font-bold"
+          >
+            ←
+          </button>
+          <h1 className="text-lg font-black text-gray-800">예약 요청하기</h1>
+        </div>
+
+        {/* 장소 정보 */}
+        <div className="bg-white rounded-2xl border-2 border-gray-100 p-4 mb-6">
+          <span className="text-xs font-bold text-[#36CFA0] bg-teal-50 px-2 py-0.5 rounded-full">예약 장소</span>
+          <div className="mt-2 font-black text-gray-800 text-lg">{placeName}</div>
+          {address && <div className="text-sm text-gray-400 mt-1">📍 {address}</div>}
+          {openingHours && <div className="text-sm text-gray-400 mt-0.5">🕐 {openingHours}</div>}
+        </div>
+
+        {status === 'form' ? (
+          <>
+            {/* 이름 */}
+            <div className="mb-4">
+              <label className="block text-sm font-bold text-gray-700 mb-2">
+                이름 <span className="text-red-400">*</span>
+              </label>
+              <input
+                type="text"
+                placeholder="홍길동"
+                value={name}
+                onChange={(e) => { setName(e.target.value); setError(''); }}
+                className="w-full border-2 border-gray-200 rounded-2xl px-4 py-3 text-gray-800 placeholder-gray-300 focus:outline-none focus:border-[#36CFA0] transition-colors"
+              />
+            </div>
+
+            {/* 인원수 */}
+            <div className="mb-6">
+              <label className="block text-sm font-bold text-gray-700 mb-2">
+                인원수 <span className="text-red-400">*</span>
+              </label>
+              <input
+                type="number"
+                placeholder="3"
+                min={1}
+                value={people}
+                onChange={(e) => { setPeople(e.target.value); setError(''); }}
+                className="w-full border-2 border-gray-200 rounded-2xl px-4 py-3 text-gray-800 placeholder-gray-300 focus:outline-none focus:border-[#36CFA0] transition-colors"
+              />
+            </div>
+
+            {error && (
+              <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-500 text-center">
+                {error}
+              </div>
+            )}
+
+            <button
+              onClick={handleSubmit}
+              className="w-full bg-[#36CFA0] text-white font-black text-base py-4 rounded-2xl shadow-lg shadow-teal-200 active:scale-95 transition-all hover:bg-[#2AB58C]"
+            >
+              예약 확인하기
+            </button>
+          </>
+        ) : (
+          /* 예약 불가 메시지 */
+          <div className="bg-red-50 border border-red-200 rounded-2xl p-8 text-center">
+            <div className="text-4xl mb-3">😔</div>
+            <div className="text-lg font-black text-red-600 mb-2">죄송합니다.</div>
+            <div className="text-sm text-red-400 leading-relaxed">
+              현재 예약이 불가능한 매장입니다.
+            </div>
+            <button
+              onClick={onBack}
+              className="mt-6 text-sm text-gray-400 underline"
+            >
+              돌아가기
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+</file>
+
+<file path="api/travel-time.ts">
+import type { VercelRequest, VercelResponse } from '@vercel/node';
+
+interface Origin {
+  lat: number;
+  lng: number;
+  label: string;
+}
+
+function formatDuration(minutes: number): string {
+  if (minutes < 1) return '1분 미만';
+  if (minutes < 60) return `약 ${minutes}분`;
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  return m > 0 ? `${h}시간 ${m}분` : `${h}시간`;
+}
+
+function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+// 프론트엔드 midpoint.ts 와 동일한 구간 공식 사용 (일관성)
+function estimateTransitMin(km: number): number {
+  if (km <= 3)  return Math.round(7   + km * 3.5);
+  if (km <= 10) return Math.round(17.5 + (km -  3) * 2.5);
+  if (km <= 25) return Math.round(35  + (km - 10) * 2.0);
+  return        Math.round(65  + (km - 25) * 1.8);
+}
+
+export default async function handler(req: VercelRequest, res: VercelResponse) {
+  if (req.method !== 'POST') return res.status(405).end();
+
+  const { origins, destination } = req.body as {
+    origins: Origin[];
+    destination: { lat: number; lng: number };
+  };
+  const apiKey = process.env.VITE_KAKAO_REST_API_KEY ?? process.env.KAKAO_REST_API_KEY;
+
+  const results = await Promise.all(
+    origins.map(async (origin) => {
+      // 1) 카카오 대중교통 API 시도
+      if (apiKey) {
+        try {
+          const url = `https://apis-navi.kakaomobility.com/v1/transit/route?origin=${origin.lng},${origin.lat}&destination=${destination.lng},${destination.lat}`;
+          const resp = await fetch(url, { headers: { Authorization: `KakaoAK ${apiKey}` } });
+          if (resp.ok) {
+            const data = await resp.json();
+            const duration: number | undefined = data.routes?.[0]?.summary?.duration;
+            if (duration) {
+              return {
+                label: origin.label,
+                formatted: formatDuration(Math.round(duration / 60)),
+                source: 'transit',
+              };
+            }
+          }
+        } catch {}
+      }
+
+      // 2) 직선거리 기반 추정 (자동차 API × 환산 제거 — 오차 큼)
+      const km = haversineKm(origin.lat, origin.lng, destination.lat, destination.lng);
+      const m = estimateTransitMin(km);
+      return { label: origin.label, formatted: formatDuration(m), source: 'estimate' };
+    })
+  );
+
+  return res.status(200).json(results);
+}
+</file>
+
+<file path="src/utils/analytics.ts">
+// Supabase 마이그레이션 필요:
+//   ALTER TABLE events ADD COLUMN IF NOT EXISTS duration_seconds integer;
+// (Supabase 대시보드 > SQL Editor에서 실행)
+
+import { supabase } from './supabase';
+
+type EventType = 'landing_view' | 'cta_click' | 'reservation_attempt' | 'session_duration';
+
+const PAUSE_KEY = 'mint_tracking_paused';
+
+export function isTrackingPaused(): boolean {
+  try { return localStorage.getItem(PAUSE_KEY) === 'true'; } catch { return false; }
+}
+
+export function setTrackingPaused(paused: boolean): void {
+  try { localStorage.setItem(PAUSE_KEY, paused ? 'true' : 'false'); } catch {}
+}
+
+declare global {
+  interface Window { dataLayer: Record<string, unknown>[] }
+}
+
+function pushDataLayer(event: string) {
+  window.dataLayer = window.dataLayer || [];
+  window.dataLayer.push({ event });
+}
+
+export function trackEvent(type: Exclude<EventType, 'session_duration'>): void {
+  if (isTrackingPaused()) return;
+  pushDataLayer(type);
+  supabase.from('events').insert({ type }).then(() => {});
+}
+
+export function trackSessionDuration(seconds: number): void {
+  if (isTrackingPaused()) return;
+  supabase.from('events').insert({ type: 'session_duration', duration_seconds: seconds }).then(() => {});
+}
+
+export async function getAnalytics() {
+  const { data } = await supabase.from('events').select('type, duration_seconds');
+  if (!data) return { landingViews: 0, ctaClicks: 0, reservationAttempts: 0, avgStaySeconds: null as number | null };
+  const sessions = data.filter((e) => e.type === 'session_duration' && e.duration_seconds != null);
+  const avgStaySeconds: number | null = sessions.length > 0
+    ? Math.round(sessions.reduce((sum: number, s: any) => sum + (s.duration_seconds as number), 0) / sessions.length)
+    : null;
+  return {
+    landingViews: data.filter((e) => e.type === 'landing_view').length,
+    ctaClicks: data.filter((e) => e.type === 'cta_click').length,
+    reservationAttempts: data.filter((e) => e.type === 'reservation_attempt').length,
+    avgStaySeconds,
+  };
+}
+</file>
+
+<file path="vercel.json">
+{
+  "functions": {
+    "api/recommend.ts": { "maxDuration": 60 },
+    "api/travel-time.ts": { "maxDuration": 30 }
+  },
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
+}
+</file>
+
+<file path="src/components/MeetingLocationSelect.tsx">
+import { useState } from 'react';
+
+export type MeetingLocation =
+  | { type: 'auto' }
+  | { type: 'manual'; regionId: string; area: string };
+
+interface Props {
+  value: MeetingLocation | null;
+  onSelect: (loc: MeetingLocation) => void;
+}
+
+const HOT_REGIONS = [
+  { id: 'seongsu',    label: '성수/건대', desc: '성수역·건대입구·뚝섬' },
+  { id: 'hongdae',    label: '홍대/마포', desc: '홍대입구·합정·망원'   },
+  { id: 'myeongdong', label: '명동/시청', desc: '명동·을지로·중구'      },
+];
+
+const MORE_REGIONS = [
+  { id: 'gangnam',  label: '강남/서초',   desc: '강남역·서초역·교대'   },
+  { id: 'itaewon',  label: '이태원/한남', desc: '이태원역·한남동'       },
+  { id: 'jongno',   label: '종로/혜화',   desc: '종각역·인사동·광화문' },
+  { id: 'yeouido',  label: '여의도',      desc: '여의도역·IFC몰'        },
+  { id: 'sinchon',  label: '신촌/연대',   desc: '신촌역·이대역·연세대' },
+  { id: 'jamsil',   label: '잠실/송파',   desc: '잠실역·롯데월드'       },
+];
+
+export default function MeetingLocationSelect({ value, onSelect }: Props) {
+  const [search, setSearch] = useState('');
+  const [showMore, setShowMore] = useState(false);
+
+  function handleSearch() {
+    const trimmed = search.trim();
+    if (trimmed) onSelect({ type: 'manual', regionId: '', area: trimmed });
+  }
+
+  function isManualSelected(regionId: string) {
+    return value?.type === 'manual' && (value as { type: 'manual'; regionId: string }).regionId === regionId;
+  }
+
+  return (
+    <div className="px-4 py-3 flex flex-col gap-4">
+      {/* 자동 중간지점 카드 */}
+      <button
+        onClick={() => onSelect({ type: 'auto' })}
+        className={`w-full text-left rounded-2xl p-4 flex items-center gap-3 active:scale-[0.98] transition-all shadow-lg shadow-[#3CDBC0]/25 ${
+          value?.type === 'auto'
+            ? 'bg-[#3CDBC0] border-4 border-[#2AB58C]'
+            : 'bg-[#3CDBC0]'
+        }`}
+      >
+        <div className="text-2xl">🧭</div>
+        <div className="flex-1">
+          <div className="font-black text-white text-base">자동 중간지점 찾기</div>
+          <div className="text-xs text-white/80 mt-0.5">모든 출발지 기준 최적 중간 지점 계산</div>
+        </div>
+        <div className="text-xs font-bold text-[#3CDBC0] bg-white px-2.5 py-1 rounded-full flex-shrink-0">
+          추천
+        </div>
+      </button>
+
+      <div className="bg-white rounded-2xl border-2 border-gray-100 shadow-sm p-4 flex flex-col gap-4">
+
+        {/* 카드 헤더 */}
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-xl bg-[#E8F8F5] flex items-center justify-center">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#3CDBC0" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+            </svg>
+          </div>
+          <div className="flex-1">
+            <div className="font-black text-gray-800 text-base">직접 입력하기</div>
+            <div className="text-xs text-gray-400 mt-0.5">만날 지역을 직접 입력</div>
+          </div>
+        </div>
+
+        {/* 검색창 — 메인 */}
+        <div className="relative">
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter') handleSearch(); }}
+            placeholder="예: 홍대, 강남역, 성수동..."
+            className="w-full bg-white border-2 border-[#3CDBC0] rounded-xl px-4 py-3 text-sm text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#3CDBC0]/20 transition-colors"
+          />
+          {search.trim() && (
+            <button
+              onClick={handleSearch}
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 bg-[#3CDBC0] text-white text-xs font-bold px-3 py-1.5 rounded-lg active:scale-95 transition-transform"
+            >
+              →
+            </button>
+          )}
+        </div>
+
+        {/* 핫 지역 */}
+        <div>
+          <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-2">
+            🔥 지금 핫한 지역
+          </p>
+          <div className="grid grid-cols-3 gap-2">
+            {HOT_REGIONS.map((r) => (
+              <button
+                key={r.id}
+                onClick={() => onSelect({ type: 'manual', regionId: r.id, area: r.label })}
+                className={`rounded-xl border-2 px-3 py-2.5 text-center active:scale-[0.97] transition-all ${
+                  isManualSelected(r.id)
+                    ? 'border-[#3CDBC0] bg-teal-50'
+                    : 'border-gray-200 bg-white hover:border-[#3CDBC0]'
+                }`}
+              >
+                <div className="text-sm font-black text-gray-800 truncate">{r.label}</div>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* 더 많은 지역 */}
+        {!showMore ? (
+          <button
+            onClick={() => setShowMore(true)}
+            className="text-center text-xs text-[#3CDBC0] font-bold hover:text-[#2AB5A0] transition-colors py-0.5"
+          >
+            다른 지역 선택하기 →
+          </button>
+        ) : (
+          <div className="grid grid-cols-3 gap-2 animate-fade-in-up">
+            {MORE_REGIONS.map((r) => (
+              <button
+                key={r.id}
+                onClick={() => onSelect({ type: 'manual', regionId: r.id, area: r.label })}
+                className={`rounded-xl border-2 px-3 py-2.5 text-center active:scale-[0.97] transition-all ${
+                  isManualSelected(r.id)
+                    ? 'border-[#3CDBC0] bg-teal-50'
+                    : 'border-gray-200 bg-white hover:border-[#3CDBC0]'
+                }`}
+              >
+                <div className="text-sm font-black text-gray-800 truncate">{r.label}</div>
+              </button>
+            ))}
+          </div>
+        )}
+
+      </div>
+    </div>
+  );
+}
+</file>
+
+<file path="src/components/PurposeSelect.tsx">
+import { useState } from 'react';
+
+export interface PurposeValue {
+  first: string | null;
+  firstRaw: '밥' | '술' | '카페' | '기타' | null;
+  second: string | null;
+  secondRaw: '밥' | '술' | '카페' | '기타' | '없음' | null;
+}
+
+interface Props {
+  value: PurposeValue;
+  onChange: (v: PurposeValue) => void;
+}
+
+const OPTIONS: { value: '밥' | '술' | '카페' | '기타'; emoji: string }[] = [
+  { value: '밥', emoji: '🍽️' },
+  { value: '술', emoji: '🍻' },
+  { value: '카페', emoji: '☕' },
+  { value: '기타', emoji: '✏️' },
+];
+
+export default function PurposeSelect({ value, onChange }: Props) {
+  const [firstText, setFirstText] = useState<string>(
+    value.firstRaw === '기타' && value.first ? value.first : ''
+  );
+  const [secondText, setSecondText] = useState<string>(
+    value.secondRaw === '기타' && value.second ? value.second : ''
+  );
+
+  function selectFirst(opt: '밥' | '술' | '카페' | '기타') {
+    const newSecondRaw = value.secondRaw === opt ? null : value.secondRaw;
+    const newSecond = value.secondRaw === opt ? null : value.second;
+    if (opt === '기타') {
+      onChange({ first: firstText.trim() || null, firstRaw: '기타', second: newSecond, secondRaw: newSecondRaw });
+    } else {
+      onChange({ first: opt, firstRaw: opt, second: newSecond, secondRaw: newSecondRaw });
+    }
+  }
+
+  function handleFirstText(text: string) {
+    setFirstText(text);
+    onChange({ ...value, first: text.trim() || null });
+  }
+
+  function selectSecond(opt: '밥' | '술' | '카페' | '기타' | '없음') {
+    if (opt === '없음') {
+      onChange({ ...value, second: '없음', secondRaw: '없음' });
+    } else if (opt === '기타') {
+      onChange({ ...value, second: secondText.trim() || null, secondRaw: '기타' });
+    } else {
+      onChange({ ...value, second: opt, secondRaw: opt });
+    }
+  }
+
+  function handleSecondText(text: string) {
+    setSecondText(text);
+    onChange({ ...value, second: text.trim() || null });
+  }
+
+  const isNoneSelected = value.secondRaw === '없음' || value.secondRaw === null;
+
+  return (
+    <div className="px-4 py-3 flex flex-col gap-5">
+      {/* 1차 목적 */}
+      <div>
+        <div className="flex items-center gap-2 mb-3">
+          <p className="text-[11px] font-bold text-gray-500 uppercase tracking-widest">1차 목적</p>
+          <span className="text-[10px] font-bold text-red-400 bg-red-50 px-2 py-0.5 rounded-full">필수</span>
+        </div>
+        <div className="grid grid-cols-4 gap-2">
+          {OPTIONS.map((opt) => {
+            const selected = value.firstRaw === opt.value;
+            const showInput = selected && opt.value === '기타';
+            return (
+              <button
+                key={opt.value}
+                onClick={() => selectFirst(opt.value)}
+                className={`flex flex-col items-center justify-center h-[72px] rounded-2xl border-2 transition-all duration-200 ${
+                  selected
+                    ? 'border-[#3CDBC0] bg-[#E8F8F5] shadow-md shadow-[#3CDBC0]/20'
+                    : 'border-gray-200 bg-white hover:border-[#3CDBC0]/50'
+                }`}
+              >
+                {showInput ? (
+                  <input
+                    type="text"
+                    value={firstText}
+                    onClick={(e) => e.stopPropagation()}
+                    onChange={(e) => handleFirstText(e.target.value)}
+                    placeholder="입력"
+                    maxLength={10}
+                    className="w-full px-1 text-center text-xs font-bold text-[#2AB5A0] bg-transparent outline-none placeholder:text-[#3CDBC0]/50 placeholder:font-medium"
+                    autoFocus
+                  />
+                ) : (
+                  <>
+                    <span className="text-xl mb-1 leading-none">{opt.emoji}</span>
+                    <span className={`text-xs font-bold ${selected ? 'text-[#2AB5A0]' : 'text-gray-700'}`}>
+                      {opt.value}
+                    </span>
+                  </>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* 2차 목적 */}
+      <div>
+        <div className="flex items-center gap-2 mb-3">
+          <p className="text-[11px] font-bold text-gray-500 uppercase tracking-widest">2차 목적</p>
+          <span className="text-[10px] text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full font-medium">선택사항</span>
+        </div>
+        <div className="grid grid-cols-4 gap-2 mb-2.5">
+          {OPTIONS.map((opt) => {
+            const isDisabled = opt.value !== '기타' && opt.value === value.firstRaw;
+            const selected = value.secondRaw === opt.value;
+            const showInput = selected && opt.value === '기타';
+            return (
+              <button
+                key={opt.value}
+                onClick={() => !isDisabled && selectSecond(opt.value)}
+                disabled={isDisabled}
+                className={`flex flex-col items-center justify-center h-[72px] rounded-2xl border-2 transition-all duration-200 ${
+                  isDisabled
+                    ? 'border-gray-100 bg-gray-50 opacity-40 cursor-not-allowed'
+                    : selected
+                    ? 'border-[#3CDBC0] bg-[#E8F8F5] shadow-md shadow-[#3CDBC0]/20'
+                    : 'border-gray-200 bg-white hover:border-[#3CDBC0]/50'
+                }`}
+              >
+                {showInput ? (
+                  <input
+                    type="text"
+                    value={secondText}
+                    onClick={(e) => e.stopPropagation()}
+                    onChange={(e) => handleSecondText(e.target.value)}
+                    placeholder="입력"
+                    maxLength={10}
+                    className="w-full px-1 text-center text-xs font-bold text-[#2AB5A0] bg-transparent outline-none placeholder:text-[#3CDBC0]/50 placeholder:font-medium"
+                    autoFocus
+                  />
+                ) : (
+                  <>
+                    <span className="text-xl mb-1 leading-none">{opt.emoji}</span>
+                    <span className={`text-xs font-bold ${selected ? 'text-[#2AB5A0]' : 'text-gray-700'}`}>
+                      {opt.value}
+                    </span>
+                  </>
+                )}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* 없음 — 풀너비, 기본 선택 */}
+        <button
+          onClick={() => selectSecond('없음')}
+          className={`w-full py-3.5 rounded-2xl border-2 text-sm font-bold transition-all duration-200 flex items-center justify-center gap-2 ${
+            isNoneSelected
+              ? 'border-[#3CDBC0] bg-[#E8F8F5] text-[#2AB5A0] shadow-md shadow-[#3CDBC0]/20'
+              : 'border-gray-200 bg-white text-gray-600 hover:border-[#3CDBC0]/50'
+          }`}
+        >
+          <span>✋</span>
+          <span>2차 없음</span>
+        </button>
+      </div>
+    </div>
+  );
+}
+</file>
+
+<file path="src/components/StepProgress.tsx">
+interface Props {
+  current: number;
+  total: number;
+}
+
+const STEP_LABELS = ['출발지', '목적', '분위기', '장소', '추천'];
+
+export default function StepProgress({ current, total }: Props) {
+  return (
+    <div className="w-full px-4 pt-6 pb-2">
+      <div className="flex items-center justify-between mb-3">
+        {STEP_LABELS.slice(0, total).map((label, i) => (
+          <div key={i} className="flex flex-col items-center gap-1">
+            <div
+              className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-300 ${
+                i < current
+                  ? 'bg-[#3CDBC0] text-white'
+                  : i === current
+                  ? 'bg-[#3CDBC0] text-white shadow-lg shadow-[#3CDBC0]/40'
+                  : 'bg-gray-200 text-gray-400'
+              }`}
+            >
+              {i < current ? '✓' : i + 1}
+            </div>
+            <span
+              className={`text-[10px] font-medium ${
+                i <= current ? 'text-[#2AB5A0]' : 'text-gray-400'
+              }`}
+            >
+              {label}
+            </span>
+          </div>
+        ))}
+      </div>
+      <div className="relative h-1.5 bg-gray-200 rounded-full overflow-hidden">
+        <div
+          className="absolute inset-y-0 left-0 bg-[#3CDBC0] rounded-full transition-all duration-500 ease-in-out"
+          style={{ width: `${(current / (total - 1)) * 100}%` }}
+        />
+      </div>
+    </div>
+  );
+}
+</file>
+
+<file path="src/pages/Admin.tsx">
+import { useEffect, useState } from 'react';
+import { supabase } from '../utils/supabase';
+import { getAnalytics, isTrackingPaused, setTrackingPaused } from '../utils/analytics';
+import type { ReservationRecord } from './Reserve';
+
+function formatDuration(seconds: number): string {
+  if (seconds < 60) return `${seconds}초`;
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  return s > 0 ? `${m}분 ${s}초` : `${m}분`;
+}
+
+function formatDate(iso: string) {
+  const d = new Date(iso);
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  const hh = String(d.getHours()).padStart(2, '0');
+  const min = String(d.getMinutes()).padStart(2, '0');
+  return `${mm}/${dd} ${hh}:${min}`;
+}
+
+async function fetchReservations(): Promise<ReservationRecord[]> {
+  const { data } = await supabase
+    .from('reservations')
+    .select('*')
+    .order('created_at', { ascending: false });
+  if (!data) return [];
+  return data.map((r) => ({
+    id: r.id,
+    placeName: r.place_name,
+    address: r.address,
+    guestName: r.guest_name,
+    people: r.people,
+    arrivalTime: r.arrival_time,
+    createdAt: r.created_at,
+  }));
+}
+
+function PasswordGate({ onUnlock }: { onUnlock: () => void }) {
+  const [input, setInput] = useState('');
+  const [error, setError] = useState(false);
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (input === '1229') { onUnlock(); }
+    else { setError(true); setInput(''); }
+  }
+
+  return (
+    <div className="min-h-screen bg-[#F5FBF8] flex items-center justify-center px-4">
+      <form onSubmit={handleSubmit} className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 w-full max-w-xs text-center">
+        <div className="text-3xl mb-3">🔒</div>
+        <h1 className="text-lg font-black text-gray-800 mb-1">MINT 어드민</h1>
+        <p className="text-sm text-gray-400 mb-6">비밀번호를 입력해주세요</p>
+        <input
+          type="password"
+          value={input}
+          onChange={(e) => { setInput(e.target.value); setError(false); }}
+          placeholder="비밀번호"
+          autoFocus
+          className={`w-full px-4 py-3 rounded-xl border-2 text-center text-lg tracking-widest outline-none transition-all ${error ? 'border-red-300 bg-red-50' : 'border-gray-200 focus:border-[#36CFA0]'}`}
+        />
+        {error && <p className="text-xs text-red-400 mt-2">비밀번호가 틀렸어요</p>}
+        <button type="submit" className="w-full mt-4 bg-[#36CFA0] text-white font-black py-3 rounded-xl hover:bg-[#2AB58C] transition-colors">
+          입장
+        </button>
+      </form>
+    </div>
+  );
+}
+
+export default function Admin() {
+  const [unlocked, setUnlocked] = useState(false);
+  const [records, setRecords] = useState<ReservationRecord[]>([]);
+  const [analytics, setAnalytics] = useState({ landingViews: 0, ctaClicks: 0, reservationAttempts: 0, avgStaySeconds: null as number | null });
+  const [loading, setLoading] = useState(true);
+  const [paused, setPaused] = useState(false);
+
+  useEffect(() => {
+    setPaused(isTrackingPaused());
+  }, []);
+
+  const conversionRate = analytics.landingViews === 0
+    ? '0.0'
+    : ((analytics.ctaClicks / analytics.landingViews) * 100).toFixed(1);
+
+  useEffect(() => {
+    if (!unlocked) return;
+    Promise.all([getAnalytics(), fetchReservations()]).then(([a, r]) => {
+      setAnalytics(a);
+      setRecords(r);
+      setLoading(false);
+    });
+  }, [unlocked]);
+
+  async function handleDelete(id: string) {
+    await supabase.from('reservations').delete().eq('id', id);
+    setRecords((prev) => prev.filter((r) => r.id !== id));
+  }
+
+  async function handleClear() {
+    if (!confirm('전체 예약 내역을 삭제할까요?')) return;
+    await supabase.from('reservations').delete().not('id', 'is', null);
+    setRecords([]);
+  }
+
+  async function handleClearAnalytics() {
+    if (!confirm('분석 데이터(랜딩 조회, CTA 클릭 등)를 초기화할까요?')) return;
+    await supabase.from('events').delete().not('id', 'is', null);
+    setAnalytics({ landingViews: 0, ctaClicks: 0, reservationAttempts: 0, avgStaySeconds: null });
+  }
+
+  function handleTogglePause() {
+    const next = !paused;
+    setTrackingPaused(next);
+    setPaused(next);
+  }
+
+  if (!unlocked) return <PasswordGate onUnlock={() => setUnlocked(true)} />;
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#F5FBF8] flex items-center justify-center">
+        <p className="text-gray-400">불러오는 중...</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-[#F5FBF8]">
+      <div className="max-w-3xl mx-auto px-4 pt-8 pb-16">
+
+        {/* 헤더 */}
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h1 className="text-2xl font-black text-[#2AB5A0]">MINT 어드민</h1>
+            <p className="text-sm text-gray-400">예약 요청 내역</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-xs bg-[#E8F8F5] text-[#2AB5A0] font-bold px-2.5 py-1 rounded-full">
+              총 {records.length}건
+            </span>
+            {records.length > 0 && (
+              <button
+                onClick={handleClear}
+                className="text-xs text-red-400 border border-red-200 px-2.5 py-1 rounded-full hover:bg-red-50 transition-colors"
+              >
+                전체 삭제
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* 데이터 수집 일시정지 토글 */}
+        <div className="mb-6">
+          <button
+            onClick={handleTogglePause}
+            className={`w-full flex items-center justify-between px-4 py-3 rounded-2xl border-2 transition-all ${
+              paused
+                ? 'border-orange-300 bg-orange-50'
+                : 'border-gray-200 bg-white'
+            }`}
+          >
+            <div className="flex items-center gap-3">
+              <span className="text-xl">{paused ? '⏸️' : '▶️'}</span>
+              <div className="text-left">
+                <div className={`font-black text-sm ${paused ? 'text-orange-600' : 'text-gray-700'}`}>
+                  데이터 수집 {paused ? '일시정지 중' : '수집 중'}
+                </div>
+                <div className="text-xs text-gray-400">
+                  {paused ? 'MVP 테스트 중에는 데이터가 기록되지 않아요' : '클릭하면 이 기기에서 수집이 멈춰요'}
+                </div>
+              </div>
+            </div>
+            <div className={`w-10 h-6 rounded-full transition-colors relative ${paused ? 'bg-orange-400' : 'bg-[#3CDBC0]'}`}>
+              <div className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-transform ${paused ? 'left-1' : 'left-5'}`} />
+            </div>
+          </button>
+        </div>
+
+        {/* ── 전환율 대시보드 ── */}
+        <div className="mb-8">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-sm font-black text-gray-600">📊 전환율 현황</h2>
+            <button
+              onClick={handleClearAnalytics}
+              className="text-xs text-red-400 border border-red-200 px-2.5 py-1 rounded-full hover:bg-red-50 transition-colors"
+            >
+              초기화
+            </button>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="bg-white rounded-2xl border border-gray-100 p-4 shadow-sm">
+              <div className="text-xs text-gray-400 mb-1">랜딩 조회</div>
+              <div className="text-3xl font-black text-[#36CFA0]">{analytics.landingViews}</div>
+              <div className="text-xs text-gray-300 mt-1">회</div>
+            </div>
+            <div className="bg-white rounded-2xl border border-gray-100 p-4 shadow-sm">
+              <div className="text-xs text-gray-400 mb-1">CTA 클릭</div>
+              <div className="text-3xl font-black text-[#36CFA0]">{analytics.ctaClicks}</div>
+              <div className="text-xs text-gray-300 mt-1">회</div>
+            </div>
+            <div className="bg-white rounded-2xl border-2 border-[#36CFA0] bg-teal-50 p-4 shadow-sm">
+              <div className="text-xs text-[#36CFA0] font-bold mb-1">전환율</div>
+              <div className="text-3xl font-black text-[#36CFA0]">{conversionRate}%</div>
+              <div className="text-xs text-teal-300 mt-1">랜딩 → MVP</div>
+            </div>
+            <div className="bg-white rounded-2xl border border-gray-100 p-4 shadow-sm">
+              <div className="text-xs text-gray-400 mb-1">예약 시도</div>
+              <div className="text-3xl font-black text-[#36CFA0]">{analytics.reservationAttempts}</div>
+              <div className="text-xs text-gray-300 mt-1">건</div>
+            </div>
+            <div className="col-span-2 bg-white rounded-2xl border border-gray-100 p-4 shadow-sm">
+              <div className="text-xs text-gray-400 mb-1">평균 체류시간</div>
+              <div className="text-3xl font-black text-[#36CFA0]">
+                {analytics.avgStaySeconds != null ? formatDuration(analytics.avgStaySeconds) : '—'}
+              </div>
+              <div className="text-xs text-gray-300 mt-1">
+                {analytics.avgStaySeconds != null ? '앱 진입 → 결과 확인까지' : 'Supabase SQL 마이그레이션 필요 (analytics.ts 주석 참고)'}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* ── 예약 목록 ── */}
+        {records.length === 0 ? (
+          <div className="text-center py-20">
+            <div className="text-4xl mb-3">📋</div>
+            <p className="text-gray-400">아직 예약 요청이 없어요.</p>
+            <a href="/app" className="inline-block mt-4 text-sm text-[#3CDBC0] underline">
+              MINT로 장소 추천받기 →
+            </a>
+          </div>
+        ) : (
+          <>
+            {/* 모바일: 카드형 */}
+            <div className="flex flex-col gap-3 md:hidden">
+              {records.map((r) => (
+                <div key={r.id} className="bg-white rounded-2xl border-2 border-gray-100 p-4">
+                  <div className="flex items-start justify-between mb-2">
+                    <div>
+                      <div className="font-black text-gray-800">{r.placeName}</div>
+                      <div className="text-xs text-gray-400 mt-0.5">{r.address}</div>
+                    </div>
+                    <button
+                      onClick={() => handleDelete(r.id)}
+                      className="text-gray-300 hover:text-red-400 transition-colors text-lg leading-none ml-2"
+                    >
+                      ×
+                    </button>
+                  </div>
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
+                    <div className="flex items-center gap-1">
+                      <span className="text-gray-400">예약자</span>
+                      <span className="font-bold text-gray-700">{r.guestName}</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <span className="text-gray-400">인원</span>
+                      <span className="font-bold text-gray-700">{r.people}명</span>
+                    </div>
+                  </div>
+                  <div className="text-xs text-gray-400 mt-2">요청: {formatDate(r.createdAt)}</div>
+                </div>
+              ))}
+            </div>
+
+            {/* 데스크탑: 테이블형 */}
+            <div className="hidden md:block bg-white rounded-2xl border-2 border-gray-100 overflow-hidden">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="bg-[#E8F8F5] text-left">
+                    <th className="px-4 py-3 font-bold text-[#2AB5A0]">장소명</th>
+                    <th className="px-4 py-3 font-bold text-[#2AB5A0]">주소</th>
+                    <th className="px-4 py-3 font-bold text-[#2AB5A0]">예약자</th>
+                    <th className="px-4 py-3 font-bold text-[#2AB5A0]">인원</th>
+                    <th className="px-4 py-3 font-bold text-[#2AB5A0]">요청시간</th>
+                    <th className="px-4 py-3"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {records.map((r, i) => (
+                    <tr
+                      key={r.id}
+                      className={`border-t border-gray-100 ${i % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}
+                    >
+                      <td className="px-4 py-3 font-bold text-gray-800">{r.placeName}</td>
+                      <td className="px-4 py-3 text-gray-500 text-xs max-w-[160px] truncate">{r.address}</td>
+                      <td className="px-4 py-3 font-medium text-gray-700">{r.guestName}</td>
+                      <td className="px-4 py-3">
+                        <span className="bg-[#E8F8F5] text-[#2AB5A0] font-bold px-2 py-0.5 rounded-full text-xs">
+                          {r.people}명
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-gray-400 text-xs">{formatDate(r.createdAt)}</td>
+                      <td className="px-4 py-3">
+                        <button
+                          onClick={() => handleDelete(r.id)}
+                          className="text-gray-300 hover:text-red-400 transition-colors"
+                        >
+                          삭제
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+</file>
+
+<file path="src/services/kakaoMap.ts">
+export interface KakaoPlace {
+  id: string;
+  place_name: string;
+  category_name: string;
+  address_name: string;
+  road_address_name: string;
+  phone: string;
+  place_url: string;
+  x: string; // lng
+  y: string; // lat
+}
+
+declare global {
+  interface Window { kakao: any; Kakao: any }
+}
+
+const cache = new Map<string, KakaoPlace[]>();
+
+export function searchKakaoKeyword(
+  keyword: string,
+  options?: { x?: string; y?: string; radius?: number }
+): Promise<KakaoPlace[]> {
+  const cacheKey = keyword + JSON.stringify(options ?? {});
+  if (cache.has(cacheKey)) return Promise.resolve(cache.get(cacheKey)!);
+
+  return new Promise((resolve, reject) => {
+    const ps = new window.kakao.maps.services.Places();
+    const opts: Record<string, unknown> = { size: 5 };
+    if (options?.x) opts.x = Number(options.x);
+    if (options?.y) opts.y = Number(options.y);
+    if (options?.radius) opts.radius = options.radius;
+
+    ps.keywordSearch(
+      keyword,
+      (results: KakaoPlace[], status: string) => {
+        const { OK, ZERO_RESULT } = window.kakao.maps.services.Status;
+        if (status === OK) {
+          cache.set(cacheKey, results);
+          resolve(results);
+        } else if (status === ZERO_RESULT) {
+          cache.set(cacheKey, []);
+          resolve([]);
+        } else {
+          reject(new Error('카카오 장소 검색 실패'));
+        }
+      },
+      opts
+    );
+  });
+}
+
+export async function searchAddress(keyword: string): Promise<KakaoPlace[]> {
+  return searchKakaoKeyword(keyword);
+}
+</file>
+
+<file path="src/services/midpoint.ts">
+export interface Coordinates {
+  lat: number;
+  lng: number;
+}
+
+// 구형(球形) 지구 기준 두 좌표 간 직선거리 (km)
+function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+// 직선거리 → 대중교통 예상 소요시간(분) — 수도권 실측 기반 구간 보정
+// 구간별 실제 지하철+환승+대기 시간을 역산해 맞춤
+function estimateTransitMin(km: number): number {
+  if (km <= 3)  return Math.round(7   + km * 3.5);        // ~18분
+  if (km <= 10) return Math.round(17.5 + (km -  3) * 2.5); // 18→35분
+  if (km <= 25) return Math.round(35  + (km - 10) * 2.0);  // 35→65분
+  return        Math.round(65  + (km - 25) * 1.8);         // 65분~
+}
+
+// 전국 주요 도시 (수도권 외)
+const NATIONAL_AREAS: { name: string; lat: number; lng: number }[] = [
+  // 제주
+  { name: '제주시 연동',   lat: 33.4996, lng: 126.5312 },
+  { name: '제주 애월',     lat: 33.4601, lng: 126.3124 },
+  { name: '제주 중문',     lat: 33.2544, lng: 126.4120 },
+  { name: '서귀포시',      lat: 33.2534, lng: 126.5600 },
+  { name: '제주 성산',     lat: 33.4614, lng: 126.9199 },
+  // 부산
+  { name: '부산 해운대',   lat: 35.1631, lng: 129.1635 },
+  { name: '부산 서면',     lat: 35.1579, lng: 129.0586 },
+  { name: '부산 남포동',   lat: 35.0976, lng: 129.0319 },
+  { name: '부산역',        lat: 35.1151, lng: 129.0424 },
+  // 대구
+  { name: '대구 동성로',   lat: 35.8714, lng: 128.5958 },
+  { name: '대구 수성구',   lat: 35.8585, lng: 128.6313 },
+  // 광주
+  { name: '광주 상무지구', lat: 35.1544, lng: 126.8526 },
+  { name: '광주 충장로',   lat: 35.1467, lng: 126.9157 },
+  // 대전
+  { name: '대전 둔산동',   lat: 36.3504, lng: 127.3845 },
+  { name: '대전역',        lat: 36.3323, lng: 127.4343 },
+  // 울산
+  { name: '울산 삼산동',   lat: 35.5428, lng: 129.3320 },
+  // 강원
+  { name: '강릉 시내',     lat: 37.7519, lng: 128.8760 },
+  { name: '춘천 명동',     lat: 37.8813, lng: 127.7298 },
+  // 충청
+  { name: '청주 성안길',   lat: 36.6424, lng: 127.4890 },
+  // 전라
+  { name: '전주 한옥마을', lat: 35.8150, lng: 127.1531 },
+  // 경상
+  { name: '경주 시내',     lat: 35.8562, lng: 129.2247 },
+];
+
+// 수도권 도심 상업지역만 포함 (도시화 낮은 지역 제외)
+const METRO_AREAS: { name: string; lat: number; lng: number }[] = [
+  // 서울
+  { name: '강남 MICE 관광특구', lat: 37.5115, lng: 127.0595 },
+  { name: '동대문 관광특구',     lat: 37.5700, lng: 127.0097 },
+  { name: '명동',               lat: 37.5636, lng: 126.9869 },
+  { name: '홍대입구역',          lat: 37.5573, lng: 126.9243 },
+  { name: '이태원 관광특구',     lat: 37.5344, lng: 126.9942 },
+  { name: '합정역',              lat: 37.5498, lng: 126.9137 },
+  { name: '성수역',              lat: 37.5447, lng: 127.0557 },
+  { name: '건대입구역',          lat: 37.5403, lng: 127.0699 },
+  { name: '신촌·이대역',         lat: 37.5576, lng: 126.9368 },
+  { name: '왕십리역',            lat: 37.5612, lng: 127.0383 },
+  { name: '여의도',              lat: 37.5219, lng: 126.9245 },
+  { name: '강남역',              lat: 37.4979, lng: 127.0276 },
+  { name: '삼성역',              lat: 37.5088, lng: 127.0630 },
+  { name: '역삼역',              lat: 37.5001, lng: 127.0366 },
+  { name: '서울역',              lat: 37.5547, lng: 126.9707 },
+  { name: '종각역',              lat: 37.5701, lng: 126.9823 },
+  { name: '혜화역',              lat: 37.5822, lng: 127.0016 },
+  { name: '한남·이태원',         lat: 37.5338, lng: 126.9976 },
+  { name: '잠실 관광특구',       lat: 37.5131, lng: 127.1000 },
+  { name: '북촌한옥마을',        lat: 37.5827, lng: 126.9845 },
+  // 경기 남부 (상업 중심지만)
+  { name: '수원역',              lat: 37.2660, lng: 127.0000 },
+  { name: '수원 인계동',         lat: 37.2636, lng: 127.0286 },
+  { name: '판교역',              lat: 37.3943, lng: 127.1108 },
+  { name: '분당 서현역',         lat: 37.3838, lng: 127.1228 },
+  { name: '성남 모란역',         lat: 37.4340, lng: 127.1290 },
+  { name: '안양 범계역',         lat: 37.3934, lng: 126.9528 },
+  // 경기 북부 (상업 중심지만)
+  { name: '고양 정발산역',       lat: 37.6759, lng: 126.7716 },
+  { name: '의정부역',            lat: 37.7381, lng: 127.0439 },
+  // 경기 서부 / 인천
+  { name: '부천 중동',           lat: 37.5033, lng: 126.7613 },
+  { name: '인천 부평역',         lat: 37.4883, lng: 126.7238 },
+];
+
+const ALL_AREAS = [...METRO_AREAS, ...NATIONAL_AREAS];
+
+// 서울 중심 기준점
+const SEOUL_CENTER: Coordinates = { lat: 37.5665, lng: 126.9780 };
+
+/**
+ * 출발지들로부터 소요시간 편차가 가장 작은 도심 지역을 반환.
+ * 수도권 외 지역(지리 중심이 수도권에서 80km 초과)이면 전국 도시 목록으로 fallback.
+ */
+export function findBalancedAreas(
+  departures: Coordinates[],
+  count = 3,
+): { areas: string[]; midpoint: Coordinates; areaName: string; compromiseMessage?: string } {
+  const fallback = { areas: ['명동', '홍대입구역', '강남역'], midpoint: SEOUL_CENTER, areaName: '서울 중심부' };
+  if (departures.length === 0) return fallback;
+
+  // 1. 지리적 중심점 계산
+  const geoCenter: Coordinates = {
+    lat: departures.reduce((s, c) => s + c.lat, 0) / departures.length,
+    lng: departures.reduce((s, c) => s + c.lng, 0) / departures.length,
+  };
+
+  // 2. 출발지 간 최대 직선거리 계산
+  let maxPairDist = 0;
+  for (let i = 0; i < departures.length; i++) {
+    for (let j = i + 1; j < departures.length; j++) {
+      const d = haversineKm(departures[i].lat, departures[i].lng, departures[j].lat, departures[j].lng);
+      if (d > maxPairDist) maxPairDist = d;
+    }
+  }
+
+  // 3. 수도권에서의 거리 확인
+  const distFromMetro = haversineKm(geoCenter.lat, geoCenter.lng, SEOUL_CENTER.lat, SEOUL_CENTER.lng);
+
+  // 4. 수도권 80km 초과 → 전국 목록에서 지리 중심에 가장 가까운 곳 선택
+  if (distFromMetro > 80) {
+    const candidates = ALL_AREAS
+      .map((area) => ({
+        ...area,
+        dist: haversineKm(geoCenter.lat, geoCenter.lng, area.lat, area.lng),
+      }))
+      .sort((a, b) => a.dist - b.dist);
+    const best = candidates[0];
+    // 출발지 간 거리가 150km 초과면 보완 메시지 표시
+    const compromiseMessage = maxPairDist > 150
+      ? `출발지 간 거리가 멀어 ${best.name}을(를) 중간 지점으로 보완했어요 📍`
+      : undefined;
+    return {
+      areas: candidates.slice(0, count).map((a) => a.name),
+      midpoint: { lat: best.lat, lng: best.lng },
+      areaName: best.name,
+      compromiseMessage,
+    };
+  }
+
+  // 5. 수도권 내 → 기존 소요시간 편차 최소화 알고리즘
+  const scored = METRO_AREAS.map((area) => {
+    const times = departures.map((dep) =>
+      estimateTransitMin(haversineKm(dep.lat, dep.lng, area.lat, area.lng))
+    );
+    const maxT = Math.max(...times);
+    const minT = Math.min(...times);
+    const range = maxT - minT;
+    const avg = times.reduce((s, t) => s + t, 0) / times.length;
+    const score = range * 2 + avg * 0.3 + Math.max(0, avg - 60) * 1.5;
+    return { ...area, score };
+  });
+
+  scored.sort((a, b) => a.score - b.score);
+  const best = scored[0];
+
+  // 수도권 내에서도 출발지 간 거리가 극심하면 메시지
+  const compromiseMessage = maxPairDist > 150
+    ? `출발지 간 거리가 멀어 ${best.name}을(를) 중간 지점으로 보완했어요 📍`
+    : undefined;
+
+  return {
+    areas: scored.slice(0, count).map((s) => s.name),
+    midpoint: { lat: best.lat, lng: best.lng },
+    areaName: best.name,
+    compromiseMessage,
+  };
+}
+
+// 특정 좌표 근처 지역명 반환 — 전국 목록 사용
+export function findNearestAreas(midpoint: Coordinates, count = 3): string[] {
+  return ALL_AREAS
+    .map((area) => ({
+      name: area.name,
+      dist: haversineKm(area.lat, area.lng, midpoint.lat, midpoint.lng),
+    }))
+    .sort((a, b) => a.dist - b.dist)
+    .slice(0, count)
+    .map((a) => a.name);
+}
+
+// 하위 호환용 (프리셋 등에서 사용)
+export function calcMidpoint(coords: Coordinates[]): Coordinates {
+  if (coords.length === 0) return { lat: 37.5665, lng: 126.9780 };
+  return {
+    lat: coords.reduce((s, c) => s + c.lat, 0) / coords.length,
+    lng: coords.reduce((s, c) => s + c.lng, 0) / coords.length,
+  };
+}
+
+// 직접 선택용 지역 프리셋
+export interface PresetRegion {
+  id: string;
+  label: string;
+  sublabel: string;
+  midpoint: Coordinates;
+}
+
+export const PRESET_REGIONS: PresetRegion[] = [
+  { id: 'gangnam',        label: '강남/서초',   sublabel: '강남역·역삼·선릉',     midpoint: { lat: 37.4979, lng: 127.0276 } },
+  { id: 'hongdae',        label: '홍대/마포',   sublabel: '홍대입구·합정·연남',   midpoint: { lat: 37.5535, lng: 126.9240 } },
+  { id: 'itaewon',        label: '이태원/한남', sublabel: '이태원·경리단길·한남', midpoint: { lat: 37.5344, lng: 126.9942 } },
+  { id: 'sinchon',        label: '신촌/연대',   sublabel: '신촌·이대·연남동',     midpoint: { lat: 37.5576, lng: 126.9368 } },
+  { id: 'seongsu',        label: '성수/건대',   sublabel: '성수역·건대입구·뚝섬', midpoint: { lat: 37.5425, lng: 127.0628 } },
+  { id: 'myeongdong',     label: '명동/시청',   sublabel: '명동·을지로·종각',     midpoint: { lat: 37.5636, lng: 126.9869 } },
+  { id: 'jamsil',         label: '잠실/송파',   sublabel: '잠실역·잠실나루·석촌', midpoint: { lat: 37.5131, lng: 127.1000 } },
+  { id: 'jongno',         label: '종로/혜화',   sublabel: '대학로·혜화·낙원동',   midpoint: { lat: 37.5822, lng: 127.0016 } },
+  { id: 'yeouido',        label: '여의도',      sublabel: '여의도·영등포역',      midpoint: { lat: 37.5219, lng: 126.9245 } },
+  { id: 'gyeonggi-south', label: '경기 남부',   sublabel: '수원·성남·판교',       midpoint: { lat: 37.3500, lng: 127.0500 } },
+  { id: 'gyeonggi-north', label: '경기 북부',   sublabel: '고양·일산·의정부',     midpoint: { lat: 37.6600, lng: 126.8900 } },
+  { id: 'incheon',        label: '인천/부천',   sublabel: '인천·부천·김포',       midpoint: { lat: 37.4900, lng: 126.7500 } },
+];
+</file>
+
+<file path="src/components/LocationInput.tsx">
+import { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
+import { searchAddress } from '../services/kakaoMap';
+import type { KakaoPlace } from '../services/kakaoMap';
+
+export interface LocationEntry {
+  name: string;
+  lat?: number;
+  lng?: number;
+}
+
+interface Props {
+  locations: LocationEntry[];
+  onChange: (locations: LocationEntry[]) => void;
+}
+
+interface InputState {
+  value: string;
+  suggestions: KakaoPlace[];
+  loading: boolean;
+  selected: boolean;
+  lat?: number;
+  lng?: number;
+}
+
+function SuggestionDropdown({
+  suggestions,
+  anchorEl,
+  onSelect,
+}: {
+  suggestions: KakaoPlace[];
+  anchorEl: HTMLDivElement | null;
+  onSelect: (place: KakaoPlace) => void;
+}) {
+  if (!suggestions.length || !anchorEl) return null;
+  const rect = anchorEl.getBoundingClientRect();
+  return createPortal(
+    <div
+      style={{ position: 'fixed', top: rect.bottom + 4, left: rect.left, width: rect.width, zIndex: 9999 }}
+      className="bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden"
+    >
+      {suggestions.map((place) => (
+        <button
+          key={place.id}
+          onMouseDown={() => onSelect(place)}
+          className="w-full text-left px-4 py-3 hover:bg-[#E8F8F5] transition-colors border-b border-gray-100 last:border-0"
+        >
+          <div className="text-sm font-medium text-gray-800">{place.place_name}</div>
+          <div className="text-xs text-gray-400 mt-0.5">{place.road_address_name || place.address_name}</div>
+        </button>
+      ))}
+    </div>,
+    document.body
+  );
+}
+
+export default function LocationInput({ locations, onChange }: Props) {
+  const [inputs, setInputs] = useState<InputState[]>(
+    locations.length >= 2
+      ? locations.map((l) => ({ value: l.name, suggestions: [], loading: false, selected: true }))
+      : [
+          { value: '', suggestions: [], loading: false, selected: false },
+          { value: '', suggestions: [], loading: false, selected: false },
+        ]
+  );
+  const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
+  const wrapperRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
+
+  function handleFocus(index: number) {
+    const el = inputRefs.current[index];
+    if (!el) return;
+    setTimeout(() => { el.scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 300);
+  }
+
+  function update(index: number, partial: Partial<InputState>) {
+    setInputs((prev) => {
+      const next = [...prev];
+      next[index] = { ...next[index], ...partial };
+      return next;
+    });
+  }
+
+  function addInput() {
+    setInputs((prev) => [...prev, { value: '', suggestions: [], loading: false, selected: false }]);
+  }
+
+  function removeInput(index: number) {
+    setInputs((prev) => prev.filter((_, i) => i !== index));
+  }
+
+  async function handleChange(index: number, value: string) {
+    update(index, { value, selected: false, suggestions: [] });
+    clearTimeout(timers.current[index]);
+    if (value.length < 1) return;
+    update(index, { loading: true });
+    timers.current[index] = setTimeout(async () => {
+      try {
+        const results = await searchAddress(value);
+        update(index, { suggestions: results.slice(0, 5), loading: false });
+      } catch {
+        update(index, { loading: false });
+      }
+    }, 200);
+  }
+
+  function selectPlace(index: number, place: KakaoPlace) {
+    update(index, {
+      value: place.place_name,
+      suggestions: [],
+      selected: true,
+      loading: false,
+      lat: parseFloat(place.y),
+      lng: parseFloat(place.x),
+    });
+  }
+
+  useEffect(() => {
+    const selected = inputs
+      .filter((i) => i.selected && i.value)
+      .map((i) => ({ name: i.value, lat: i.lat, lng: i.lng }));
+    onChange(selected);
+  }, [inputs]);
+
+  return (
+    <div className="flex flex-col gap-2.5 px-4 py-3">
+      {inputs.map((inp, i) => (
+        <div key={i} className="flex items-center gap-2">
+          <span className="w-6 h-6 rounded-full bg-[#E8F8F5] border border-[#3CDBC0]/50 text-[#3CDBC0] text-xs font-black flex items-center justify-center flex-shrink-0">
+            {i + 1}
+          </span>
+          <div
+            ref={(el) => { wrapperRefs.current[i] = el; }}
+            className="flex-1 relative"
+          >
+            <input
+              ref={(el) => { inputRefs.current[i] = el; }}
+              type="text"
+              value={inp.value}
+              onChange={(e) => handleChange(i, e.target.value)}
+              onFocus={() => handleFocus(i)}
+              placeholder={i === 0 ? '예: 성수역, 합정역...' : '예: 강남역, 이태원...'}
+              className={`w-full pl-4 pr-9 py-2.5 rounded-xl border-2 text-sm outline-none transition-all duration-200 bg-white ${
+                inp.selected ? 'border-[#3CDBC0] bg-[#E8F8F5]' : 'border-gray-200 focus:border-[#3CDBC0]'
+              }`}
+            />
+            {inp.loading && (
+              <div className="absolute inset-y-0 right-3 flex items-center">
+                <div className="w-4 h-4 border-2 border-[#3CDBC0] border-t-transparent rounded-full animate-spin-slow" />
+              </div>
+            )}
+            {inp.selected && !inp.loading && (
+              <div className="absolute inset-y-0 right-3 flex items-center">
+                <span className="text-[#3CDBC0] text-sm font-bold">✓</span>
+              </div>
+            )}
+          </div>
+          {inputs.length > 2 && (
+            <button
+              onClick={() => removeInput(i)}
+              className="w-7 h-7 rounded-full bg-gray-100 text-gray-400 flex items-center justify-center hover:bg-red-50 hover:text-red-400 transition-colors text-sm flex-shrink-0"
+            >
+              ×
+            </button>
+          )}
+          <SuggestionDropdown
+            suggestions={inp.suggestions}
+            anchorEl={wrapperRefs.current[i] ?? null}
+            onSelect={(place) => selectPlace(i, place)}
+          />
+        </div>
+      ))}
+
+      {inputs.length < 6 && (
+        <button
+          onClick={addInput}
+          className="flex items-center justify-center gap-2 py-2.5 rounded-xl border-2 border-dashed border-[#3CDBC0]/60 text-[#3CDBC0] text-sm font-medium hover:bg-[#E8F8F5] transition-colors"
+        >
+          <span className="text-base leading-none">+</span>
+          출발지 추가
+        </button>
+      )}
+    </div>
+  );
+}
+</file>
+
+<file path="index.html">
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="apple-touch-icon" href="/favicon.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <meta name="theme-color" content="#3CDBC0" />
+    <meta name="description" content="약속은 잡았는데 어디 가지? MINT가 30초 만에 해결해드려요." />
+    <meta property="og:title" content="MINT - 그룹 외출 큐레이션" />
+    <meta property="og:description" content="약속은 잡았는데 어디 가지? MINT가 30초 만에 해결해드려요." />
+    <meta property="og:image" content="/image/step5.png" />
+    <title>MINT - 그룹 외출 큐레이션</title>
+    <!-- Google Tag Manager -->
+    <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+    new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+    j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+    'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+    })(window,document,'script','dataLayer','GTM-TST2XCDT');</script>
+  </head>
+  <body>
+    <!-- Google Tag Manager (noscript) -->
+    <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-TST2XCDT"
+    height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+    <!-- End Google Tag Manager (noscript) -->
+    <div id="root"></div>
+    <script src="https://t1.kakaocdn.net/kakaojs/2.7.4/kakao.min.js" crossorigin="anonymous"></script>
+    <script type="text/javascript" src="//dapi.kakao.com/v2/maps/sdk.js?appkey=%VITE_KAKAO_JS_API_KEY%&libraries=services"></script>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
+</file>
+
+<file path="src/pages/Landing.tsx">
+import { useEffect, useRef } from 'react';
+import { trackEvent } from '../utils/analytics';
+
+function goToApp() {
+  trackEvent('cta_click');
+  window.location.pathname = '/app';
+}
+
+function PhoneMockup({ src, alt, width = 'w-52' }: { src: string; alt: string; width?: string }) {
+  return (
+    <div className={`${width} mx-auto bg-white rounded-3xl shadow-xl border-2 border-gray-100 overflow-hidden`}>
+      <div className="w-12 h-1 bg-gray-200 rounded-full mx-auto mt-2 mb-1" />
+      <img src={src} alt={alt} className="w-full block" loading="lazy" />
+    </div>
+  );
+}
+
+function KakaoTalkBubble({ className = 'w-6 h-6' }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 120 108" fill="none">
+      <ellipse cx="60" cy="46" rx="58" ry="44" fill="#000"/>
+      <text x="60" y="58" textAnchor="middle" fill="#FFE500" fontSize="26" fontWeight="900" fontFamily="Arial, sans-serif" letterSpacing="-0.5">TALK</text>
+      <path d="M 26 84 L 12 107 L 50 86 Z" fill="#000"/>
+    </svg>
+  );
+}
+
+function useFadeUp() {
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const obs = new IntersectionObserver(
+      ([entry]) => { if (entry.isIntersecting) el.classList.add('opacity-100', 'translate-y-0'); },
+      { threshold: 0.12 }
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, []);
+  return ref;
+}
+
+export default function Landing() {
+  useEffect(() => { trackEvent('landing_view'); }, []);
+
+  const s2 = useFadeUp();
+  const s3 = useFadeUp();
+  const s4 = useFadeUp();
+  const s5 = useFadeUp();
+  const s6 = useFadeUp();
+
+  return (
+    <div className="min-h-screen bg-[#F0FDF9]">
+
+      {/* NAV */}
+      <nav className="sticky top-0 z-50 bg-[#F0FDF9]/90 backdrop-blur border-b border-teal-100 px-5 py-3 flex items-center justify-between max-w-lg mx-auto">
+        <span className="text-xl font-black text-[#36CFA0] tracking-tight">MINT</span>
+        <button
+          onClick={goToApp}
+          className="bg-[#36CFA0] text-white text-sm font-bold px-5 py-2 rounded-full transition-all active:scale-95 hover:bg-[#2AB58C]"
+        >
+          시작하기 →
+        </button>
+      </nav>
+
+      <div className="max-w-lg mx-auto">
+
+        {/* ── HERO ── */}
+        <section className="text-center px-6 pt-12 pb-10">
+          <div className="inline-flex items-center gap-1.5 bg-teal-50 border border-teal-200 text-[#36CFA0] text-xs font-bold px-4 py-1.5 rounded-full mb-6">
+            ✦ AI 장소 추천 서비스
+          </div>
+          <h1 className="text-4xl font-black text-gray-800 leading-tight mb-3">
+            약속은 잡았는데<br />
+            <span className="text-[#36CFA0]">어디 가지?</span>
+          </h1>
+          <p className="text-gray-500 text-base leading-relaxed mb-8">
+            검색어가 없어도 괜찮아요.<br />
+            <strong className="text-gray-700">30초 만에 딱 하나</strong>, AI가 골라줍니다.<br />
+            <span className="text-sm">서울부터 제주까지, 전국 어디서든.</span>
+          </p>
+          <button
+            onClick={goToApp}
+            className="w-full max-w-xs bg-[#36CFA0] text-white font-black text-lg py-4 rounded-2xl shadow-lg shadow-teal-200 active:scale-95 transition-all hover:bg-[#2AB58C] mb-6"
+          >
+            지금 바로 시작하기
+          </button>
+          {/* 통계 — 높이 맞춤 */}
+          <div className="flex justify-center gap-8 items-end text-center mb-10">
+            <div>
+              <div className="text-2xl font-black text-[#36CFA0] whitespace-nowrap">30초</div>
+              <div className="text-xs text-gray-400 mt-0.5">추천까지 걸리는 시간</div>
+            </div>
+            <div>
+              <div className="text-2xl font-black text-[#36CFA0] whitespace-nowrap">딱 1곳</div>
+              <div className="text-xs text-gray-400 mt-0.5">선택 피로 제로</div>
+            </div>
+            <div>
+              <div className="text-2xl font-black text-[#36CFA0] whitespace-nowrap">전국</div>
+              <div className="text-xs text-gray-400 mt-0.5">서울 · 부산 · 제주</div>
+            </div>
+          </div>
+          {/* 원래 폰 목업 높이의 절반 빈 공간 */}
+          <div className="h-48" />
+        </section>
+
+        {/* ── PROBLEM ── */}
+        <section
+          ref={s2}
+          className="bg-white px-6 py-14 border-y border-gray-100 opacity-0 translate-y-5 transition-all duration-700"
+        >
+          <p className="text-xs font-bold tracking-widest text-[#36CFA0] mb-3">PROBLEM</p>
+          <h2 className="text-2xl font-black text-gray-800 leading-tight mb-3">
+            매번 반복되는 이 대화,<br />익숙하지 않나요?
+          </h2>
+          <p className="text-sm text-gray-400 mb-6 leading-relaxed">
+            장소 하나 정하는 데 30분. 결국 아무도 안 정해서 맨날 같은 곳.
+          </p>
+
+          {/* 카카오톡 목업 */}
+          <div className="rounded-2xl overflow-hidden shadow-md">
+            <div className="bg-[#3B576E] px-4 py-3 flex items-center gap-2">
+              <span className="text-white text-lg">‹</span>
+              <span className="text-white text-sm font-bold flex-1 text-center">화생공 24(4)</span>
+              <span className="bg-white/20 text-white text-xs px-2 py-0.5 rounded-full">4</span>
+            </div>
+            <div className="bg-[#B2C7D9] p-4 flex flex-col gap-3">
+              {[
+                { emoji: '😎', name: '민준', msg: '이번주 토요일 다들 되지? 어디서 볼까', time: '오후 2:31' },
+                { emoji: '🙂', name: '서연', msg: 'ㅇㅇ 난 아무데나~', time: '오후 2:33' },
+                { emoji: '😊', name: '지훈', msg: '나도 다 좋은데.. 어디가 좋으려나', time: '오후 2:35' },
+                { emoji: '🤔', name: '수빈', msg: '맛집 아는 사람? 나는 모르겠는데', time: '오후 2:38' },
+              ].map((m) => (
+                <div key={m.name} className="flex items-end gap-2">
+                  <div className="w-8 h-8 rounded-xl bg-gray-300 flex items-center justify-center text-base flex-shrink-0">{m.emoji}</div>
+                  <div>
+                    <div className="text-xs text-gray-600 mb-1">{m.name}</div>
+                    <div className="bg-white rounded-2xl px-3 py-2 text-sm text-gray-800 shadow-sm">{m.msg}</div>
+                  </div>
+                  <div className="text-xs text-gray-500 mb-1">{m.time}</div>
+                </div>
+              ))}
+              <div className="flex items-end gap-2 flex-row-reverse">
+                <div className="bg-[#FEE500] rounded-2xl px-3 py-2 text-sm text-gray-800 shadow-sm">
+                  ㅋㅋ 누가 정해줘...
+                </div>
+                <div className="text-xs text-gray-500 mb-1">오후 2:45</div>
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-6 bg-teal-50 border border-teal-100 rounded-2xl p-5 text-center">
+            <div className="text-4xl font-black text-[#36CFA0]">평균 32분</div>
+            <div className="text-sm text-gray-400 mt-1">한국인이 모임 장소 정하는 데 소요되는 시간</div>
+          </div>
+        </section>
+
+        {/* ── SOLUTION ── */}
+        <section
+          ref={s3}
+          className="px-6 py-14 opacity-0 translate-y-5 transition-all duration-700"
+        >
+          <p className="text-xs font-bold tracking-widest text-[#36CFA0] mb-3">SOLUTION</p>
+          <h2 className="text-2xl font-black text-gray-800 leading-tight mb-3">
+            MINT가<br />이렇게 해결합니다
+          </h2>
+          <p className="text-sm text-gray-400 mb-10 leading-relaxed">
+            한 명만 30초 투자하면 끝.<br />
+            선택지 10개가 아니라, <strong className="text-gray-600">딱 1곳</strong>만 추천해요.
+          </p>
+
+          <div className="flex flex-col items-center gap-0">
+            {/* STEP 1 */}
+            <div className="text-center w-full">
+              <span className="inline-block bg-[#36CFA0] text-white text-xs font-bold px-3 py-1 rounded-full mb-3">STEP 1</span>
+              <h3 className="text-lg font-black text-gray-800 mb-1">각자 출발지를 입력해요</h3>
+              <p className="text-sm text-gray-400 mb-5">동네나 역 이름만 치면 중간 지점을 자동으로 계산합니다</p>
+              <PhoneMockup src="/image/step1.png" alt="출발지 입력" />
+            </div>
+            <div className="w-0.5 h-8 bg-gradient-to-b from-[#36CFA0] to-transparent my-2" />
+
+            {/* STEP 2 */}
+            <div className="text-center w-full">
+              <span className="inline-block bg-[#36CFA0] text-white text-xs font-bold px-3 py-1 rounded-full mb-3">STEP 2</span>
+              <h3 className="text-lg font-black text-gray-800 mb-1">목적 · 인원 · 바이브 선택</h3>
+              <p className="text-sm text-gray-400 mb-5">밥? 술? 카페? 1차·2차 코스도 한 번에.<br />오늘 분위기에 맞는 조건을 골라요</p>
+              <div className="flex gap-3 justify-center">
+                <PhoneMockup src="/image/step3.png" alt="목적 선택" width="w-44" />
+                <PhoneMockup src="/image/step4.png" alt="바이브 선택" width="w-44" />
+              </div>
+            </div>
+            <div className="w-0.5 h-8 bg-gradient-to-b from-[#36CFA0] to-transparent my-2" />
+
+            {/* STEP 3 */}
+            <div className="text-center w-full">
+              <span className="inline-block bg-[#36CFA0] text-white text-xs font-bold px-3 py-1 rounded-full mb-3">STEP 3</span>
+              <h3 className="text-lg font-black text-gray-800 mb-1">AI가 딱 하나 골라줍니다</h3>
+              <p className="text-sm text-gray-400 mb-5">네이버 검증 실존 장소 · 실시간 혼잡도 · 날씨까지 반영.<br />1차→2차 코스, 카카오톡으로 바로 공유!</p>
+              <PhoneMockup src="/image/step5.png" alt="AI 추천 결과" />
+            </div>
+          </div>
+        </section>
+
+        {/* ── DIFF ── */}
+        <section
+          ref={s4}
+          className="bg-white px-6 py-14 border-y border-gray-100 opacity-0 translate-y-5 transition-all duration-700"
+        >
+          <p className="text-xs font-bold tracking-widest text-[#36CFA0] mb-3">WHY MINT?</p>
+          <h2 className="text-2xl font-black text-gray-800 leading-tight mb-3">
+            네이버 지도와<br />뭐가 다를까?
+          </h2>
+          <p className="text-sm text-gray-400 mb-6 leading-relaxed">
+            네이버 지도는 <strong className="text-gray-600">검색어가 있는 사람</strong>을 위한 서비스.<br />
+            MINT는 <strong className="text-gray-600">검색어가 없는 사람</strong>을 위한 서비스입니다.
+          </p>
+          <div className="flex flex-col gap-4">
+            <div className="rounded-2xl border border-gray-200 p-5">
+              <div className="flex items-center gap-2 mb-4">
+                <svg className="w-6 h-6 text-gray-400" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+                </svg>
+                <span className="font-black text-gray-400">기존 지도 앱</span>
+              </div>
+              <ul className="flex flex-col gap-2">
+                {['검색어를 알아야 검색 가능', '결과 수십 개 → 또 고민', '중간 지점? 내가 계산해야 함', '광고성 상위 노출 — 진짜 맛집인지 모름'].map((t) => (
+                  <li key={t} className="flex items-start gap-2 text-sm text-gray-400">
+                    <span className="text-gray-300 mt-0.5">✕</span>{t}
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <div className="rounded-2xl border-2 border-[#36CFA0] bg-teal-50 p-5">
+              <div className="flex items-center gap-2 mb-4">
+                <div className="w-6 h-6 rounded-md bg-[#36CFA0] flex items-center justify-center flex-shrink-0">
+                  <span className="text-white text-[10px] font-black leading-none">M</span>
+                </div>
+                <span className="font-black text-[#36CFA0]">MINT</span>
+              </div>
+              <ul className="flex flex-col gap-2">
+                {['검색어 없이 조건만 선택하면 끝', 'AI가 딱 1곳만 추천 — 로컬 맛집 우선', '전국 어디서든 중간 지점 자동 계산', '혼잡도 · 날씨 · 그룹 규모까지 고려', '카카오톡 한 번이면 공유 완료'].map((t) => (
+                  <li key={t} className="flex items-start gap-2 text-sm text-gray-800">
+                    <span className="text-[#36CFA0] font-bold mt-0.5">✓</span>{t}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        </section>
+
+        {/* ── SHARE ── */}
+        <section
+          ref={s5}
+          className="px-6 py-14 opacity-0 translate-y-5 transition-all duration-700"
+        >
+          <p className="text-xs font-bold tracking-widest text-[#36CFA0] mb-3">SHARE</p>
+          <h2 className="text-2xl font-black text-gray-800 leading-tight mb-3">
+            추천 받자마자<br />
+            <span className="text-[#36CFA0] whitespace-nowrap">카카오톡으로 공유</span>
+          </h2>
+          <p className="text-sm text-gray-400 mb-6 leading-relaxed">
+            결과 나오면 버튼 하나로 단톡방에 공유.<br />'여기 어때?' 한 줄이면 약속 끝.
+          </p>
+          {/* 칩 한 줄 */}
+          <div className="flex items-center justify-center gap-2 mb-8 flex-nowrap">
+            <span className="bg-teal-50 border border-teal-200 text-[#36CFA0] text-sm font-bold px-4 py-2 rounded-full whitespace-nowrap">🍃 조건 선택</span>
+            <span className="text-[#36CFA0] font-bold flex-shrink-0">→</span>
+            <span className="bg-teal-50 border border-teal-200 text-[#36CFA0] text-sm font-bold px-4 py-2 rounded-full whitespace-nowrap">✨ AI 추천</span>
+            <span className="text-[#36CFA0] font-bold flex-shrink-0">→</span>
+            <div className="flex items-center gap-1.5 bg-teal-50 border border-teal-200 text-[#36CFA0] text-sm font-bold px-3 py-2 rounded-full whitespace-nowrap flex-shrink-0">
+              <KakaoTalkBubble className="w-4 h-4" />
+              카톡 공유
+            </div>
+          </div>
+          <p className="text-base text-gray-500 text-center mt-2 leading-relaxed font-medium">
+            더 이상 '어디로 갈까' 단톡방 폭격 없이,<br />
+            <strong className="text-gray-600">한 명이 정하고 모두가 편한</strong> 약속.
+          </p>
+        </section>
+
+        {/* ── CTA ── */}
+        <section
+          ref={s6}
+          className="px-6 py-16 text-center bg-gradient-to-b from-[#F0FDF9] to-[#E8FBF3] opacity-0 translate-y-5 transition-all duration-700"
+        >
+          <h2 className="text-2xl font-black text-gray-800 leading-tight mb-3">
+            지금 바로<br />30초 만에 해결하세요
+          </h2>
+          <p className="text-sm text-gray-400 mb-8">무료로 시작하세요. 회원가입도 없어요.</p>
+          <button
+            onClick={goToApp}
+            className="w-full max-w-xs bg-[#36CFA0] text-white font-black text-lg py-4 rounded-2xl shadow-lg shadow-teal-200 active:scale-95 transition-all hover:bg-[#2AB58C] mb-6"
+          >
+            MINT 시작하기
+          </button>
+          {/* 아이콘 칩 */}
+          <div className="flex justify-center gap-4 flex-wrap">
+            {/* 30초면 끝 */}
+            <div className="flex items-center gap-1 text-xs text-gray-400">
+              <svg className="w-3.5 h-3.5 text-[#36CFA0]" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M13 2.05V2c0-1.1-.9-2-2-2s-2 .9-2 2v.05C4.6 2.55 1 6.5 1 11.5 1 17.3 5.7 22 11.5 22S22 17.3 22 11.5c0-5-3.6-8.95-9-9.45zM11.5 20C6.81 20 3 16.19 3 11.5S6.81 3 11.5 3 20 6.81 20 11.5 16.19 20 11.5 20zm.5-10.31V7c0-.55-.45-1-1-1s-1 .45-1 1v3c0 .28.11.53.29.71l2 2c.39.39 1.02.39 1.41 0 .39-.39.39-1.02 0-1.41L12 9.69z"/>
+              </svg>
+              30초면 끝
+            </div>
+            {/* Claude AI 추천 */}
+            <div className="flex items-center gap-1 text-xs text-gray-400">
+              <svg className="w-3.5 h-3.5 text-[#CC785C]" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 2L9.5 9.5 2 12l7.5 2.5L12 22l2.5-7.5L22 12l-7.5-2.5z"/>
+              </svg>
+              AI 추천
+            </div>
+            {/* 카톡 공유 */}
+            <div className="flex items-center gap-1 text-xs text-gray-400">
+              <KakaoTalkBubble className="w-3.5 h-3.5" />
+              카톡 공유
+            </div>
+            {/* 완전 무료 */}
+            <div className="flex items-center gap-1 text-xs text-gray-400">
+              <svg className="w-3.5 h-3.5 text-[#36CFA0]" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-2 16l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z"/>
+              </svg>
+              완전 무료
+            </div>
+          </div>
+        </section>
+
+      </div>
+
+      {/* FOOTER */}
+      <footer className="bg-white border-t border-gray-100 py-6 text-center">
+        <p className="text-xs text-gray-400">© 2025 MINT. All rights reserved.</p>
+      </footer>
+
+    </div>
+  );
+}
+</file>
+
+<file path="src/services/ai.ts">
+import type { AreaCongestion } from './seoulData';
+import type { Coordinates } from './midpoint';
+
+export interface UserInput {
+  locations: { name: string; coords?: Coordinates }[];
+  groupSize: '2명' | '3~4명' | '5명 이상';
+  purpose: { first: string; second: string | null };
+  vibe: { first: string[]; second: string[] };
+}
+
+export interface PlaceRecommendation {
+  rank?: number;
+  placeName: string;
+  category: string;
+  description: string;
+  priceRange: string;
+  vibeTags: string[];
+  address: string;
+  area: string;
+  congestionLevel: string;
+  openingHours?: string;
+  kakaoPlaceId?: string;
+  lat?: number;
+  lng?: number;
+  nearbySpots?: string[];
+  walkingToNext?: number;
+}
+
+export interface CoursePlace {
+  placeName: string;
+  category: string;
+  description: string;
+  vibeTags: string[];
+  address: string;
+  walkingMinutes: number;
+  lat?: number;
+  lng?: number;
+}
+
+export interface CourseRecommendation {
+  places: CoursePlace[];
+  totalMinutes: number;
+}
+
+export async function getAIRecommendation(
+  input: UserInput,
+  midpoint: Coordinates,
+  congestionData: AreaCongestion[]
+): Promise<PlaceRecommendation[]> {
+  const res = await fetch('/api/recommend', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ input, midpoint, congestionData }),
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.error || `AI 추천 요청 실패 (${res.status})`);
+  }
+  const data = await res.json();
+  if (data.error) throw new Error(data.error);
+  return Array.isArray(data) ? data as PlaceRecommendation[] : [data as PlaceRecommendation];
+}
+
+export async function getCourseRecommendation(
+  input: UserInput,
+  firstPlace: PlaceRecommendation
+): Promise<CourseRecommendation> {
+  const res = await fetch('/api/course', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ input, firstPlace }),
+  });
+  if (!res.ok) throw new Error('코스 추천 요청 실패');
+  const data = await res.json();
+  if (data.error) throw new Error(data.error);
+  return data as CourseRecommendation;
+}
+</file>
+
+<file path="api/recommend.ts">
+import Anthropic from '@anthropic-ai/sdk';
+import type { VercelRequest, VercelResponse } from '@vercel/node';
+
+interface NaverPlace {
+  name: string;
+  category: string;
+  address: string;
+  lat: number;
+  lng: number;
+}
+
+interface WeatherInfo {
+  description: string;
+  temp: number;
+  isRainy: boolean;
+  isHot: boolean;
+  isCold: boolean;
+}
+
+// 두 좌표 간 도보 소요시간(분) — 4km/h 기준
+function walkingMinutes(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLng / 2) ** 2;
+  const km = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return Math.round((km / 4) * 60);
+}
+
+// 대형 프랜차이즈 체인 키워드 (이름에 포함되면 프랜차이즈로 판단)
+const FRANCHISE_KEYWORDS = [
+  '스타벅스','이디야','투썸','메가커피','빽다방','컴포즈','탐앤탐스','폴바셋','커피빈',
+  '맥도날드','버거킹','롯데리아','KFC','맘스터치','서브웨이','노브랜드버거',
+  '파리바게뜨','뚜레쥬르','던킨','크리스피크림',
+  'CJ올리브','올리브영','GS25','CU편의점','세븐일레븐',
+  '본죽','한솥','김밥천국','국민','놀부','BBQ','BHC','교촌','굽네','네네치킨',
+  '이마트24','홈플러스','롯데마트',
+];
+
+function isFranchise(name: string): boolean {
+  return FRANCHISE_KEYWORDS.some((kw) => name.includes(kw));
+}
+
+// 네이버 로컬 검색 — 실존 장소 목록 반환 (프랜차이즈 후순위)
+async function searchNaverLocal(query: string, display = 12): Promise<NaverPlace[]> {
+  const clientId = process.env.NAVER_CLIENT_ID;
+  const clientSecret = process.env.NAVER_CLIENT_SECRET;
+  if (!clientId || !clientSecret) return [];
+  try {
+    const url = `https://openapi.naver.com/v1/search/local.json?query=${encodeURIComponent(query)}&display=${display}&sort=comment`;
+    const res = await fetch(url, {
+      headers: {
+        'X-Naver-Client-Id': clientId,
+        'X-Naver-Client-Secret': clientSecret,
+      },
+    });
+    if (!res.ok) return [];
+    const data = await res.json() as { items?: { title: string; category: string; roadAddress: string; address: string; mapx: string; mapy: string }[] };
+    const all = (data.items || []).map((item) => ({
+      name: item.title.replace(/<[^>]*>/g, ''),
+      category: item.category,
+      address: item.roadAddress || item.address,
+      lat: parseInt(item.mapy) / 1e7,
+      lng: parseInt(item.mapx) / 1e7,
+    }));
+    // 로컬 맛집 앞, 프랜차이즈 뒤로 정렬 후 상위 8개 반환
+    const local = all.filter((p) => !isFranchise(p.name));
+    const franchise = all.filter((p) => isFranchise(p.name));
+    return [...local, ...franchise].slice(0, 8);
+  } catch {
+    return [];
+  }
+}
+
+// OpenWeatherMap 날씨 조회
+async function fetchWeather(lat: number, lng: number): Promise<WeatherInfo | null> {
+  const apiKey = process.env.OPENWEATHER_API_KEY;
+  if (!apiKey) return null;
+  try {
+    const url = `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lng}&appid=${apiKey}&units=metric&lang=kr`;
+    const res = await fetch(url);
+    if (!res.ok) return null;
+    const data = await res.json() as {
+      weather: { description: string; id: number }[];
+      main: { temp: number };
+    };
+    const weatherId = data.weather[0]?.id ?? 800;
+    const temp = data.main.temp;
+    const isRainy = weatherId >= 200 && weatherId < 700;
+    return {
+      description: data.weather[0]?.description ?? '',
+      temp: Math.round(temp),
+      isRainy,
+      isHot: temp >= 28,
+      isCold: temp <= 5,
+    };
+  } catch {
+    return null;
+  }
+}
+
+function purposeToNaverQuery(purpose: string, areaName: string, groupSize: number): string {
+  const isLargeGroup = groupSize >= 5;
+  const groupPrefix = isLargeGroup ? '단체 ' : '';
+  const map: Record<string, string> = {
+    '밥': `${areaName} ${groupPrefix}맛집`,
+    '술': `${areaName} ${groupPrefix}${isLargeGroup ? '단체 술집 포차' : '술집 이자카야 포차'}`,
+    '카페': `${areaName} ${groupPrefix}카페`,
+    '기타': `${areaName} ${groupPrefix}음식점`,
+  };
+  return map[purpose] ?? `${areaName} ${groupPrefix}${purpose}`;
+}
+
+function formatNaverPlaces(places: NaverPlace[]): string {
+  return places.map((p, i) =>
+    `${i + 1}. ${p.name} | ${p.category} | ${p.address} | lat:${p.lat.toFixed(4)}, lng:${p.lng.toFixed(4)}`
+  ).join('\n');
+}
+
+export default async function handler(req: VercelRequest, res: VercelResponse) {
+  if (req.method !== 'POST') return res.status(405).end();
+
+  try {
+    const { input, midpoint, congestionData } = req.body;
+
+    const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+
+    const now = new Date();
+    const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+
+    const purpose = input.purpose as { first: string; second: string | null };
+    const hasTwoPurposes = !!(purpose.second && purpose.second !== '없음');
+    const vibe = input.vibe as { first?: string[]; second?: string[] } | undefined;
+    const vibeFirstStr = vibe?.first?.length ? vibe.first.join(', ') : '자유롭게';
+    const vibeSecondStr = vibe?.second?.length ? vibe.second.join(', ') : '';
+    const isQuiet = vibe?.first?.includes('조용하게') ?? false;
+    const groupSize: number = typeof input.groupSize === 'number' ? input.groupSize : parseInt(input.groupSize) || 2;
+
+    const areaNames = (congestionData as { areaName: string; level: string }[])
+      .map((c) => c.areaName)
+      .join(', ');
+    const congestionSummary = (congestionData as { areaName: string; level: string }[])
+      .map((c) => `${c.areaName}: ${c.level}`)
+      .join(', ');
+    const locationStr = input.locations.map((l: { name: string }) => l.name).join(', ');
+    const primaryArea = (congestionData as { areaName: string }[])[0]?.areaName || areaNames;
+
+    // 날씨 + 네이버 장소 병렬 fetch
+    const midLat: number = midpoint?.lat ?? 37.5665;
+    const midLng: number = midpoint?.lng ?? 126.9780;
+
+    const [weather, naverFirstPlaces, naverSecondPlaces] = await Promise.all([
+      fetchWeather(midLat, midLng),
+      searchNaverLocal(purposeToNaverQuery(purpose.first, primaryArea, groupSize)),
+      hasTwoPurposes && purpose.second
+        ? searchNaverLocal(purposeToNaverQuery(purpose.second, primaryArea, groupSize))
+        : Promise.resolve([]),
+    ]);
+
+    const hasNaverData = naverFirstPlaces.length > 0;
+
+    // 네이버 데이터 있을 때 전용 규칙
+    const naverSection = hasNaverData ? `
+## 네이버에서 확인된 실존 장소 목록 (반드시 이 목록에서만 선택)
+### 1차 목적 "${purpose.first}" 후보
+${formatNaverPlaces(naverFirstPlaces)}
+${hasTwoPurposes && naverSecondPlaces.length > 0 ? `
+### 2차 목적 "${purpose.second}" 후보
+${formatNaverPlaces(naverSecondPlaces)}` : ''}
+
+⚠️ 위 목록에 없는 장소는 절대 추천 금지. 목록 내 장소의 address·lat·lng는 위 데이터 그대로 사용.
+⚠️ 로컬 맛집·개인 운영 식당을 최우선으로 선택. 스타벅스·이디야·맥도날드 등 대형 프랜차이즈는 전체 추천 중 최대 1개만 허용.` : `
+## 절대 규칙
+1. 실제 존재하고 영업 중인 장소만 추천
+2. 로컬 맛집·개인 운영 식당 우선, 대형 프랜차이즈는 전체 추천 중 최대 1개
+3. address 불확실하면 동네명만, lat/lng 모르면 0 기재`;
+
+    // 날씨 컨텍스트
+    const weatherSection = weather ? `
+## 현재 날씨 (${primaryArea})
+- 날씨: ${weather.description}, 기온: ${weather.temp}°C
+- ${weather.isRainy ? '비 또는 눈이 오고 있음 → 실내 장소 우선 추천' : ''}${weather.isHot ? '더운 날씨 → 에어컨 완비된 실내 선호' : ''}${weather.isCold ? '추운 날씨 → 따뜻한 실내 분위기 선호' : ''}` : '';
+
+    const commonInfo = `
+## 모임 정보
+- 출발지: ${locationStr}
+- 추천 지역: ${areaNames}
+- 인원: ${groupSize}명${groupSize >= 5 ? ' (단체석 또는 넓은 공간 필수)' : ''}
+- 분위기: ${vibeFirstStr}${vibeSecondStr ? ` / 2차: ${vibeSecondStr}` : ''}
+- 현재 시각: ${currentTime}
+- 혼잡도: ${congestionSummary || '정보 없음'}
+${weatherSection}
+
+## 추천 조건
+- "${vibeFirstStr}" 분위기에 맞는 곳
+- ${isQuiet ? '조용하고 여유로운 분위기' : '활기찬 분위기'}
+- ${groupSize}명 수용 가능 규모${groupSize >= 5 ? ' (단체석 우선)' : ''}
+- ${currentTime} 기준 영업 중 또는 곧 영업 시작 우선`;
+
+    const placeSchema = `{
+  "rank": 1,
+  "placeName": "장소명",
+  "category": "카테고리",
+  "description": "한 줄 설명 20자 내외",
+  "priceRange": "1인 예상 가격대",
+  "vibeTags": ["태그1", "태그2", "태그3"],
+  "address": "주소",
+  "area": "지역명",
+  "congestionLevel": "혼잡도",
+  "openingHours": "HH:MM ~ HH:MM",
+  "lat": 0,
+  "lng": 0
+}`;
+
+    const placeSchemaWithWalking = placeSchema.replace('"lng": 0', '"lng": 0,\n  "walkingToNext": 10');
+
+    const prompt = hasTwoPurposes
+      ? `당신은 한국 모임 장소 큐레이터입니다. 1차·2차 코스 장소를 추천해주세요.
+${naverSection}
+${commonInfo}
+
+## 응답 구성 (총 6곳)
+- rank 1: 1차 "${purpose.first}" 최적. walkingToNext에 rank 2까지 도보 분 기재
+- rank 2: 2차 "${purpose.second}" 최적 (rank 1과 도보 15분 이내)
+- rank 3, 4: 1차 대안
+- rank 5, 6: 2차 대안 (rank 2 인근)
+rank 1·2는 같은 동네 또는 인접 지역.
+
+## 응답 형식 (JSON만)
+{"places": [${placeSchemaWithWalking}, {"rank": 2}, {"rank": 3}, {"rank": 4}, {"rank": 5}, {"rank": 6}]}`
+      : `당신은 한국 모임 장소 큐레이터입니다. "${purpose.first}" 장소 3곳을 추천해주세요.
+${naverSection}
+${commonInfo}
+
+## 응답 구성 (서로 다른 3곳)
+- rank 1: 최적, rank 2·3: 대안
+
+## 응답 형식 (JSON만)
+{"places": [${placeSchema}, {"rank": 2}, {"rank": 3}]}`;
+
+    const message = await client.messages.create({
+      model: 'claude-opus-4-7',
+      max_tokens: 4096,
+      messages: [{ role: 'user', content: prompt }],
+    });
+
+    const text = message.content
+      .filter((b): b is { type: 'text'; text: string } => b.type === 'text')
+      .map((b) => b.text)
+      .join('');
+
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) return res.status(500).json({ error: 'AI 응답 파싱 실패' });
+
+    const parsed = JSON.parse(jsonMatch[0]);
+    const places = Array.isArray(parsed.places) ? parsed.places : [parsed];
+
+    // 1차·2차 도보 시간 haversine으로 보정 (rank 1 → rank 2)
+    if (hasTwoPurposes) {
+      const rank1 = places.find((p: { rank: number }) => p.rank === 1);
+      const rank2 = places.find((p: { rank: number }) => p.rank === 2);
+      if (rank1 && rank2 && rank1.lat && rank1.lng && rank2.lat && rank2.lng &&
+          rank1.lat !== 0 && rank2.lat !== 0) {
+        rank1.walkingToNext = walkingMinutes(rank1.lat, rank1.lng, rank2.lat, rank2.lng);
+      }
+    }
+
+    return res.status(200).json(places);
+  } catch (e) {
+    return res.status(500).json({ error: (e as Error).message });
+  }
+}
+</file>
+
+<file path="src/components/VibeSelect.tsx">
+import { useState } from 'react';
+
+export type GroupVibeState = { first: string | null; second: string | null };
+export type VibeState = Record<string, GroupVibeState>;
+
+export const VIBE_KEY_TO_LABEL: Record<string, string> = {
+  noise_loud:    '시끌벅적',
+  noise_quiet:   '조용하게',
+  pace_fast:     '빠르게 한잔',
+  pace_slow:     '오래 즐기기',
+  novelty_new:   '새로운 곳',
+  novelty_known: '검증된 곳',
+};
+
+const GROUPS = [
+  {
+    label: '분위기',
+    options: [
+      { key: 'noise_loud',    label: '시끌벅적',  emoji: '🎵' },
+      { key: 'noise_quiet',   label: '조용하게',  emoji: '🌿' },
+    ],
+  },
+  {
+    label: '페이스',
+    options: [
+      { key: 'pace_fast',  label: '빠르게 한잔', emoji: '⚡' },
+      { key: 'pace_slow',  label: '오래 즐기기', emoji: '🌙' },
+    ],
+  },
+  {
+    label: '취향',
+    options: [
+      { key: 'novelty_new',   label: '새로운 곳', emoji: '✨' },
+      { key: 'novelty_known', label: '검증된 곳', emoji: '👍' },
+    ],
+  },
+];
+
+interface Props {
+  value: VibeState;
+  onChange: (v: VibeState) => void;
+  purpose?: { first: string | null; second?: string | null };
+}
+
+export default function VibeSelect({ value, onChange, purpose }: Props) {
+  // 같은 카드에 1차+2차가 모두 붙었다가 2차 제거된 직후 여부 (그룹별 추적)
+  const [wasDoubled, setWasDoubled] = useState<Record<string, boolean>>({});
+
+  function toggle(groupLabel: string, key: string) {
+    const g = value[groupLabel] ?? { first: null, second: null };
+    let { first, second } = g;
+    const nextDoubled = { ...wasDoubled };
+
+    if (first === key && second === key) {
+      // 같은 카드에 1차+2차 → 2차 제거, "연속 제거 모드" 진입
+      second = null;
+      nextDoubled[groupLabel] = true;
+    } else if (wasDoubled[groupLabel] && first === key && second === null) {
+      // 연속 제거 모드: 2차 제거 직후 다시 클릭 → 1차 제거
+      first = null;
+      nextDoubled[groupLabel] = false;
+    } else if (first === key && second !== null) {
+      // 1차가 이 카드, 2차는 다른 카드 → 1차 제거
+      first = null;
+      nextDoubled[groupLabel] = false;
+    } else if (second === key) {
+      // 2차가 이 카드 → 2차 제거
+      second = null;
+      nextDoubled[groupLabel] = false;
+    } else if (first === null) {
+      // 1차 자리 비어있음 → 1차 배정
+      first = key;
+      nextDoubled[groupLabel] = false;
+    } else if (second === null) {
+      // 1차 있음, 2차 자리 비어있음 → 2차 배정 (같은 카드 가능)
+      second = key;
+      nextDoubled[groupLabel] = false;
+    }
+    // else: 두 자리 모두 다른 카드 → 무시
+
+    setWasDoubled(nextDoubled);
+    onChange({ ...value, [groupLabel]: { first, second } });
+  }
+
+  const hasSecond = purpose?.second && purpose.second !== '없음';
+
+  return (
+    <div className="px-4 py-3 flex flex-col gap-4">
+      {GROUPS.map((group, groupIdx) => {
+        const g = value[group.label] ?? { first: null, second: null };
+        return (
+          <div key={group.label}>
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest">
+                {group.label}
+              </p>
+              {groupIdx === 0 && (
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[10px] font-black bg-green-600 text-white px-2 py-0.5 rounded-full">
+                    🍀 {purpose?.first ? `1차: ${purpose.first}` : '1차'}
+                  </span>
+                  {hasSecond && (
+                    <span className="text-[10px] font-black bg-[#3CDBC0] text-white px-2 py-0.5 rounded-full">
+                      🍀 2차: {purpose!.second}
+                    </span>
+                  )}
+                </div>
+              )}
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              {group.options.map((opt) => {
+                const hasFirst = g.first === opt.key;
+                const hasSecond = g.second === opt.key;
+                const isActive = hasFirst || hasSecond;
+                return (
+                  <button
+                    key={opt.key}
+                    onClick={() => toggle(group.label, opt.key)}
+                    className={`relative pt-6 pb-3.5 rounded-xl border-2 text-sm font-bold transition-all duration-200 flex flex-col items-center gap-0.5 active:scale-[0.97] ${
+                      isActive
+                        ? 'border-[#3CDBC0] bg-[#E8F8F5] text-[#2AB5A0] shadow-md shadow-[#3CDBC0]/20'
+                        : 'border-gray-200 bg-white text-gray-700 hover:border-[#3CDBC0]/50'
+                    }`}
+                  >
+                    {/* 클로버 스티커 */}
+                    {isActive && (
+                      <div className="absolute top-1.5 left-1.5 flex gap-0.5">
+                        {hasFirst && (
+                          <span className="text-[9px] font-black bg-green-600 text-white px-1.5 py-0.5 rounded-full leading-none shadow-sm">
+                            🍀 1차
+                          </span>
+                        )}
+                        {hasSecond && (
+                          <span className="text-[9px] font-black bg-[#3CDBC0] text-white px-1.5 py-0.5 rounded-full leading-none shadow-sm">
+                            🍀 2차
+                          </span>
+                        )}
+                      </div>
+                    )}
+                    <span className="text-lg leading-none">{opt.emoji}</span>
+                    <span>{opt.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+</file>
+
+<file path="src/components/ResultCard.tsx">
+import { useState } from 'react';
+import type { PlaceRecommendation } from '../services/ai';
+import { congestionDotClass } from '../services/seoulData';
+import type { CongestionLevel } from '../services/seoulData';
+
+interface TravelResult {
+  label: string;
+  formatted: string;
+  source?: string;
+  error?: boolean;
+}
+
+interface Props {
+  results: PlaceRecommendation[];
+  travelTimes: TravelResult[] | null;
+  midpointAreaName?: string;
+  purpose?: { first: string; second: string | null };
+  treasurer: string | null;
+  onRetry: () => void;
+  onShare: () => void;
+  onReserve: () => void;
+}
+
+function GpsPin({ className = '' }: { className?: string }) {
+  return (
+    <svg
+      width="13" height="13" viewBox="0 0 24 24" fill="currentColor"
+      className={`shrink-0 ${className}`}
+    >
+      <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" />
+    </svg>
+  );
+}
+
+function parseOpenStatus(openingHours?: string): { label: string; isOpen: boolean } | null {
+  if (!openingHours) return null;
+  const match = openingHours.match(/(\d{2}):(\d{2})\s*[~\-]\s*(\d{2}):(\d{2})/);
+  if (!match) return null;
+  const now = new Date();
+  const nowMin = now.getHours() * 60 + now.getMinutes();
+  const openMin = parseInt(match[1]) * 60 + parseInt(match[2]);
+  let closeMin = parseInt(match[3]) * 60 + parseInt(match[4]);
+  if (closeMin < openMin) closeMin += 24 * 60;
+  const isOpen = nowMin >= openMin && nowMin < closeMin;
+  return { label: isOpen ? '영업중' : nowMin < openMin ? '영업 전' : '영업 종료', isOpen };
+}
+
+function congestionInfo(level: string): { dot: string; label: string } {
+  if (!level) return { dot: 'text-white/50', label: '-' };
+  if (level.includes('여유') || level.includes('원활')) return { dot: 'text-green-300', label: '여유' };
+  if (level.includes('보통')) return { dot: 'text-yellow-300', label: '보통' };
+  return { dot: 'text-red-300', label: '혼잡' };
+}
+
+function kakaoUrl(place: PlaceRecommendation) {
+  return `https://map.kakao.com/link/search/${encodeURIComponent(place.placeName)}`;
+}
+
+interface CardProps {
+  place: PlaceRecommendation;
+  extraResults?: PlaceRecommendation[];
+  gradient: string;
+  shadowColor: string;
+}
+
+function PlaceCard({ place, extraResults = [], gradient, shadowColor }: CardProps) {
+  const [moreVisible, setMoreVisible] = useState(false);
+  const openStatus = parseOpenStatus(place.openingHours);
+  const cong = congestionInfo(place.congestionLevel);
+  const url = kakaoUrl(place);
+
+  return (
+    <div
+      className={`rounded-2xl text-white overflow-hidden cursor-pointer active:scale-[0.99] transition-transform shadow-xl ${shadowColor}`}
+      style={{ background: gradient }}
+      onClick={() => window.open(url, '_blank')}
+    >
+      <div className="py-3 px-4">
+        {/* 카테고리 + 혼잡도 */}
+        <div className="flex items-center justify-between mb-1.5">
+          <span className="text-xs font-black bg-white/30 text-white px-3 py-0.5 rounded-full border border-white/30">
+            {place.category}
+          </span>
+          <div className="flex items-center gap-1">
+            <span className={`${cong.dot} text-xs leading-none`}>●</span>
+            <span className="text-xs text-white/80">{cong.label}</span>
+          </div>
+        </div>
+
+        {/* 장소명 */}
+        <h2 className="text-xl font-black leading-tight mb-1.5">{place.placeName}</h2>
+
+        {/* 해시태그 */}
+        <div className="flex flex-wrap gap-1 mb-2">
+          {place.vibeTags.slice(0, 3).map((tag) => (
+            <span key={tag} className="text-xs text-white/80 bg-white/15 px-2 py-0.5 rounded-full">
+              #{tag}
+            </span>
+          ))}
+        </div>
+
+        {/* 핵심 정보 */}
+        <div className="flex flex-col gap-0.5">
+          <div className="flex items-center gap-1.5 text-xs text-white/80">
+            <GpsPin className="opacity-80 shrink-0" />
+            <span className="leading-tight">{place.address || place.area}</span>
+          </div>
+          <div className="flex items-center gap-3 text-xs text-white/80 flex-wrap">
+            <span className="flex items-center gap-1">
+              <span>💰</span>
+              <span>{place.priceRange}</span>
+            </span>
+            {place.openingHours && (
+              <span className="flex items-center gap-1">
+                <span>🕐</span>
+                <span>{place.openingHours}</span>
+                {openStatus && (
+                  <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${
+                    openStatus.isOpen ? 'bg-green-400 text-white' : 'bg-red-400/80 text-white'
+                  }`}>
+                    {openStatus.label}
+                  </span>
+                )}
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* 더보기 버튼 */}
+        {extraResults.length > 0 && (
+          <button
+            onClick={(e) => { e.stopPropagation(); setMoreVisible(!moreVisible); }}
+            className="w-full mt-3 text-white/70 text-sm font-bold flex items-center justify-center gap-1 active:scale-95 transition-all"
+          >
+            {moreVisible ? '접기 ▲' : `추천 더보기 (${extraResults.length}개 더) ▼`}
+          </button>
+        )}
+      </div>
+
+      {/* 더보기 펼침 */}
+      {moreVisible && extraResults.length > 0 && (
+        <div className="border-t border-white/20 px-4 pb-3 pt-3 flex flex-col gap-2 animate-fade-in-up">
+          {extraResults.map((p, idx) => (
+            <div
+              key={idx}
+              className="bg-white/15 rounded-xl p-3 cursor-pointer active:bg-white/25 transition-colors"
+              onClick={(e) => { e.stopPropagation(); window.open(kakaoUrl(p), '_blank'); }}
+            >
+              <div className="flex items-start justify-between mb-1">
+                <div>
+                  <p className="text-sm font-black">{p.placeName}</p>
+                  <p className="text-xs text-white/70">{p.category}</p>
+                </div>
+                <div className="flex items-center gap-1 flex-shrink-0">
+                  <div className={`w-1.5 h-1.5 rounded-full ${congestionDotClass(p.congestionLevel as CongestionLevel)}`} />
+                  <span className="text-xs text-white/60">{p.congestionLevel}</span>
+                </div>
+              </div>
+              <p className="text-xs text-white/70 mb-1.5 leading-relaxed">{p.description}</p>
+              <div className="flex items-center gap-3 text-xs text-white/60">
+                <span>💰 {p.priceRange}</span>
+                {p.address && (
+                  <span className="flex items-center gap-1 truncate flex-1">
+                    <GpsPin className="opacity-60" /> {p.address}
+                  </span>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default function ResultCard({
+  results,
+  travelTimes,
+  midpointAreaName,
+  purpose,
+  treasurer,
+  onRetry,
+  onShare,
+  onReserve,
+}: Props) {
+  const [secondMoreVisible, setSecondMoreVisible] = useState(false);
+  const [showTreasurerPopup, setShowTreasurerPopup] = useState(false);
+
+  const hasSecond = !!(purpose?.second && purpose.second !== '없음');
+  const result = results[0];
+  const secondResult = hasSecond ? results[1] : null;
+  const extraFirstResults = hasSecond ? results.slice(2, 4) : results.slice(1);
+  const extraSecondResults = hasSecond ? results.slice(4) : [];
+
+  return (
+    <div className="flex flex-col gap-2 animate-fade-in-up">
+
+      {/* 상단 요약 바 */}
+      {midpointAreaName && (
+        <div className="bg-white rounded-2xl border border-gray-100 p-3 shadow-sm">
+          <div className="flex items-center justify-between mb-1.5">
+            <span className="text-xs font-black text-gray-700 flex items-center gap-1">
+              <GpsPin className="text-[#3CDBC0]" /> {midpointAreaName} 기준
+            </span>
+            <span className="text-xs text-gray-400">대중교통 예상</span>
+          </div>
+          {travelTimes === null ? (
+            <div className="flex items-center gap-2 text-sm text-gray-400">
+              <div className="w-3.5 h-3.5 border-2 border-[#3CDBC0] border-t-transparent rounded-full animate-spin-slow" />
+              계산 중...
+            </div>
+          ) : travelTimes.length === 0 ? (
+            <p className="text-xs text-gray-400">소요시간을 가져올 수 없어요</p>
+          ) : (
+            <div className="flex flex-wrap gap-x-3 gap-y-1">
+              {travelTimes.map((t, i) => (
+                <div key={i} className="flex items-center gap-1 text-xs">
+                  <span className="text-gray-500 truncate max-w-[80px]">{t.label}</span>
+                  <span className="text-gray-400">→ 약</span>
+                  <span className={`font-black ${t.error ? 'text-gray-400' : 'text-[#3CDBC0]'}`}>
+                    {t.formatted}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* 1차 라벨 + 힌트 */}
+      <div className="flex items-center justify-between -mt-1">
+        {hasSecond ? (
+          <span className="text-xs font-black bg-[#3CDBC0] text-white px-3 py-1 rounded-full">
+            1차 추천 {purpose!.first}
+          </span>
+        ) : <span />}
+        <p className="text-[10px] text-gray-400 text-right">카드 터치 시 카카오맵에서 확인</p>
+      </div>
+
+      {/* 1차 카드 */}
+      <PlaceCard
+        place={result}
+        extraResults={extraFirstResults}
+        gradient="linear-gradient(135deg, #3CDBC0 0%, #2AB5A0 100%)"
+        shadowColor="shadow-[#3CDBC0]/25"
+      />
+
+      {/* 도보 정중앙 + 2차 배지 왼쪽 */}
+      {hasSecond && secondResult && (
+        <div className="relative flex items-center py-1">
+          <span className="text-xs font-black bg-[#1A7A6E] text-white px-3 py-1 rounded-full">
+            2차 추천 {purpose!.second}
+          </span>
+          <div className="absolute left-1/2 -translate-x-1/2 flex items-center gap-1 text-xs text-gray-400 font-medium pointer-events-none">
+            <span className="text-[#3CDBC0] text-base leading-none">↓</span>
+            <span>도보 약 {result.walkingToNext ? `${result.walkingToNext}분` : '10~15분'}</span>
+          </div>
+        </div>
+      )}
+
+      {/* 2차 카드 */}
+      {hasSecond && secondResult && (
+        <div className="flex flex-col gap-1">
+
+          {/* 2차 카드 */}
+          <div
+            className="rounded-2xl text-white shadow-xl shadow-[#1A7A6E]/25 overflow-hidden cursor-pointer active:scale-[0.99] transition-transform"
+            style={{ background: 'linear-gradient(135deg, #1A7A6E 0%, #155E54 100%)' }}
+            onClick={() => window.open(kakaoUrl(secondResult), '_blank')}
+          >
+            <div className="py-3 px-4">
+              {(() => {
+                const cong = congestionInfo(secondResult.congestionLevel);
+                return (
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs font-black bg-white/20 text-white px-3 py-0.5 rounded-full border border-white/20">
+                      {secondResult.category}
+                    </span>
+                    <div className="flex items-center gap-1">
+                      <span className={`${cong.dot} text-xs leading-none`}>●</span>
+                      <span className="text-xs text-white/80">{cong.label}</span>
+                    </div>
+                  </div>
+                );
+              })()}
+              <h2 className="text-xl font-black leading-tight mb-1.5">{secondResult.placeName}</h2>
+              <div className="flex flex-wrap gap-1 mb-2">
+                {secondResult.vibeTags.slice(0, 3).map((tag) => (
+                  <span key={tag} className="text-xs text-white/80 bg-white/15 px-2 py-0.5 rounded-full">
+                    #{tag}
+                  </span>
+                ))}
+              </div>
+              <div className="flex flex-col gap-0.5">
+                <div className="flex items-center gap-1.5 text-xs text-white/80">
+                  <GpsPin className="opacity-80 shrink-0" />
+                  <span className="leading-tight">{secondResult.address || secondResult.area}</span>
+                </div>
+                <div className="flex items-center gap-3 text-xs text-white/80 flex-wrap">
+                  <span className="flex items-center gap-1"><span>💰</span><span>{secondResult.priceRange}</span></span>
+                  {secondResult.openingHours && (
+                    <span className="flex items-center gap-1">
+                      <span>🕐</span><span>{secondResult.openingHours}</span>
+                      {(() => {
+                        const s = parseOpenStatus(secondResult.openingHours);
+                        return s ? (
+                          <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${s.isOpen ? 'bg-green-400 text-white' : 'bg-red-400/80 text-white'}`}>
+                            {s.label}
+                          </span>
+                        ) : null;
+                      })()}
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* 2차 추천 더보기 */}
+              {extraSecondResults.length > 0 && (
+                <button
+                  onClick={(e) => { e.stopPropagation(); setSecondMoreVisible(!secondMoreVisible); }}
+                  className="w-full mt-3 text-white/70 text-sm font-bold flex items-center justify-center gap-1 active:scale-95 transition-all"
+                >
+                  {secondMoreVisible ? '접기 ▲' : `추천 더보기 (${extraSecondResults.length}개 더) ▼`}
+                </button>
+              )}
+            </div>
+
+            {/* 2차 더보기 펼침 */}
+            {secondMoreVisible && extraSecondResults.length > 0 && (
+              <div className="border-t border-white/20 px-4 pb-3 pt-3 flex flex-col gap-2 animate-fade-in-up">
+                {extraSecondResults.map((p, idx) => (
+                  <div
+                    key={idx}
+                    className="bg-white/15 rounded-xl p-3 cursor-pointer active:bg-white/25 transition-colors"
+                    onClick={(e) => { e.stopPropagation(); window.open(kakaoUrl(p), '_blank'); }}
+                  >
+                    <div className="flex items-start justify-between mb-1">
+                      <div>
+                        <p className="text-sm font-black">{p.placeName}</p>
+                        <p className="text-xs text-white/70">{p.category}</p>
+                      </div>
+                      <div className="flex items-center gap-1 flex-shrink-0">
+                        <div className={`w-1.5 h-1.5 rounded-full ${congestionDotClass(p.congestionLevel as CongestionLevel)}`} />
+                        <span className="text-xs text-white/60">{p.congestionLevel}</span>
+                      </div>
+                    </div>
+                    <p className="text-xs text-white/70 mb-1.5 leading-relaxed">{p.description}</p>
+                    <div className="flex items-center gap-3 text-xs text-white/60">
+                      <span>💰 {p.priceRange}</span>
+                      {p.address && (
+                        <span className="flex items-center gap-1 truncate flex-1">
+                          <GpsPin className="opacity-60" /> {p.address}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* 예약하기 */}
+      <button
+        onClick={onReserve}
+        className="w-full py-3 rounded-2xl bg-[#3CDBC0] text-white font-black text-base flex items-center justify-center gap-2 shadow-lg shadow-[#3CDBC0]/30 hover:bg-[#2AB5A0] active:scale-95 transition-all"
+      >
+        📋 이 장소 예약하기
+      </button>
+
+      {/* 카카오톡 공유 */}
+      <button
+        onClick={onShare}
+        className="w-full py-3 rounded-2xl bg-[#FEE500] text-gray-900 font-black text-base flex items-center justify-center gap-2 shadow-lg shadow-yellow-200 active:scale-95 transition-transform"
+      >
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M12 2C6.48 2 2 6.08 2 11.1c0 3.13 1.73 5.9 4.35 7.57V22l3.97-2.18c1.06.29 2.18.44 3.33.44 5.52 0 10-4.08 10-9.1C23.65 6.08 17.52 2 12 2z" />
+        </svg>
+        카카오톡으로 공유하기
+      </button>
+
+      {/* 총무 + 다시뽑기 반반 */}
+      <div className="flex gap-2">
+        <button
+          onClick={() => treasurer && setShowTreasurerPopup(true)}
+          className="flex-1 py-2.5 rounded-2xl bg-gradient-to-r from-amber-50 to-yellow-50 border-2 border-amber-200 flex items-center justify-center gap-2 active:scale-95 transition-all"
+        >
+          <span className="text-lg">💰</span>
+          <span className="text-sm font-black text-amber-700">오늘의 총무</span>
+        </button>
+        <button
+          onClick={onRetry}
+          className="flex-1 py-2.5 rounded-2xl border border-gray-200 bg-white text-gray-500 font-bold text-sm flex items-center justify-center gap-2 hover:border-[#3CDBC0] hover:text-[#2AB5A0] transition-all active:scale-95"
+        >
+          <span className="text-lg">🔄</span>
+          <span>다시 뽑기</span>
+        </button>
+      </div>
+
+      <div className="pb-2" />
+
+      {/* 총무 팝업 */}
+      {showTreasurerPopup && treasurer && (
+        <div
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 px-6"
+          onClick={() => setShowTreasurerPopup(false)}
+        >
+          <div
+            className="bg-white rounded-3xl p-7 w-full max-w-sm text-center shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="text-5xl mb-4">🎲</div>
+            <p className="text-lg font-black text-gray-800 leading-snug">
+              {treasurer}에서 출발하는 분이<br />오늘의 총무 담첨!
+            </p>
+            <button
+              onClick={() => setShowTreasurerPopup(false)}
+              className="mt-5 w-full py-3 rounded-2xl bg-[#3CDBC0] text-white font-black text-base active:scale-95 transition-transform"
+            >
+              확인
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+</file>
+
+<file path="src/pages/Home.tsx">
+import { useState, useEffect } from 'react';
+import StepProgress from '../components/StepProgress';
+import LocationInput from '../components/LocationInput';
+import type { LocationEntry } from '../components/LocationInput';
+import PurposeSelect from '../components/PurposeSelect';
+import type { PurposeValue } from '../components/PurposeSelect';
+import VibeSelect from '../components/VibeSelect';
+import type { VibeState } from '../components/VibeSelect';
+import { VIBE_KEY_TO_LABEL } from '../components/VibeSelect';
+import MeetingLocationSelect from '../components/MeetingLocationSelect';
+import type { MeetingLocation } from '../components/MeetingLocationSelect';
+import ResultCard from '../components/ResultCard';
+import Reserve from './Reserve';
+import { PRESET_REGIONS, findNearestAreas, findBalancedAreas } from '../services/midpoint';
+import type { PresetRegion, Coordinates } from '../services/midpoint';
+import { getMultiAreaCongestion } from '../services/seoulData';
+import { getAIRecommendation } from '../services/ai';
+import type { PlaceRecommendation, UserInput } from '../services/ai';
+import { trackSessionDuration } from '../utils/analytics';
+
+type Step = 0 | 1 | 2 | 3;
+type View = 'steps' | 'result' | 'reserve';
+
+interface TravelResult {
+  label: string;
+  formatted: string;
+  source?: string;
+  error?: boolean;
+}
+
+const LOADING_MESSAGES = [
+  '🗺️ 서울 구석구석 탐색 중...',
+  '👥 우리 팀 취향 분석 중...',
+  '🔍 딱 맞는 곳 걸러내는 중...',
+  '💰 가격대 & 영업시간 체크 중...',
+  '✨ 오늘의 코스 완성 직전!',
+];
+
+function deriveGroupSize(locationCount: number): UserInput['groupSize'] {
+  if (locationCount >= 5) return '5명 이상';
+  if (locationCount >= 3) return '3~4명';
+  return '2명';
+}
+
+export default function Home() {
+  const [view, setView] = useState<View>('steps');
+  const [step, setStep] = useState<Step>(0);
+  const [locations, setLocations] = useState<LocationEntry[]>([]);
+  const [purpose, setPurpose] = useState<PurposeValue | null>(null);
+  const [vibe, setVibe] = useState<VibeState>({});
+  const [meetingLocation, setMeetingLocation] = useState<MeetingLocation | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [loadingMsg, setLoadingMsg] = useState(0);
+  const [loadingProgress, setLoadingProgress] = useState(0);
+  const [result, setResult] = useState<PlaceRecommendation[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [midpointData, setMidpointData] = useState<{
+    midpoint: Coordinates;
+    areaName: string;
+    nearestAreas: string[];
+  } | null>(null);
+  const [resultTravelTimes, setResultTravelTimes] = useState<TravelResult[] | null>(null);
+  const [treasurer, setTreasurer] = useState<string | null>(null);
+  const [compromiseMessage, setCompromiseMessage] = useState<string | null>(null);
+  const [showCompromiseToast, setShowCompromiseToast] = useState(false);
+
+  useEffect(() => {
+    if (!sessionStorage.getItem('mintSessionStart')) {
+      sessionStorage.setItem('mintSessionStart', Date.now().toString());
+    }
+  }, []);
+
+
+  useEffect(() => {
+    if (view === 'result') {
+      const startStr = sessionStorage.getItem('mintSessionStart');
+      if (startStr) {
+        const seconds = Math.round((Date.now() - parseInt(startStr)) / 1000);
+        trackSessionDuration(seconds);
+        sessionStorage.removeItem('mintSessionStart');
+      }
+    }
+  }, [view]);
+
+  function canNext(): boolean {
+    if (step === 0) return locations.length >= 2;
+    if (step === 1) return !!purpose?.first;
+    if (step === 2) return Object.values(vibe).some((g) => g.first !== null);
+    if (step === 3) return meetingLocation !== null;
+    return false;
+  }
+
+  function handleNext() {
+    setStep((s) => (s + 1) as Step);
+  }
+
+  function handleBack() {
+    if (step > 0) setStep((s) => (s - 1) as Step);
+  }
+
+  function applyCompromiseMessage(msg?: string) {
+    if (msg) {
+      setCompromiseMessage(msg);
+      setShowCompromiseToast(true);
+      setTimeout(() => setShowCompromiseToast(false), 5000);
+    }
+  }
+
+  function handleConfirmMeetingLocation(loc: MeetingLocation) {
+    if (loc.type === 'auto') {
+      handleMidpointSelect();
+    } else {
+      const region = PRESET_REGIONS.find((r) => r.id === loc.regionId);
+      if (region) {
+        handleMidpointSelect(region);
+      } else {
+        const validLocs = locations.filter((l) => l.lat != null && l.lng != null);
+        const coords = validLocs.map((l) => ({ lat: l.lat!, lng: l.lng! }));
+        const balanced = findBalancedAreas(coords.length >= 2 ? coords : [{ lat: 37.5665, lng: 126.978 }]);
+        const nearestAreas = findNearestAreas(balanced.midpoint, 3);
+        setMidpointData({ midpoint: balanced.midpoint, areaName: loc.area, nearestAreas });
+        setResultTravelTimes(null);
+        applyCompromiseMessage(balanced.compromiseMessage);
+        handleRecommend(balanced.midpoint, nearestAreas, validLocs);
+      }
+    }
+  }
+
+  function handleMidpointSelect(presetRegion?: PresetRegion) {
+    let midpoint: Coordinates;
+    let areaName: string;
+    const validLocs = locations.filter((l) => l.lat != null && l.lng != null);
+
+    if (presetRegion) {
+      midpoint = presetRegion.midpoint;
+      areaName = presetRegion.label;
+    } else {
+      const coords = validLocs.map((l) => ({ lat: l.lat!, lng: l.lng! }));
+      const balanced = findBalancedAreas(coords.length >= 2 ? coords : [{ lat: 37.5665, lng: 126.978 }]);
+      midpoint = balanced.midpoint;
+      areaName = balanced.areaName;
+      applyCompromiseMessage(balanced.compromiseMessage);
+    }
+
+    const nearestAreas = findNearestAreas(midpoint, 3);
+    setMidpointData({ midpoint, areaName, nearestAreas });
+    setResultTravelTimes(null);
+    handleRecommend(midpoint, nearestAreas, validLocs);
+  }
+
+  async function handleRecommend(
+    midpoint: Coordinates,
+    nearestAreas: string[],
+    validLocs: LocationEntry[],
+  ) {
+    setLoading(true);
+    setLoadingProgress(0);
+    setError(null);
+    setResult(null);
+
+    const msgInterval = setInterval(() => {
+      setLoadingMsg((m) => (m + 1) % LOADING_MESSAGES.length);
+    }, 1800);
+
+    let aiProgressInterval: ReturnType<typeof setInterval> | null = null;
+
+    try {
+      // 실제 마일스톤 1: 혼잡도 데이터 fetch
+      setLoadingProgress(5);
+      const congestionData = await getMultiAreaCongestion(nearestAreas);
+      setLoadingProgress(25); // 실제 완료
+
+      const vibeFirst: string[] = [];
+      const vibeSecond: string[] = [];
+      Object.values(vibe).forEach((g) => {
+        if (g.first) vibeFirst.push(VIBE_KEY_TO_LABEL[g.first] ?? g.first);
+        if (g.second) vibeSecond.push(VIBE_KEY_TO_LABEL[g.second] ?? g.second);
+      });
+
+      const input: UserInput = {
+        locations,
+        groupSize: deriveGroupSize(locations.length),
+        purpose: { first: purpose!.first!, second: purpose!.second ?? null },
+        vibe: { first: vibeFirst, second: vibeSecond },
+      };
+
+      // AI 호출 동안 25→90% 타이머 (Claude 응답이 단일 fetch라 내부 진행도 불가)
+      aiProgressInterval = setInterval(() => {
+        setLoadingProgress((prev) => {
+          if (prev >= 90) return prev;
+          // 초반엔 빠르게, 90% 가까울수록 느리게
+          const gap = 90 - prev;
+          return prev + gap * 0.04;
+        });
+      }, 250);
+
+      // 실제 마일스톤 2: AI 추천 완료
+      const recommendation = await getAIRecommendation(input, midpoint, congestionData);
+      clearInterval(aiProgressInterval);
+      setLoadingProgress(100); // 실제 완료
+
+      setResult(recommendation);
+
+      const namedLocs = locations.filter((l) => l.name);
+      if (namedLocs.length > 0) {
+        const picked = namedLocs[Math.floor(Math.random() * namedLocs.length)];
+        setTreasurer(picked.name);
+      }
+      setView('result');
+
+      if (validLocs.length >= 2) {
+        fetch('/api/travel-time', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            origins: validLocs.map((l) => ({ lat: l.lat!, lng: l.lng!, label: l.name })),
+            destination: midpoint,
+          }),
+        })
+          .then((r) => r.json())
+          .then((data: TravelResult[]) => setResultTravelTimes(data))
+          .catch(() => setResultTravelTimes([]));
+      } else {
+        setResultTravelTimes([]);
+      }
+    } catch (e) {
+      if (aiProgressInterval) clearInterval(aiProgressInterval);
+      setError((e as Error).message || '추천을 가져오지 못했어요. 다시 시도해주세요.');
+    } finally {
+      clearInterval(msgInterval);
+      setLoading(false);
+      setLoadingProgress(0);
+    }
+  }
+
+  function handleRetry() {
+    setTreasurer(null);
+    setResultTravelTimes(null);
+    setMeetingLocation(null);
+    setStep(3 as Step);
+    setView('steps');
+  }
+
+  function handleShare() {
+    if (!result || result.length === 0) return;
+    const primary = result[0];
+    const mlpUrl = window.location.origin;
+    const hasSecond = !!(purpose?.second && purpose.second !== '없음');
+    const secondPlace = hasSecond && result.length > 1 ? result[1] : null;
+
+    const mapUrl = (p: typeof primary) =>
+      p.lat && p.lng
+        ? `https://map.kakao.com/link/to/${encodeURIComponent(p.placeName)},${p.lat},${p.lng}`
+        : `https://map.kakao.com/link/search/${encodeURIComponent(p.placeName)}`;
+
+    const primaryMapUrl = mapUrl(primary);
+    const secondMapUrl = secondPlace ? mapUrl(secondPlace) : null;
+
+    if (window.Kakao?.Share) {
+      if (!window.Kakao.isInitialized()) {
+        window.Kakao.init(import.meta.env.VITE_KAKAO_JS_API_KEY);
+      }
+
+      const descLines = hasSecond && secondPlace
+        ? [
+            `1차(${purpose!.first}): ${primary.placeName}`,
+            `2차(${purpose!.second}): ${secondPlace.placeName}`,
+            ...(treasurer ? [`💰 ${treasurer}에서 출발하는 분이 오늘의 총무!`] : []),
+          ]
+        : [
+            `장소: ${primary.placeName}`,
+            `가격대: ${primary.priceRange || ''}`,
+            ...(treasurer ? [`💰 ${treasurer}에서 출발하는 분이 오늘의 총무!`] : []),
+          ];
+
+      const buttons: object[] = [
+        { title: 'MINT로 장소 정하러 가기', link: { mobileWebUrl: mlpUrl, webUrl: mlpUrl } },
+      ];
+      if (secondMapUrl) {
+        buttons.push({ title: `2차(${purpose!.second}) 카카오맵 보기`, link: { mobileWebUrl: secondMapUrl, webUrl: secondMapUrl } });
+      } else {
+        buttons.push({ title: '카카오맵에서 보기', link: { mobileWebUrl: primaryMapUrl, webUrl: primaryMapUrl } });
+      }
+
+      window.Kakao.Share.sendDefault({
+        objectType: 'feed',
+        content: {
+          title: `🍀 MINT 추천${hasSecond ? ` | 1차(${purpose!.first}) · 2차(${purpose!.second})` : ''}`,
+          description: descLines.join('\n'),
+          imageUrl: `${mlpUrl}/image/step5.png`,
+          link: { mobileWebUrl: mlpUrl, webUrl: mlpUrl },
+        },
+        buttons,
+      });
+      return;
+    }
+
+    // 카카오 SDK 없을 때 텍스트 공유
+    const lines = [
+      '🍀 MINT 추천 장소 🍀',
+      '',
+      ...(hasSecond && secondPlace
+        ? [
+            `1차(${purpose!.first}): ${primary.placeName}`,
+            `  카카오맵 → ${primaryMapUrl}`,
+            '',
+            `2차(${purpose!.second}): ${secondPlace.placeName}`,
+            `  카카오맵 → ${secondMapUrl}`,
+          ]
+        : [
+            `장소: ${primary.placeName}`,
+            `  카카오맵 → ${primaryMapUrl}`,
+          ]),
+      ...(treasurer ? ['', `💰 ${treasurer}에서 출발하는 분이 오늘의 총무 담첨!`] : []),
+      '',
+      '이젠, MINT로 우리 모임 장소 정해봐요!',
+      mlpUrl,
+    ];
+
+    const shareText = lines.join('\n');
+    if (navigator.share) {
+      navigator.share({ text: shareText });
+    } else {
+      navigator.clipboard?.writeText(shareText).then(() => alert('공유 내용이 복사되었습니다!'));
+    }
+  }
+
+  // 로딩
+  if (loading) {
+    const r = 52;
+    const circ = 2 * Math.PI * r;
+    const offset = circ - (loadingProgress / 100) * circ;
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-[#F5FBF8] px-4 gap-6">
+        <p className="text-[#3CDBC0] font-black text-2xl tracking-widest">MINT</p>
+
+        {/* 원형 프로그레스 링 */}
+        <div className="relative w-36 h-36">
+          <svg className="w-full h-full -rotate-90" viewBox="0 0 120 120">
+            <circle cx="60" cy="60" r={r} fill="none" stroke="#E8F8F5" strokeWidth="10" />
+            <circle
+              cx="60" cy="60" r={r}
+              fill="none"
+              stroke="#3CDBC0"
+              strokeWidth="10"
+              strokeLinecap="round"
+              strokeDasharray={circ}
+              strokeDashoffset={offset}
+              className="transition-all duration-300 ease-out"
+            />
+          </svg>
+          <div className="absolute inset-0 flex items-center justify-center">
+            <span className="text-2xl font-black text-[#2AB5A0]">{Math.round(loadingProgress)}%</span>
+          </div>
+        </div>
+
+        {/* 메시지 */}
+        <div className="text-center">
+          <p className="text-base font-bold text-[#2AB5A0]">{LOADING_MESSAGES[loadingMsg]}</p>
+          <p className="text-xs text-gray-400 mt-1">AI가 서울을 탐색하고 있어요</p>
+        </div>
+      </div>
+    );
+  }
+
+  // 예약 페이지
+  if (view === 'reserve' && result && result.length > 0) {
+    return (
+      <Reserve
+        placeName={result[0].placeName}
+        address={result[0].address || result[0].area}
+        openingHours={result[0].openingHours ?? ''}
+        onBack={() => setView('result')}
+      />
+    );
+  }
+
+  // 추천 결과
+  if (view === 'result' && result && result.length > 0) {
+    return (
+      <div className="min-h-screen bg-[#F5FBF8]">
+        {/* 중간 지점 보완 토스트 */}
+        {compromiseMessage && (
+          <div className={`fixed top-4 left-1/2 -translate-x-1/2 z-50 w-[90%] max-w-sm transition-all duration-500 ${showCompromiseToast ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-2 pointer-events-none'}`}>
+            <div className="bg-[#1A7A6E] text-white text-xs font-bold px-4 py-3 rounded-2xl shadow-lg flex items-start gap-2">
+              <span className="text-base leading-none mt-0.5">📍</span>
+              <span className="leading-snug">{compromiseMessage}</span>
+            </div>
+          </div>
+        )}
+        <div className="max-w-md mx-auto px-4 pb-6 pt-2">
+          <div className="flex items-center justify-between mb-2">
+            <button
+              onClick={() => {
+                setResult(null);
+                setView('steps');
+                setStep(0);
+                setResultTravelTimes(null);
+                setLocations([]);
+                setPurpose(null);
+                setVibe({});
+                setMeetingLocation(null);
+                setMidpointData(null);
+                setTreasurer(null);
+              }}
+              className="text-sm text-gray-400 hover:text-gray-600"
+            >
+              ← 처음으로
+            </button>
+            <span className="text-[#3CDBC0] font-black text-lg">MINT</span>
+          </div>
+
+          <ResultCard
+            results={result}
+            travelTimes={resultTravelTimes}
+            midpointAreaName={midpointData?.areaName}
+            purpose={purpose?.first ? { first: purpose.first, second: purpose.second ?? null } : undefined}
+            treasurer={treasurer}
+            onRetry={handleRetry}
+            onShare={handleShare}
+            onReserve={() => setView('reserve')}
+          />
+        </div>
+      </div>
+    );
+  }
+
+  // 입력 플로우
+  return (
+    <div className="h-[100dvh] bg-[#F5FBF8] overflow-hidden">
+      <div className="h-full max-w-md mx-auto flex flex-col">
+
+        {/* 헤더 */}
+        <div className="flex-shrink-0 text-center pt-5 px-4">
+          <h1 className="text-2xl font-black text-[#2AB5A0] tracking-tight">MINT</h1>
+        </div>
+
+        {/* 스텝 프로그레스 */}
+        <div className="flex-shrink-0">
+          <StepProgress current={step} total={4} />
+        </div>
+
+        {/* 스텝 제목 */}
+        <div className="flex-shrink-0 text-center px-4 pt-3 pb-1">
+          <h2 className="text-xl font-black text-gray-800">
+            {step === 0 && '각자의 출발지를 입력해주세요'}
+            {step === 1 && '오늘의 코스 선택'}
+            {step === 2 && '원하는 분위기를 골라봐요'}
+            {step === 3 && '어디서 만날까요?'}
+          </h2>
+          {step === 2 && (
+            <p className="text-xs text-gray-400 mt-1">최소 1개 이상 선택 · 많이 고를수록 추천이 정확해져요</p>
+          )}
+          {step === 3 && (
+            <p className="text-xs text-gray-400 mt-1">친구들이 만날 동네를 입력해봐요</p>
+          )}
+        </div>
+
+        {/* 콘텐츠 */}
+        <div key={step} className="flex-1 min-h-0 overflow-y-auto animate-fade-in-up">
+          {step === 0 && <LocationInput locations={locations} onChange={setLocations} />}
+          {step === 1 && (
+            <PurposeSelect
+              value={purpose ?? { first: null, firstRaw: null, second: '없음', secondRaw: '없음' }}
+              onChange={setPurpose}
+            />
+          )}
+          {step === 2 && (
+            <VibeSelect
+              value={vibe}
+              onChange={setVibe}
+              purpose={purpose ? { first: purpose.first, second: purpose.second } : undefined}
+            />
+          )}
+          {step === 3 && (
+            <MeetingLocationSelect
+              value={meetingLocation}
+              onSelect={(loc) => {
+                setMeetingLocation(loc);
+                handleConfirmMeetingLocation(loc);
+              }}
+            />
+          )}
+        </div>
+
+        {/* 에러 */}
+        {error && (
+          <div className="flex-shrink-0 mx-4 mb-2 p-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-600 text-center">
+            {error}
+          </div>
+        )}
+
+        {/* 하단 버튼 */}
+        <div className="flex-shrink-0 px-4 pt-2 pb-8 flex flex-col gap-2">
+          {step < 3 ? (
+            <>
+              <div className="flex gap-3">
+                {step > 0 && (
+                  <button
+                    onClick={handleBack}
+                    className="w-14 py-4 rounded-2xl border-2 border-gray-200 bg-white text-gray-500 font-bold text-lg hover:border-gray-300 transition-all active:scale-95"
+                  >
+                    ←
+                  </button>
+                )}
+                <button
+                  onClick={handleNext}
+                  disabled={!canNext()}
+                  className={`flex-1 py-4 rounded-2xl font-black text-base transition-all duration-300 active:scale-95 ${
+                    canNext()
+                      ? 'bg-[#3CDBC0] text-white shadow-lg shadow-[#3CDBC0]/30 hover:bg-[#2AB5A0]'
+                      : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                  }`}
+                >
+                  다음
+                </button>
+              </div>
+              {step === 1 && !canNext() && (
+                <p className="text-xs text-gray-400 text-center">1차 목적을 선택해주세요</p>
+              )}
+            </>
+          ) : (
+            <button
+              onClick={handleBack}
+              className="w-full py-4 rounded-2xl border-2 border-gray-200 bg-white text-gray-500 font-bold text-base hover:border-gray-300 transition-all active:scale-95"
+            >
+              ← 뒤로
+            </button>
+          )}
+        </div>
+
+      </div>
+    </div>
+  );
+}
+</file>
+
+</files>
