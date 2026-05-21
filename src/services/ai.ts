@@ -6,6 +6,9 @@ export interface UserInput {
   groupSize: '2명' | '3~4명' | '5명 이상';
   purpose: { first: string; second: string | null };
   vibe: { first: string[]; second: string[] };
+  relation?: string | null;
+  occasion?: string | null;
+  budget?: string | null;
 }
 
 export interface PlaceRecommendation {

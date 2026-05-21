@@ -48,6 +48,7 @@ export default function Home() {
   const [locations, setLocations] = useState<LocationEntry[]>([]);
   const [purpose, setPurpose] = useState<PurposeValue | null>(null);
   const [vibe, setVibe] = useState<VibeState>({});
+  const [budget, setBudget] = useState<string | null>(null);
   const [meetingLocation, setMeetingLocation] = useState<MeetingLocation | null>(null);
   const [loading, setLoading] = useState(false);
   const [loadingMsg, setLoadingMsg] = useState(0);
@@ -185,6 +186,9 @@ export default function Home() {
         groupSize: deriveGroupSize(locations.length),
         purpose: { first: purpose!.first!, second: purpose!.second ?? null },
         vibe: { first: vibeFirst, second: vibeSecond },
+        relation: purpose?.relation ?? null,
+        occasion: purpose?.occasion ?? null,
+        budget,
       };
 
       // AI 호출 동안 25→90% 타이머 (Claude 응답이 단일 fetch라 내부 진행도 불가)
@@ -248,6 +252,7 @@ export default function Home() {
     setTreasurer(null);
     setResultTravelTimes(null);
     setMeetingLocation(null);
+    setBudget(null);
     setStep(3 as Step);
     setView('steps');
   }
@@ -410,6 +415,7 @@ export default function Home() {
                 setLocations([]);
                 setPurpose(null);
                 setVibe({});
+                setBudget(null);
                 setMeetingLocation(null);
                 setMidpointData(null);
                 setTreasurer(null);
@@ -472,7 +478,7 @@ export default function Home() {
           {step === 0 && <LocationInput locations={locations} onChange={setLocations} />}
           {step === 1 && (
             <PurposeSelect
-              value={purpose ?? { first: null, firstRaw: null, second: '없음', secondRaw: '없음' }}
+              value={purpose ?? { first: null, firstRaw: null, second: '없음', secondRaw: '없음', relation: null, occasion: null }}
               onChange={setPurpose}
             />
           )}
@@ -481,6 +487,8 @@ export default function Home() {
               value={vibe}
               onChange={setVibe}
               purpose={purpose ? { first: purpose.first, second: purpose.second } : undefined}
+              budget={budget}
+              onBudgetChange={setBudget}
             />
           )}
           {step === 3 && (

@@ -36,14 +36,22 @@ const GROUPS = [
   },
 ];
 
+const BUDGET_OPTIONS: { value: string | null; label: string; emoji: string }[] = [
+  { value: null,      label: '상관없음', emoji: '🤷' },
+  { value: '~2만원',  label: '~2만원',  emoji: '💚' },
+  { value: '2~4만원', label: '2~4만원', emoji: '💛' },
+  { value: '4만원+',  label: '4만원+',  emoji: '💎' },
+];
+
 interface Props {
   value: VibeState;
   onChange: (v: VibeState) => void;
   purpose?: { first: string | null; second?: string | null };
+  budget: string | null;
+  onBudgetChange: (b: string | null) => void;
 }
 
-export default function VibeSelect({ value, onChange, purpose }: Props) {
-  // 같은 카드에 1차+2차가 모두 붙었다가 2차 제거된 직후 여부 (그룹별 추적)
+export default function VibeSelect({ value, onChange, purpose, budget, onBudgetChange }: Props) {
   const [wasDoubled, setWasDoubled] = useState<Record<string, boolean>>({});
 
   function toggle(groupLabel: string, key: string) {
@@ -52,31 +60,24 @@ export default function VibeSelect({ value, onChange, purpose }: Props) {
     const nextDoubled = { ...wasDoubled };
 
     if (first === key && second === key) {
-      // 같은 카드에 1차+2차 → 2차 제거, "연속 제거 모드" 진입
       second = null;
       nextDoubled[groupLabel] = true;
     } else if (wasDoubled[groupLabel] && first === key && second === null) {
-      // 연속 제거 모드: 2차 제거 직후 다시 클릭 → 1차 제거
       first = null;
       nextDoubled[groupLabel] = false;
     } else if (first === key && second !== null) {
-      // 1차가 이 카드, 2차는 다른 카드 → 1차 제거
       first = null;
       nextDoubled[groupLabel] = false;
     } else if (second === key) {
-      // 2차가 이 카드 → 2차 제거
       second = null;
       nextDoubled[groupLabel] = false;
     } else if (first === null) {
-      // 1차 자리 비어있음 → 1차 배정
       first = key;
       nextDoubled[groupLabel] = false;
     } else if (second === null) {
-      // 1차 있음, 2차 자리 비어있음 → 2차 배정 (같은 카드 가능)
       second = key;
       nextDoubled[groupLabel] = false;
     }
-    // else: 두 자리 모두 다른 카드 → 무시
 
     setWasDoubled(nextDoubled);
     onChange({ ...value, [groupLabel]: { first, second } });
@@ -110,8 +111,8 @@ export default function VibeSelect({ value, onChange, purpose }: Props) {
             <div className="grid grid-cols-2 gap-2">
               {group.options.map((opt) => {
                 const hasFirst = g.first === opt.key;
-                const hasSecond = g.second === opt.key;
-                const isActive = hasFirst || hasSecond;
+                const hasSecondFlag = g.second === opt.key;
+                const isActive = hasFirst || hasSecondFlag;
                 return (
                   <button
                     key={opt.key}
@@ -122,7 +123,6 @@ export default function VibeSelect({ value, onChange, purpose }: Props) {
                         : 'border-gray-200 bg-white text-gray-700 hover:border-[#3CDBC0]/50'
                     }`}
                   >
-                    {/* 클로버 스티커 */}
                     {isActive && (
                       <div className="absolute top-1.5 left-1.5 flex gap-0.5">
                         {hasFirst && (
@@ -130,7 +130,7 @@ export default function VibeSelect({ value, onChange, purpose }: Props) {
                             🍀 1차
                           </span>
                         )}
-                        {hasSecond && (
+                        {hasSecondFlag && (
                           <span className="text-[9px] font-black bg-[#3CDBC0] text-white px-1.5 py-0.5 rounded-full leading-none shadow-sm">
                             🍀 2차
                           </span>
@@ -146,6 +146,33 @@ export default function VibeSelect({ value, onChange, purpose }: Props) {
           </div>
         );
       })}
+
+      {/* 예산 */}
+      <div>
+        <div className="flex items-center gap-2 mb-2">
+          <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest">예산</p>
+          <span className="text-[10px] text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full font-medium">선택사항</span>
+        </div>
+        <div className="grid grid-cols-4 gap-2">
+          {BUDGET_OPTIONS.map((opt) => {
+            const selected = budget === opt.value;
+            return (
+              <button
+                key={opt.label}
+                onClick={() => onBudgetChange(budget === opt.value ? null : opt.value)}
+                className={`flex flex-col items-center justify-center h-16 rounded-xl border-2 text-xs font-bold transition-all duration-200 active:scale-[0.97] ${
+                  selected
+                    ? 'border-[#3CDBC0] bg-[#E8F8F5] text-[#2AB5A0] shadow-md shadow-[#3CDBC0]/20'
+                    : 'border-gray-200 bg-white text-gray-600 hover:border-[#3CDBC0]/50'
+                }`}
+              >
+                <span className="text-base mb-0.5">{opt.emoji}</span>
+                <span>{opt.label}</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
     </div>
   );
 }

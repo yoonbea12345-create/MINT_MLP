@@ -51,6 +51,31 @@ const PURPOSE_KEYWORDS: Record<string, string[]> = {
   '기타':  ['맛집', '음식점', '식당', '카페', '바', '이자카야', '포차', '브런치', '고깃집', '커피'],
 };
 
+// 행사별 추가 키워드 (1순위 지역에 extra 쿼리로 추가)
+const OCCASION_EXTRA_KEYWORDS: Record<string, string[]> = {
+  '생일':   ['프라이빗룸 식당', '생일 케이크 반입', '이벤트 레스토랑', '생일 맛집'],
+  '기념일': ['프라이빗룸 식당', '기념일 레스토랑', '코스요리', '분위기 좋은 레스토랑'],
+  '소개팅': ['소개팅 맛집', '분위기 좋은 식당', '조용한 레스토랑', '데이트 맛집'],
+  '축하':   ['단체 모임 맛집', '파티 가능 식당', '이벤트 레스토랑'],
+  '위로':   ['감성 맛집', '조용한 술집', '힐링 카페'],
+};
+
+// 관계별 추가 키워드
+const RELATION_EXTRA_KEYWORDS: Record<string, string[]> = {
+  '연인':    ['데이트 맛집', '커플 맛집'],
+  '직장동료': ['회식 맛집', '단체 식당'],
+  '가족':    ['가족 식사 맛집', '넓은 식당'],
+};
+
+// 행사별 Claude 힌트
+const OCCASION_HINT: Record<string, string> = {
+  '생일':   '프라이빗룸 또는 케이크 반입 가능 우선, 이벤트 연출 가능한 곳',
+  '기념일': '분위기 있는 공간, 프라이빗 좌석, 조용한 환경 선호',
+  '소개팅': '조용하고 대화하기 좋은 공간, 테이블 간격 넓은 곳',
+  '축하':   '신나는 분위기, 파티 가능한 곳, 큰 테이블 선호',
+  '위로':   '조용하고 편안한 분위기, 오래 머물 수 있는 곳',
+};
+
 // 혼잡도 area명 → 네이버 검색에 효과적인 동네명으로 매핑
 const AREA_SEARCH_NAME: Record<string, string> = {
   '강남 MICE 관광특구': '강남역',
@@ -117,6 +142,9 @@ async function searchNaverMulti(
   groupSize: number,
   midLat: number,
   midLng: number,
+  occasion?: string | null,
+  relation?: string | null,
+  budget?: string | null,
 ): Promise<NaverPlace[]> {
   const clientId     = process.env.NAVER_CLIENT_ID;
   const clientSecret = process.env.NAVER_CLIENT_SECRET;
@@ -124,14 +152,23 @@ async function searchNaverMulti(
 
   const isLargeGroup = groupSize >= 5;
   const groupPrefix  = isLargeGroup ? '단체 ' : '';
-  const keywords     = PURPOSE_KEYWORDS[purpose] ?? PURPOSE_KEYWORDS['기타'];
+  const budgetPrefix = budget === '~2만원' ? '가성비 ' : budget === '4만원+' ? '고급 ' : '';
+  const baseKeywords = PURPOSE_KEYWORDS[purpose] ?? PURPOSE_KEYWORDS['기타'];
+
+  // 행사/관계 추가 키워드 병합
+  const extraKeywords = [
+    ...(occasion ? (OCCASION_EXTRA_KEYWORDS[occasion] ?? []) : []),
+    ...(relation ? (RELATION_EXTRA_KEYWORDS[relation] ?? []) : []),
+  ];
+  const keywords = [...extraKeywords, ...baseKeywords];
+
   const searchAreas  = areas.map(toSearchName).filter(Boolean);
 
-  // 쿼리 빌드: 1순위×10, 2순위×5, 3순위×3
+  // 쿼리 빌드: 1순위×(extra+10), 2순위×5, 3순위×3
   const queries: string[] = [];
-  if (searchAreas[0]) keywords.forEach((kw) => queries.push(`${searchAreas[0]} ${groupPrefix}${kw}`));
-  if (searchAreas[1]) keywords.slice(0, 5).forEach((kw) => queries.push(`${searchAreas[1]} ${groupPrefix}${kw}`));
-  if (searchAreas[2]) keywords.slice(0, 3).forEach((kw) => queries.push(`${searchAreas[2]} ${groupPrefix}${kw}`));
+  if (searchAreas[0]) keywords.forEach((kw) => queries.push(`${searchAreas[0]} ${groupPrefix}${budgetPrefix}${kw}`));
+  if (searchAreas[1]) keywords.slice(0, 5).forEach((kw) => queries.push(`${searchAreas[1]} ${groupPrefix}${budgetPrefix}${kw}`));
+  if (searchAreas[2]) keywords.slice(0, 3).forEach((kw) => queries.push(`${searchAreas[2]} ${groupPrefix}${budgetPrefix}${kw}`));
 
   const batches = await Promise.all(queries.map((q) => fetchNaverQuery(q, clientId, clientSecret)));
 
@@ -227,6 +264,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const vibeSecondStr = vibe?.second?.length ? vibe.second.join(', ') : '';
     const isQuiet = vibe?.first?.includes('조용하게') ?? false;
     const groupSize: number = typeof input.groupSize === 'number' ? input.groupSize : parseInt(input.groupSize) || 2;
+    const relation: string | null = input.relation ?? null;
+    const occasion: string | null = input.occasion ?? null;
+    const budget: string | null = input.budget ?? null;
 
     const areaNames = (congestionData as { areaName: string; level: string }[])
       .map((c) => c.areaName)
@@ -249,9 +289,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const [weather, naverFirstPlaces, naverSecondPlaces] = await Promise.all([
       fetchWeather(midLat, midLng),
-      searchNaverMulti(purpose.first, searchAreas, groupSize, midLat, midLng),
+      searchNaverMulti(purpose.first, searchAreas, groupSize, midLat, midLng, occasion, relation, budget),
       hasTwoPurposes && purpose.second
-        ? searchNaverMulti(purpose.second, searchAreas, groupSize, midLat, midLng)
+        ? searchNaverMulti(purpose.second, searchAreas, groupSize, midLat, midLng, occasion, relation, budget)
         : Promise.resolve([]),
     ]);
 
@@ -282,11 +322,15 @@ ${formatNaverPlaces(naverSecondPlaces)}` : ''}
 - 날씨: ${weather.description}, 기온: ${weather.temp}°C
 - ${weather.isRainy ? '비 또는 눈이 오고 있음 → 실내 장소 우선 추천' : ''}${weather.isHot ? '더운 날씨 → 에어컨 완비된 실내 선호' : ''}${weather.isCold ? '추운 날씨 → 따뜻한 실내 분위기 선호' : ''}` : '';
 
+    const relationLine = relation ? `\n- 모임 관계: ${relation}` : '';
+    const occasionLine = occasion ? `\n- 특별한 행사: ${occasion} → ${OCCASION_HINT[occasion] ?? '분위기에 맞는 곳'}` : '';
+    const budgetLine = budget ? `\n- 예산: 1인 ${budget}` : '';
+
     const commonInfo = `
 ## 모임 정보
 - 출발지: ${locationStr}
 - 추천 지역: ${areaNames}
-- 인원: ${groupSize}명${groupSize >= 5 ? ' (단체석 또는 넓은 공간 필수)' : ''}
+- 인원: ${groupSize}명${groupSize >= 5 ? ' (단체석 또는 넓은 공간 필수)' : ''}${relationLine}${occasionLine}${budgetLine}
 - 분위기: ${vibeFirstStr}${vibeSecondStr ? ` / 2차: ${vibeSecondStr}` : ''}
 - 현재 시각: ${currentTime}
 - 혼잡도: ${congestionSummary || '정보 없음'}
@@ -296,7 +340,7 @@ ${weatherSection}
 - "${vibeFirstStr}" 분위기에 맞는 곳
 - ${isQuiet ? '조용하고 여유로운 분위기' : '활기찬 분위기'}
 - ${groupSize}명 수용 가능 규모${groupSize >= 5 ? ' (단체석 우선)' : ''}
-- ${currentTime} 기준 영업 중 또는 곧 영업 시작 우선`;
+- ${currentTime} 기준 영업 중 또는 곧 영업 시작 우선${occasion ? `\n- ${OCCASION_HINT[occasion] ?? ''}` : ''}${budget ? `\n- 1인 예산 ${budget} 내외` : ''}${relation === '연인' ? '\n- 커플 분위기, 프라이빗하고 조용한 공간 선호' : ''}${relation === '직장동료' ? '\n- 회식에 적합한 단체 공간, 넓은 테이블 선호' : ''}${relation === '가족' ? '\n- 가족 모임에 편한 공간, 소음 덜한 환경 선호' : ''}`;
 
     const placeSchema = `{
   "rank": 1,
