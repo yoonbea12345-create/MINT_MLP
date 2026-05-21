@@ -199,21 +199,23 @@ export default function PurposeSelect({ value, onChange }: Props) {
           <p className="text-[11px] font-bold text-gray-500 uppercase tracking-widest">오늘 모임은요?</p>
           <span className="text-[10px] text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full font-medium">선택사항</span>
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="grid grid-cols-4 gap-2">
           {RELATION_OPTIONS.map((opt) => {
             const selected = value.relation === opt.value;
             return (
               <button
                 key={opt.value}
                 onClick={() => toggleRelation(opt.value)}
-                className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl border-2 text-xs font-bold transition-all duration-200 ${
+                className={`flex flex-col items-center justify-center gap-1 h-[60px] rounded-xl border-2 transition-all duration-200 active:scale-[0.97] ${
                   selected
-                    ? 'border-[#3CDBC0] bg-[#E8F8F5] text-[#2AB5A0] shadow-sm shadow-[#3CDBC0]/20'
-                    : 'border-gray-200 bg-white text-gray-600 hover:border-[#3CDBC0]/50'
+                    ? 'border-[#3CDBC0] bg-[#E8F8F5] shadow-sm shadow-[#3CDBC0]/20'
+                    : 'border-gray-200 bg-white hover:border-[#3CDBC0]/50'
                 }`}
               >
-                <span>{opt.emoji}</span>
-                <span>{opt.value}</span>
+                <span className="text-lg leading-none">{opt.emoji}</span>
+                <span className={`text-[11px] font-bold leading-none ${selected ? 'text-[#2AB5A0]' : 'text-gray-600'}`}>
+                  {opt.value}
+                </span>
               </button>
             );
           })}
@@ -226,21 +228,23 @@ export default function PurposeSelect({ value, onChange }: Props) {
           <p className="text-[11px] font-bold text-gray-500 uppercase tracking-widest">특별한 날인가요?</p>
           <span className="text-[10px] text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full font-medium">선택사항</span>
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="grid grid-cols-5 gap-1.5">
           {OCCASION_OPTIONS.map((opt) => {
             const selected = value.occasion === opt.value;
             return (
               <button
                 key={opt.value}
                 onClick={() => toggleOccasion(opt.value)}
-                className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl border-2 text-xs font-bold transition-all duration-200 ${
+                className={`flex flex-col items-center justify-center gap-1 h-[60px] rounded-xl border-2 transition-all duration-200 active:scale-[0.97] ${
                   selected
-                    ? 'border-[#3CDBC0] bg-[#E8F8F5] text-[#2AB5A0] shadow-sm shadow-[#3CDBC0]/20'
-                    : 'border-gray-200 bg-white text-gray-600 hover:border-[#3CDBC0]/50'
+                    ? 'border-[#3CDBC0] bg-[#E8F8F5] shadow-sm shadow-[#3CDBC0]/20'
+                    : 'border-gray-200 bg-white hover:border-[#3CDBC0]/50'
                 }`}
               >
-                <span>{opt.emoji}</span>
-                <span>{opt.value}</span>
+                <span className="text-base leading-none">{opt.emoji}</span>
+                <span className={`text-[10px] font-bold leading-none ${selected ? 'text-[#2AB5A0]' : 'text-gray-600'}`}>
+                  {opt.value}
+                </span>
               </button>
             );
           })}
