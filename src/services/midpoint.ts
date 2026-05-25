@@ -14,15 +14,6 @@ function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): nu
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
-// 직선거리 → 대중교통 예상 소요시간(분) — 수도권 실측 기반 구간 보정
-// 구간별 실제 지하철+환승+대기 시간을 역산해 맞춤
-function estimateTransitMin(km: number): number {
-  if (km <= 3)  return Math.round(7   + km * 3.5);        // ~18분
-  if (km <= 10) return Math.round(17.5 + (km -  3) * 2.5); // 18→35분
-  if (km <= 25) return Math.round(35  + (km - 10) * 2.0);  // 35→65분
-  return        Math.round(65  + (km - 25) * 1.8);         // 65분~
-}
-
 // 전국 주요 도시 (수도권 외)
 const NATIONAL_AREAS: { name: string; lat: number; lng: number }[] = [
   // 제주
@@ -101,9 +92,54 @@ const ALL_AREAS = [...METRO_AREAS, ...NATIONAL_AREAS];
 // 서울 중심 기준점
 const SEOUL_CENTER: Coordinates = { lat: 37.5665, lng: 126.9780 };
 
+// 볼록 껍질(Convex Hull) — Graham Scan, CCW 순서
+function computeConvexHull(points: Coordinates[]): Coordinates[] {
+  if (points.length <= 2) return points;
+  const sorted = [...points].sort((a, b) => a.lng !== b.lng ? a.lng - b.lng : a.lat - b.lat);
+  const cross = (O: Coordinates, A: Coordinates, B: Coordinates) =>
+    (A.lng - O.lng) * (B.lat - O.lat) - (A.lat - O.lat) * (B.lng - O.lng);
+  const lower: Coordinates[] = [];
+  for (const p of sorted) {
+    while (lower.length >= 2 && cross(lower[lower.length - 2], lower[lower.length - 1], p) <= 0) lower.pop();
+    lower.push(p);
+  }
+  const upper: Coordinates[] = [];
+  for (let i = sorted.length - 1; i >= 0; i--) {
+    const p = sorted[i];
+    while (upper.length >= 2 && cross(upper[upper.length - 2], upper[upper.length - 1], p) <= 0) upper.pop();
+    upper.push(p);
+  }
+  lower.pop();
+  upper.pop();
+  return [...lower, ...upper];
+}
+
+// n각형 무게중심 (신발끈/Shoelace 공식) — 2명: 선분 중점, 3명: 삼각형 무게중심, n명: 다각형 무게중심
+function polygonCentroid(hull: Coordinates[]): Coordinates {
+  if (hull.length === 0) return SEOUL_CENTER;
+  if (hull.length === 1) return hull[0];
+  if (hull.length === 2) return { lat: (hull[0].lat + hull[1].lat) / 2, lng: (hull[0].lng + hull[1].lng) / 2 };
+  let area = 0, cx = 0, cy = 0;
+  const n = hull.length;
+  for (let i = 0; i < n; i++) {
+    const j = (i + 1) % n;
+    const cross = hull[i].lng * hull[j].lat - hull[j].lng * hull[i].lat;
+    area += cross;
+    cx += (hull[i].lng + hull[j].lng) * cross;
+    cy += (hull[i].lat + hull[j].lat) * cross;
+  }
+  area /= 2;
+  // 면적 0 (점들이 일직선) → 산술평균으로 폴백
+  if (Math.abs(area) < 1e-10) {
+    return { lat: hull.reduce((s, p) => s + p.lat, 0) / hull.length, lng: hull.reduce((s, p) => s + p.lng, 0) / hull.length };
+  }
+  return { lat: cy / (6 * area), lng: cx / (6 * area) };
+}
+
 /**
- * 출발지들로부터 소요시간 편차가 가장 작은 도심 지역을 반환.
- * 수도권 외 지역(지리 중심이 수도권에서 80km 초과)이면 전국 도시 목록으로 fallback.
+ * 2명: 두 거주지 선분의 직선 중점
+ * n명: n개 거주지로 이루어진 n각형의 기하학적 무게중심 (Shoelace 공식)
+ * 반환하는 midpoint는 항상 이론상 완벽한 거리 중간지점.
  */
 export function findBalancedAreas(
   departures: Coordinates[],
@@ -112,13 +148,11 @@ export function findBalancedAreas(
   const fallback = { areas: ['명동', '홍대입구역', '강남역'], midpoint: SEOUL_CENTER, areaName: '서울 중심부' };
   if (departures.length === 0) return fallback;
 
-  // 1. 지리적 중심점 계산
-  const geoCenter: Coordinates = {
-    lat: departures.reduce((s, c) => s + c.lat, 0) / departures.length,
-    lng: departures.reduce((s, c) => s + c.lng, 0) / departures.length,
-  };
+  // 볼록 껍질 → 다각형 무게중심
+  const hull = computeConvexHull(departures);
+  const midpoint = polygonCentroid(hull);
 
-  // 2. 출발지 간 최대 직선거리 계산
+  // 출발지 간 최대 직선거리
   let maxPairDist = 0;
   for (let i = 0; i < departures.length; i++) {
     for (let j = i + 1; j < departures.length; j++) {
@@ -127,57 +161,19 @@ export function findBalancedAreas(
     }
   }
 
-  // 3. 수도권에서의 거리 확인
-  const distFromMetro = haversineKm(geoCenter.lat, geoCenter.lng, SEOUL_CENTER.lat, SEOUL_CENTER.lng);
+  // 중심점에서 가장 가까운 지역 순으로 정렬
+  const nearest = ALL_AREAS
+    .map((area) => ({ ...area, dist: haversineKm(midpoint.lat, midpoint.lng, area.lat, area.lng) }))
+    .sort((a, b) => a.dist - b.dist);
 
-  // 4. 수도권 80km 초과 → 전국 목록에서 지리 중심에 가장 가까운 곳 선택
-  if (distFromMetro > 80) {
-    const candidates = ALL_AREAS
-      .map((area) => ({
-        ...area,
-        dist: haversineKm(geoCenter.lat, geoCenter.lng, area.lat, area.lng),
-      }))
-      .sort((a, b) => a.dist - b.dist);
-    const best = candidates[0];
-    // 출발지 간 거리가 150km 초과면 보완 메시지 표시
-    const compromiseMessage = maxPairDist > 150
-      ? `출발지 간 거리가 멀어 ${best.name}을(를) 중간 지점으로 보완했어요 📍`
-      : undefined;
-    return {
-      areas: candidates.slice(0, count).map((a) => a.name),
-      midpoint: { lat: best.lat, lng: best.lng },
-      areaName: best.name,
-      compromiseMessage,
-    };
-  }
+  const areas = nearest.slice(0, count).map((a) => a.name);
+  const areaName = nearest[0]?.name ?? '알 수 없는 지역';
 
-  // 5. 수도권 내 → 기존 소요시간 편차 최소화 알고리즘
-  const scored = METRO_AREAS.map((area) => {
-    const times = departures.map((dep) =>
-      estimateTransitMin(haversineKm(dep.lat, dep.lng, area.lat, area.lng))
-    );
-    const maxT = Math.max(...times);
-    const minT = Math.min(...times);
-    const range = maxT - minT;
-    const avg = times.reduce((s, t) => s + t, 0) / times.length;
-    const score = range * 2 + avg * 0.3 + Math.max(0, avg - 60) * 1.5;
-    return { ...area, score };
-  });
-
-  scored.sort((a, b) => a.score - b.score);
-  const best = scored[0];
-
-  // 수도권 내에서도 출발지 간 거리가 극심하면 메시지
   const compromiseMessage = maxPairDist > 150
-    ? `출발지 간 거리가 멀어 ${best.name}을(를) 중간 지점으로 보완했어요 📍`
+    ? `출발지 간 거리가 멀어 ${areaName}을(를) 중간 지점으로 보완했어요 📍`
     : undefined;
 
-  return {
-    areas: scored.slice(0, count).map((s) => s.name),
-    midpoint: { lat: best.lat, lng: best.lng },
-    areaName: best.name,
-    compromiseMessage,
-  };
+  return { areas, midpoint, areaName, compromiseMessage };
 }
 
 // 특정 좌표 근처 지역명 반환 — 전국 목록 사용

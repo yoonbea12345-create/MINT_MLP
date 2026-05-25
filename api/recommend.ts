@@ -17,16 +17,35 @@ interface WeatherInfo {
   isCold: boolean;
 }
 
-// 두 좌표 간 도보 소요시간(분) — 4km/h 기준
-function walkingMinutes(lat1: number, lng1: number, lat2: number, lng2: number): number {
+// 중간지점 반경 (1차: 1.5km, 부족하면 3km로 확장)
+const MIDPOINT_RADIUS_KM = 1.5;
+
+function distKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
   const R = 6371;
   const dLat = (lat2 - lat1) * Math.PI / 180;
   const dLng = (lng2 - lng1) * Math.PI / 180;
   const a =
     Math.sin(dLat / 2) ** 2 +
     Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLng / 2) ** 2;
-  const km = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  return Math.round((km / 4) * 60);
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+function walkingMinutes(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  return Math.round((distKm(lat1, lng1, lat2, lng2) / 4) * 60);
+}
+
+// 중간지점 기준 반경 내 장소만 필터링.
+// 1단계: 1.5km 이내 3개 이상 → 반환
+// 2단계: 부족하면 3km로 확장
+// 3단계: 그래도 없으면 거리순 정렬 후 전체 반환 (시골·비도심 대응)
+function filterByRadius(places: NaverPlace[], midLat: number, midLng: number): NaverPlace[] {
+  const withDist = places.map((p) => ({ ...p, _dist: distKm(midLat, midLng, p.lat, p.lng) }));
+  const inPrimary = withDist.filter((p) => p._dist <= MIDPOINT_RADIUS_KM);
+  if (inPrimary.length >= 3) return inPrimary;
+  const inExpanded = withDist.filter((p) => p._dist <= MIDPOINT_RADIUS_KM * 2);
+  if (inExpanded.length > 0) return inExpanded;
+  // 반경 내 장소 없음 → 무게중심에서 가장 가까운 순으로 전체 반환
+  return withDist.sort((a, b) => a._dist - b._dist);
 }
 
 // 대형 프랜차이즈 체인 키워드 (이름에 포함되면 프랜차이즈로 판단)
@@ -287,23 +306,28 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       ...((congestionData as { areaName: string }[]).map((c) => c.areaName).filter((a) => a !== primaryArea)),
     ].slice(0, 3);
 
-    const [weather, naverFirstPlaces, naverSecondPlaces] = await Promise.all([
+    const [weather, naverFirstRaw, naverSecondRaw] = await Promise.all([
       fetchWeather(midLat, midLng),
       searchNaverMulti(purpose.first, searchAreas, groupSize, midLat, midLng, occasion, relation, budget),
       hasTwoPurposes && purpose.second
         ? searchNaverMulti(purpose.second, searchAreas, groupSize, midLat, midLng, occasion, relation, budget)
         : Promise.resolve([]),
     ]);
+    // 기하학적 중간지점 반경 이내 장소만 사용
+    const naverFirstPlaces = filterByRadius(naverFirstRaw, midLat, midLng);
+    const naverSecondPlaces = naverSecondRaw.length ? filterByRadius(naverSecondRaw, midLat, midLng) : [];
 
     const hasNaverData = naverFirstPlaces.length > 0;
     console.log(`[recommend] naverFirst=${naverFirstPlaces.length} naverSecond=${naverSecondPlaces.length} hasNaverData=${hasNaverData}`);
+    // 2차 네이버 데이터 없으면 단일 목적 모드로 폴백 (할루시네이션 방지)
+    const effectiveTwoPurposes = hasTwoPurposes && naverSecondPlaces.length > 0;
 
     // 네이버 데이터 있을 때 전용 규칙
     const naverSection = hasNaverData ? `
 ## 네이버 검색으로 확인된 실존 장소 목록 (총 ${naverFirstPlaces.length}개 중 최적 선택)
 ### 1차 목적 "${purpose.first}" 후보
 ${formatNaverPlaces(naverFirstPlaces)}
-${hasTwoPurposes && naverSecondPlaces.length > 0 ? `
+${effectiveTwoPurposes ? `
 ### 2차 목적 "${purpose.second}" 후보
 ${formatNaverPlaces(naverSecondPlaces)}` : ''}
 
@@ -362,7 +386,7 @@ ${weatherSection}
     const rankSchema = (rank: number) =>
       placeSchema.replace('"rank": 1', `"rank": ${rank}`).replace('"sourceIndex": 1', `"sourceIndex": <목록번호>`);
 
-    const prompt = hasTwoPurposes
+    const prompt = effectiveTwoPurposes
       ? `당신은 한국 모임 장소 큐레이터입니다. 1차·2차 코스 장소를 추천해주세요.
 ${naverSection}
 ${commonInfo}
@@ -432,7 +456,7 @@ ${commonInfo}
       const usedSecond = new Set<number>();
 
       for (const place of places) {
-        const isSecond = hasTwoPurposes && [2, 5, 6].includes(place.rank);
+        const isSecond = effectiveTwoPurposes && [2, 5, 6].includes(place.rank);
         const naverList: NaverPlace[] = isSecond ? naverSecondPlaces : naverFirstPlaces;
         const used = isSecond ? usedSecond : usedFirst;
         if (!naverList.length) continue;
@@ -450,15 +474,16 @@ ${commonInfo}
             : naverList.findIndex((_, i) => !used.has(i));
         }
 
-        if (idx >= 0 && idx < naverList.length) {
-          used.add(idx);
-          const naver = naverList[idx];
-          place.placeName = naver.name;
-          place.address = naver.address;
-          place.lat = naver.lat;
-          place.lng = naver.lng;
-          if (naver.category) place.category = naver.category;
-        }
+        // 미사용 슬롯 없음(네이버 결과 부족) → 첫 번째 실존 데이터 재사용 (할루시네이션보다 낫음)
+        if (idx < 0) idx = 0;
+
+        used.add(idx);
+        const naver = naverList[idx];
+        place.placeName = naver.name;
+        place.address = naver.address;
+        place.lat = naver.lat;
+        place.lng = naver.lng;
+        if (naver.category) place.category = naver.category;
 
         // openingHours는 Naver에 없어서 항상 할류시네이션 → 제거
         delete place.openingHours;
@@ -480,7 +505,7 @@ ${commonInfo}
     }
 
     // 1차·2차 도보 시간 haversine으로 보정 (rank 1 → rank 2)
-    if (hasTwoPurposes) {
+    if (effectiveTwoPurposes) {
       const rank1 = places.find((p: { rank: number }) => p.rank === 1);
       const rank2 = places.find((p: { rank: number }) => p.rank === 2);
       if (rank1 && rank2 && rank1.lat && rank1.lng && rank2.lat && rank2.lng &&
