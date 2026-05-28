@@ -4,7 +4,7 @@
 
 import { supabase } from './supabase';
 
-type EventType = 'landing_view' | 'cta_click' | 'reservation_attempt' | 'session_duration';
+type EventType = 'landing_view' | 'cta_click' | 'reservation_attempt' | 'session_duration' | 'kakao_share';
 
 const PAUSE_KEY = 'mint_tracking_paused';
 
@@ -38,7 +38,7 @@ export function trackSessionDuration(seconds: number): void {
 
 export async function getAnalytics() {
   const { data } = await supabase.from('events').select('type, duration_seconds');
-  if (!data) return { landingViews: 0, ctaClicks: 0, reservationAttempts: 0, avgStaySeconds: null as number | null };
+  if (!data) return { landingViews: 0, ctaClicks: 0, reservationAttempts: 0, kakaoShares: 0, avgStaySeconds: null as number | null };
   const sessions = data.filter((e) => e.type === 'session_duration' && e.duration_seconds != null);
   const avgStaySeconds: number | null = sessions.length > 0
     ? Math.round(sessions.reduce((sum: number, s: any) => sum + (s.duration_seconds as number), 0) / sessions.length)
@@ -47,6 +47,7 @@ export async function getAnalytics() {
     landingViews: data.filter((e) => e.type === 'landing_view').length,
     ctaClicks: data.filter((e) => e.type === 'cta_click').length,
     reservationAttempts: data.filter((e) => e.type === 'reservation_attempt').length,
+    kakaoShares: data.filter((e) => e.type === 'kakao_share').length,
     avgStaySeconds,
   };
 }

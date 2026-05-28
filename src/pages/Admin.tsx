@@ -72,7 +72,7 @@ function PasswordGate({ onUnlock }: { onUnlock: () => void }) {
 export default function Admin() {
   const [unlocked, setUnlocked] = useState(false);
   const [records, setRecords] = useState<ReservationRecord[]>([]);
-  const [analytics, setAnalytics] = useState({ landingViews: 0, ctaClicks: 0, reservationAttempts: 0, avgStaySeconds: null as number | null });
+  const [analytics, setAnalytics] = useState({ landingViews: 0, ctaClicks: 0, reservationAttempts: 0, kakaoShares: 0, avgStaySeconds: null as number | null });
   const [loading, setLoading] = useState(true);
   const [paused, setPaused] = useState(false);
 
@@ -107,7 +107,7 @@ export default function Admin() {
   async function handleClearAnalytics() {
     if (!confirm('분석 데이터(랜딩 조회, CTA 클릭 등)를 초기화할까요?')) return;
     await supabase.from('events').delete().not('id', 'is', null);
-    setAnalytics({ landingViews: 0, ctaClicks: 0, reservationAttempts: 0, avgStaySeconds: null });
+    setAnalytics({ landingViews: 0, ctaClicks: 0, reservationAttempts: 0, kakaoShares: 0, avgStaySeconds: null });
   }
 
   function handleTogglePause() {
@@ -209,6 +209,14 @@ export default function Admin() {
               <div className="text-xs text-gray-400 mb-1">예약 시도</div>
               <div className="text-3xl font-black text-[#36CFA0]">{analytics.reservationAttempts}</div>
               <div className="text-xs text-gray-300 mt-1">건</div>
+            </div>
+            <div className="col-span-2 bg-white rounded-2xl border border-gray-100 p-4 shadow-sm flex items-center justify-between">
+              <div>
+                <div className="text-xs text-gray-400 mb-1">카카오톡 공유</div>
+                <div className="text-3xl font-black text-[#36CFA0]">{analytics.kakaoShares}</div>
+                <div className="text-xs text-gray-300 mt-1">회</div>
+              </div>
+              <span className="text-4xl">💬</span>
             </div>
             <div className="col-span-2 bg-white rounded-2xl border border-gray-100 p-4 shadow-sm">
               <div className="text-xs text-gray-400 mb-1">평균 체류시간</div>

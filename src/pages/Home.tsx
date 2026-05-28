@@ -16,7 +16,7 @@ import type { PresetRegion, Coordinates } from '../services/midpoint';
 import { getMultiAreaCongestion } from '../services/seoulData';
 import { getAIRecommendation } from '../services/ai';
 import type { PlaceRecommendation, UserInput } from '../services/ai';
-import { trackSessionDuration } from '../utils/analytics';
+import { trackSessionDuration, trackEvent } from '../utils/analytics';
 
 type Step = 0 | 1 | 2 | 3;
 type View = 'steps' | 'result' | 'reserve';
@@ -259,6 +259,7 @@ export default function Home() {
 
   function handleShare() {
     if (!result || result.length === 0) return;
+    trackEvent('kakao_share');
     const primary = result[0];
     const mlpUrl = window.location.origin;
     const hasSecond = !!(purpose?.second && purpose.second !== '없음');
