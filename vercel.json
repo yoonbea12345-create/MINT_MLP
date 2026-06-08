@@ -1,4 +1,5 @@
 {
+  "outputDirectory": "dist/web",
   "functions": {
     "api/recommend.ts": { "maxDuration": 60 },
     "api/travel-time.ts": { "maxDuration": 30 }
