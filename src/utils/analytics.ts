@@ -37,7 +37,8 @@ export function trackSessionDuration(seconds: number): void {
 }
 
 export async function getAnalytics() {
-  const { data } = await supabase.from('events').select('type, duration_seconds');
+  const { data, error } = await supabase.from('events').select('type, duration_seconds');
+  if (error) console.error('[analytics] events fetch error:', error);
   if (!data) return { landingViews: 0, ctaClicks: 0, reservationAttempts: 0, kakaoShares: 0, avgStaySeconds: null as number | null };
   const sessions = data.filter((e) => e.type === 'session_duration' && e.duration_seconds != null);
   const avgStaySeconds: number | null = sessions.length > 0

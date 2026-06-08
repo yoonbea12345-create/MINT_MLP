@@ -19,21 +19,28 @@ function formatDate(iso: string) {
   return `${mm}/${dd} ${hh}:${min}`;
 }
 
-async function fetchReservations(): Promise<ReservationRecord[]> {
-  const { data } = await supabase
+async function fetchReservations(): Promise<{ records: ReservationRecord[]; error: string | null }> {
+  const { data, error } = await supabase
     .from('reservations')
     .select('*')
     .order('created_at', { ascending: false });
-  if (!data) return [];
-  return data.map((r) => ({
-    id: r.id,
-    placeName: r.place_name,
-    address: r.address,
-    guestName: r.guest_name,
-    people: r.people,
-    arrivalTime: r.arrival_time,
-    createdAt: r.created_at,
-  }));
+  if (error) {
+    console.error('[Admin] reservations fetch error:', error);
+    return { records: [], error: error.message };
+  }
+  if (!data) return { records: [], error: null };
+  return {
+    records: data.map((r) => ({
+      id: r.id,
+      placeName: r.place_name,
+      address: r.address,
+      guestName: r.guest_name,
+      people: r.people,
+      arrivalTime: r.arrival_time,
+      createdAt: r.created_at,
+    })),
+    error: null,
+  };
 }
 
 function PasswordGate({ onUnlock }: { onUnlock: () => void }) {
@@ -75,6 +82,7 @@ export default function Admin() {
   const [analytics, setAnalytics] = useState({ landingViews: 0, ctaClicks: 0, reservationAttempts: 0, kakaoShares: 0, avgStaySeconds: null as number | null });
   const [loading, setLoading] = useState(true);
   const [paused, setPaused] = useState(false);
+  const [dbError, setDbError] = useState<string | null>(null);
 
   useEffect(() => {
     setPaused(isTrackingPaused());
@@ -84,13 +92,31 @@ export default function Admin() {
     ? '0.0'
     : ((analytics.ctaClicks / analytics.landingViews) * 100).toFixed(1);
 
+  async function loadData() {
+    setLoading(true);
+    setDbError(null);
+    try {
+      const [analyticsResult, reservationsResult] = await Promise.all([
+        getAnalytics(),
+        fetchReservations(),
+      ]);
+      setAnalytics(analyticsResult);
+      if (reservationsResult.error) {
+        setDbError(reservationsResult.error);
+      } else {
+        setRecords(reservationsResult.records);
+      }
+    } catch (e: any) {
+      console.error('[Admin] 데이터 로드 실패:', e);
+      setDbError(e?.message ?? '알 수 없는 오류');
+    } finally {
+      setLoading(false);
+    }
+  }
+
   useEffect(() => {
     if (!unlocked) return;
-    Promise.all([getAnalytics(), fetchReservations()]).then(([a, r]) => {
-      setAnalytics(a);
-      setRecords(r);
-      setLoading(false);
-    });
+    loadData();
   }, [unlocked]);
 
   async function handleDelete(id: string) {
@@ -137,6 +163,12 @@ export default function Admin() {
             <p className="text-sm text-gray-400">예약 요청 내역</p>
           </div>
           <div className="flex items-center gap-2">
+            <button
+              onClick={loadData}
+              className="text-xs bg-white border border-gray-200 text-gray-500 px-2.5 py-1 rounded-full hover:border-[#36CFA0] hover:text-[#36CFA0] transition-colors"
+            >
+              새로고침
+            </button>
             <span className="text-xs bg-[#E8F8F5] text-[#2AB5A0] font-bold px-2.5 py-1 rounded-full">
               총 {records.length}건
             </span>
@@ -150,6 +182,17 @@ export default function Admin() {
             )}
           </div>
         </div>
+
+        {/* DB 에러 표시 */}
+        {dbError && (
+          <div className="mb-4 bg-red-50 border border-red-200 rounded-2xl p-4">
+            <div className="text-sm font-bold text-red-600 mb-1">Supabase 연결 오류</div>
+            <div className="text-xs text-red-500 font-mono break-all">{dbError}</div>
+            <div className="text-xs text-red-400 mt-2">
+              Supabase 대시보드에서 테이블이 존재하는지, RLS 정책이 허용되어 있는지 확인해 주세요.
+            </div>
+          </div>
+        )}
 
         {/* 데이터 수집 일시정지 토글 */}
         <div className="mb-6">
