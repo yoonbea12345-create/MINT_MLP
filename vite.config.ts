@@ -6,6 +6,7 @@ export default defineConfig({
     react(),
   ],
   server: {
+    historyApiFallback: true,
     proxy: {
       '/api/seoul': {
         target: 'http://openapi.seoul.go.kr:8088',
