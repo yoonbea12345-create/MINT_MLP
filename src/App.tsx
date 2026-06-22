@@ -28,7 +28,8 @@ function Router() {
   const path = window.location.pathname;
   if (path === '/admin') return <Admin />;
   if (path === '/shared' || window.location.search.includes('data=')) return <SharedResult />;
-  if (path === '/app' || path === '/') return <Home />;
+  if (path === '/app') return <Home />;
+  return <Landing />;
 }
 
 export default function App() {
