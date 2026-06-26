@@ -3,6 +3,7 @@ import Home from './pages/Home';
 import Landing from './pages/Landing';
 import SharedResult from './pages/SharedResult';
 import Admin from './pages/Admin';
+import MemberInput from './pages/MemberInput';
 
 class ErrorBoundary extends Component<{ children: ReactNode }, { error: Error | null }> {
   state = { error: null };
@@ -27,6 +28,7 @@ class ErrorBoundary extends Component<{ children: ReactNode }, { error: Error | 
 function Router() {
   const path = window.location.pathname;
   if (path === '/admin') return <Admin />;
+  if (path === '/join') return <MemberInput />;
   if (path === '/shared' || window.location.search.includes('data=')) return <SharedResult />;
   if (path === '/app') return <Home />;
   return <Landing />;

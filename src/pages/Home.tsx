@@ -20,12 +20,31 @@ import { trackSessionDuration, trackEvent } from '../utils/analytics';
 
 type Step = 0 | 1 | 2 | 3;
 type View = 'steps' | 'result' | 'reserve';
+type AppMode = 'mode-select' | 'solo' | 'group-setup' | 'group-waiting' | 'group-ready';
+
+interface GroupMember {
+  member_name: string;
+  location_name: string;
+  location_lat: number;
+  location_lng: number;
+  vibe_atmosphere: string | null;
+  vibe_budget: string | null;
+}
 
 interface TravelResult {
   label: string;
   formatted: string;
   source?: string;
   error?: boolean;
+}
+
+function aggregateVibe(members: GroupMember[]): VibeState {
+  const counts: Record<string, number> = {};
+  members.forEach((m) => {
+    if (m.vibe_atmosphere) counts[m.vibe_atmosphere] = (counts[m.vibe_atmosphere] || 0) + 1;
+  });
+  const topAtm = Object.entries(counts).sort((a, b) => b[1] - a[1])[0]?.[0] ?? null;
+  return topAtm ? { 분위기: { first: topAtm, second: null } } : {};
 }
 
 const LOADING_MESSAGES = [
@@ -43,6 +62,13 @@ function deriveGroupSize(locationCount: number): UserInput['groupSize'] {
 }
 
 export default function Home() {
+  const [appMode, setAppMode] = useState<AppMode>('mode-select');
+  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [expectedCount, setExpectedCount] = useState<number>(3);
+  const [groupMembers, setGroupMembers] = useState<GroupMember[]>([]);
+  const [creatingSession, setCreatingSession] = useState(false);
+  const [groupError, setGroupError] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
   const [view, setView] = useState<View>('steps');
   const [step, setStep] = useState<Step>(0);
   const [locations, setLocations] = useState<LocationEntry[]>([]);
@@ -86,6 +112,79 @@ export default function Home() {
     }
   }, [view]);
 
+  // 그룹 대기 화면 폴링
+  useEffect(() => {
+    if (appMode !== 'group-waiting' || !sessionId) return;
+    let active = true;
+
+    async function poll() {
+      try {
+        const res = await fetch(`/api/session-get?id=${encodeURIComponent(sessionId!)}`);
+        if (!res.ok) return;
+        const data = await res.json();
+        if (!active) return;
+        if (typeof data.expected_count === 'number') setExpectedCount(data.expected_count);
+        if (Array.isArray(data.members)) setGroupMembers(data.members);
+      } catch {
+        // 폴링 실패는 조용히 무시
+      }
+    }
+
+    poll();
+    const interval = setInterval(poll, 3000);
+    return () => {
+      active = false;
+      clearInterval(interval);
+    };
+  }, [appMode, sessionId]);
+
+  async function handleCreateSession() {
+    setCreatingSession(true);
+    setGroupError(null);
+    try {
+      const res = await fetch('/api/session-create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ expected_count: expectedCount }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || '링크 생성에 실패했어요. 다시 시도해주세요.');
+      }
+      const data = await res.json();
+      setSessionId(data.id);
+      setGroupMembers([]);
+      setAppMode('group-waiting');
+    } catch (e) {
+      setGroupError((e as Error).message);
+    } finally {
+      setCreatingSession(false);
+    }
+  }
+
+  function handleCopyLink() {
+    if (!sessionId) return;
+    const link = `${window.location.origin}/join?id=${sessionId}`;
+    navigator.clipboard?.writeText(link).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  }
+
+  function handleStartGroupRecommend() {
+    if (groupMembers.length < 2) return;
+    const groupLocations: LocationEntry[] = groupMembers.map((m) => ({
+      name: m.member_name,
+      lat: m.location_lat,
+      lng: m.location_lng,
+    }));
+    setLocations(groupLocations);
+    setVibe(aggregateVibe(groupMembers));
+    setStep(1);
+    setView('steps');
+    setAppMode('group-ready');
+  }
+
   function canNext(): boolean {
     if (step === 0) return locations.length >= 2;
     if (step === 1) return !!purpose?.first;
@@ -99,7 +198,8 @@ export default function Home() {
   }
 
   function handleBack() {
-    if (step > 0) setStep((s) => (s - 1) as Step);
+    const minStep = appMode === 'group-ready' ? 1 : 0;
+    if (step > minStep) setStep((s) => (s - 1) as Step);
   }
 
   function applyCompromiseMessage(msg?: string) {
@@ -342,6 +442,167 @@ export default function Home() {
     }
   }
 
+  // 모드 선택 화면
+  if (appMode === 'mode-select') {
+    return (
+      <div className="min-h-[100dvh] bg-[#F5FBF8] flex flex-col">
+        <div className="text-center pt-12 px-4">
+          <h1 className="text-3xl font-black text-[#2AB5A0] tracking-tight">MINT</h1>
+          <p className="text-sm text-gray-500 mt-2">우리 모임, 어디서 만날까요?</p>
+        </div>
+        <div className="flex-1 flex flex-col justify-center gap-4 px-6 max-w-md mx-auto w-full">
+          <button
+            onClick={() => {
+              setAppMode('solo');
+              setStep(0);
+            }}
+            className="bg-white shadow-sm rounded-2xl p-6 text-left transition-all active:scale-95 hover:shadow-md border-2 border-transparent hover:border-[#3CDBC0]/40"
+          >
+            <p className="text-2xl mb-2">🙋</p>
+            <p className="text-lg font-black text-gray-800">혼자 정할게요</p>
+            <p className="text-sm text-gray-400 mt-1">출발지만 입력하면 바로 추천받아요</p>
+          </button>
+          <button
+            onClick={() => setAppMode('group-setup')}
+            className="bg-white shadow-sm rounded-2xl p-6 text-left transition-all active:scale-95 hover:shadow-md border-2 border-transparent hover:border-[#3CDBC0]/40"
+          >
+            <p className="text-2xl mb-2">👥</p>
+            <p className="text-lg font-black text-gray-800">모임원이랑 다같이 정할게요</p>
+            <p className="text-sm text-gray-400 mt-1">링크를 공유해서 각자 출발지를 모아요</p>
+          </button>
+        </div>
+        <div className="pb-10" />
+      </div>
+    );
+  }
+
+  // 그룹 세션 생성 화면
+  if (appMode === 'group-setup') {
+    return (
+      <div className="min-h-[100dvh] bg-[#F5FBF8] flex flex-col">
+        <div className="text-center pt-8 px-4">
+          <h1 className="text-2xl font-black text-[#2AB5A0] tracking-tight">MINT</h1>
+        </div>
+        <div className="flex-1 flex flex-col justify-center px-6 max-w-md mx-auto w-full">
+          <h2 className="text-xl font-black text-gray-800 text-center mb-1">모임 인원이 몇 명인가요?</h2>
+          <p className="text-sm text-gray-400 text-center mb-7">호스트 포함 전체 인원을 골라주세요</p>
+          <div className="grid grid-cols-3 gap-3 mb-8">
+            {[2, 3, 4, 5, 6].map((n) => (
+              <button
+                key={n}
+                onClick={() => setExpectedCount(n)}
+                className={`py-4 rounded-2xl font-black text-base transition-all active:scale-95 border-2 ${
+                  expectedCount === n
+                    ? 'bg-[#3CDBC0] text-white border-[#3CDBC0] shadow-lg shadow-[#3CDBC0]/30'
+                    : 'bg-white text-gray-600 border-gray-200'
+                }`}
+              >
+                {n === 6 ? '6명+' : `${n}명`}
+              </button>
+            ))}
+          </div>
+
+          {groupError && (
+            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-600 text-center">
+              {groupError}
+            </div>
+          )}
+
+          <button
+            onClick={handleCreateSession}
+            disabled={creatingSession}
+            className={`w-full py-4 rounded-2xl font-black text-base transition-all active:scale-95 ${
+              creatingSession
+                ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                : 'bg-[#3CDBC0] text-white shadow-lg shadow-[#3CDBC0]/30 hover:bg-[#2AB5A0]'
+            }`}
+          >
+            {creatingSession ? '생성 중...' : '링크 생성하기'}
+          </button>
+          <button
+            onClick={() => {
+              setAppMode('mode-select');
+              setGroupError(null);
+            }}
+            className="w-full py-3 mt-3 text-sm text-gray-400 hover:text-gray-600"
+          >
+            ← 뒤로
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // 그룹 대기 화면
+  if (appMode === 'group-waiting') {
+    const shareLink = sessionId ? `${window.location.origin}/join?id=${sessionId}` : '';
+    const ready = groupMembers.length >= 2;
+    return (
+      <div className="min-h-[100dvh] bg-[#F5FBF8] flex flex-col">
+        <div className="text-center pt-8 px-4">
+          <h1 className="text-2xl font-black text-[#2AB5A0] tracking-tight">MINT</h1>
+        </div>
+        <div className="flex-1 flex flex-col px-6 max-w-md mx-auto w-full pt-6 pb-10">
+          <h2 className="text-xl font-black text-gray-800 text-center mb-1">친구들을 초대해요</h2>
+          <p className="text-sm text-gray-400 text-center mb-6">링크를 공유하면 각자 출발지를 입력해요</p>
+
+          {/* 공유 링크 */}
+          <div className="bg-white shadow-sm rounded-2xl p-4 mb-5">
+            <p className="text-xs text-gray-400 mb-2">공유 링크</p>
+            <div className="flex items-center gap-2">
+              <p className="flex-1 text-sm text-gray-700 truncate">{shareLink}</p>
+              <button
+                onClick={handleCopyLink}
+                className="flex-shrink-0 px-4 py-2 rounded-xl bg-[#3CDBC0] text-white text-sm font-bold transition-all active:scale-95 hover:bg-[#2AB5A0]"
+              >
+                {copied ? '복사됨!' : '복사'}
+              </button>
+            </div>
+          </div>
+
+          {/* 진행률 */}
+          <div className="bg-white shadow-sm rounded-2xl p-6 mb-5 text-center">
+            <p className="text-xs text-gray-400 mb-1">입력 완료</p>
+            <p className="text-4xl font-black text-[#2AB5A0]">
+              {groupMembers.length}
+              <span className="text-gray-300"> / {expectedCount}</span>
+              <span className="text-lg text-gray-400 font-bold"> 명</span>
+            </p>
+            {groupMembers.length > 0 && (
+              <div className="flex flex-wrap gap-2 justify-center mt-4">
+                {groupMembers.map((m, i) => (
+                  <span
+                    key={`${m.member_name}-${i}`}
+                    className="px-3 py-1 rounded-full bg-[#E8F8F5] text-[#2AB5A0] text-sm font-bold"
+                  >
+                    {m.member_name}
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="flex-1" />
+
+          <button
+            onClick={handleStartGroupRecommend}
+            disabled={!ready}
+            className={`w-full py-4 rounded-2xl font-black text-base transition-all active:scale-95 ${
+              ready
+                ? 'bg-[#3CDBC0] text-white shadow-lg shadow-[#3CDBC0]/30 hover:bg-[#2AB5A0]'
+                : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+            }`}
+          >
+            장소 추천받기
+          </button>
+          {!ready && (
+            <p className="text-xs text-gray-400 text-center mt-2">최소 2명이 입력하면 시작할 수 있어요</p>
+          )}
+        </div>
+      </div>
+    );
+  }
+
   // 로딩
   if (loading) {
     const r = 52;
@@ -412,6 +673,9 @@ export default function Home() {
                 setResult(null);
                 setView('steps');
                 setStep(0);
+                setAppMode('mode-select');
+                setSessionId(null);
+                setGroupMembers([]);
                 setResultTravelTimes(null);
                 setLocations([]);
                 setPurpose(null);

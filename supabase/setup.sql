@@ -70,3 +70,36 @@ CREATE POLICY "anon delete events"
   ON events FOR DELETE
   TO anon
   USING (true);
+
+-- 그룹 세션 테이블
+CREATE TABLE IF NOT EXISTS mint_sessions (
+  id TEXT PRIMARY KEY,
+  expected_count INTEGER NOT NULL DEFAULT 2,
+  status TEXT NOT NULL DEFAULT 'waiting',
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS mint_session_members (
+  id BIGSERIAL PRIMARY KEY,
+  session_id TEXT NOT NULL REFERENCES mint_sessions(id) ON DELETE CASCADE,
+  member_name TEXT NOT NULL,
+  location_name TEXT NOT NULL,
+  location_lat DOUBLE PRECISION NOT NULL,
+  location_lng DOUBLE PRECISION NOT NULL,
+  vibe_atmosphere TEXT,
+  vibe_budget TEXT,
+  submitted_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- RLS
+ALTER TABLE mint_sessions ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "anon read mint_sessions" ON mint_sessions;
+CREATE POLICY "anon read mint_sessions" ON mint_sessions FOR SELECT TO anon USING (true);
+DROP POLICY IF EXISTS "anon insert mint_sessions" ON mint_sessions;
+CREATE POLICY "anon insert mint_sessions" ON mint_sessions FOR INSERT TO anon WITH CHECK (true);
+
+ALTER TABLE mint_session_members ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "anon read mint_session_members" ON mint_session_members;
+CREATE POLICY "anon read mint_session_members" ON mint_session_members FOR SELECT TO anon USING (true);
+DROP POLICY IF EXISTS "anon insert mint_session_members" ON mint_session_members;
+CREATE POLICY "anon insert mint_session_members" ON mint_session_members FOR INSERT TO anon WITH CHECK (true);
