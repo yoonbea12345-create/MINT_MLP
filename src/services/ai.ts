@@ -9,6 +9,7 @@ export interface UserInput {
   relation?: string | null;
   occasion?: string | null;
   budget?: string | null;
+  vibeWeights?: Record<string, number>;
 }
 
 export interface PlaceRecommendation {

@@ -350,6 +350,12 @@ ${formatNaverPlaces(naverSecondPlaces)}` : ''}
     const occasionLine = occasion ? `\n- 특별한 행사: ${occasion} → ${OCCASION_HINT[occasion] ?? '분위기에 맞는 곳'}` : '';
     const budgetLine = budget ? `\n- 예산: 1인 ${budget}` : '';
 
+    const WEIGHT_DESC: Record<number, string> = { 1: '거의 무시', 2: '낮음', 3: '보통', 4: '중요', 5: '최우선 반영' };
+    const vibeWeights: Record<string, number> = input.vibeWeights ?? {};
+    const weightsSection = Object.keys(vibeWeights).length > 0
+      ? `\n## 재추천 가중치 (사용자 지정)\n${Object.entries(vibeWeights).map(([label, w]) => `- ${label}: ${w}/5 (${WEIGHT_DESC[w] ?? '보통'})`).join('\n')}\n위 가중치를 반드시 고려하여 높은 가중치 항목을 최우선으로 반영하세요.`
+      : '';
+
     const commonInfo = `
 ## 모임 정보
 - 출발지: ${locationStr}
@@ -358,7 +364,7 @@ ${formatNaverPlaces(naverSecondPlaces)}` : ''}
 - 분위기: ${vibeFirstStr}${vibeSecondStr ? ` / 2차: ${vibeSecondStr}` : ''}
 - 현재 시각: ${currentTime}
 - 혼잡도: ${congestionSummary || '정보 없음'}
-${weatherSection}
+${weatherSection}${weightsSection}
 
 ## 추천 조건
 - "${vibeFirstStr}" 분위기에 맞는 곳

@@ -10,6 +10,8 @@ import { VIBE_KEY_TO_LABEL } from '../components/VibeSelect';
 import MeetingLocationSelect from '../components/MeetingLocationSelect';
 import type { MeetingLocation } from '../components/MeetingLocationSelect';
 import ResultCard from '../components/ResultCard';
+import RetryWeightModal from '../components/RetryWeightModal';
+import type { VibeWeights } from '../components/RetryWeightModal';
 import Reserve from './Reserve';
 import { PRESET_REGIONS, findNearestAreas, findBalancedAreas } from '../services/midpoint';
 import type { PresetRegion, Coordinates } from '../services/midpoint';
@@ -81,6 +83,7 @@ export default function Home() {
   const [loadingProgress, setLoadingProgress] = useState(0);
   const [result, setResult] = useState<PlaceRecommendation[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [showRetryModal, setShowRetryModal] = useState(false);
   const [midpointData, setMidpointData] = useState<{
     midpoint: Coordinates;
     areaName: string;
@@ -256,6 +259,7 @@ export default function Home() {
     midpoint: Coordinates,
     nearestAreas: string[],
     validLocs: LocationEntry[],
+    vibeWeights?: Record<string, number>,
   ) {
     setLoading(true);
     setLoadingProgress(0);
@@ -289,6 +293,7 @@ export default function Home() {
         relation: purpose?.relation ?? null,
         occasion: purpose?.occasion ?? null,
         budget,
+        ...(vibeWeights && Object.keys(vibeWeights).length > 0 ? { vibeWeights } : {}),
       };
 
       // AI 호출 동안 25→90% 타이머 (Claude 응답이 단일 fetch라 내부 진행도 불가)
@@ -349,12 +354,33 @@ export default function Home() {
   }
 
   function handleRetry() {
+    setShowRetryModal(true);
+  }
+
+  function handleRetryImmediate() {
+    setShowRetryModal(false);
+    if (!midpointData) return;
+    const validLocs = locations.filter((l) => l.lat != null && l.lng != null);
     setTreasurer(null);
     setResultTravelTimes(null);
-    setMeetingLocation(null);
-    setBudget(null);
-    setStep(3 as Step);
-    setView('steps');
+    handleRecommend(midpointData.midpoint, midpointData.nearestAreas, validLocs);
+  }
+
+  function handleRetryWithWeights(weights: VibeWeights) {
+    setShowRetryModal(false);
+    if (!midpointData) return;
+    const validLocs = locations.filter((l) => l.lat != null && l.lng != null);
+    const labeledWeights: Record<string, number> = {};
+    Object.entries(weights).forEach(([k, v]) => {
+      if (k.startsWith('budget:')) {
+        labeledWeights[`예산 ${k.slice(7)}`] = v;
+      } else {
+        labeledWeights[VIBE_KEY_TO_LABEL[k] ?? k] = v;
+      }
+    });
+    setTreasurer(null);
+    setResultTravelTimes(null);
+    handleRecommend(midpointData.midpoint, midpointData.nearestAreas, validLocs, labeledWeights);
   }
 
   function handleShare() {
@@ -702,6 +728,16 @@ export default function Home() {
             onShare={handleShare}
             onReserve={() => setView('reserve')}
           />
+
+          {showRetryModal && (
+            <RetryWeightModal
+              vibe={vibe}
+              budget={budget}
+              onRetryImmediate={handleRetryImmediate}
+              onRetryWithWeights={handleRetryWithWeights}
+              onClose={() => setShowRetryModal(false)}
+            />
+          )}
         </div>
       </div>
     );
