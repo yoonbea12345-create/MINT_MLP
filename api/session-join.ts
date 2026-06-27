@@ -4,8 +4,8 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') return res.status(405).end();
 
-  const url = process.env.SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const url = (process.env.SUPABASE_URL ?? '').trim();
+  const key = (process.env.SUPABASE_SERVICE_ROLE_KEY ?? '').trim();
   if (!url || !key) {
     return res.status(500).json({ error: 'Supabase 설정이 없습니다.' });
   }
