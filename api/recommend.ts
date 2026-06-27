@@ -372,6 +372,14 @@ ${weatherSection}${weightsSection}
 - ${groupSize}명 수용 가능 규모${groupSize >= 5 ? ' (단체석 우선)' : ''}
 - ${currentTime} 기준 영업 중 또는 곧 영업 시작 우선${occasion ? `\n- ${OCCASION_HINT[occasion] ?? ''}` : ''}${budget ? `\n- 1인 예산 ${budget} 내외` : ''}${relation === '연인' ? '\n- 커플 분위기, 프라이빗하고 조용한 공간 선호' : ''}${relation === '직장동료' ? '\n- 회식에 적합한 단체 공간, 넓은 테이블 선호' : ''}${relation === '가족' ? '\n- 가족 모임에 편한 공간, 소음 덜한 환경 선호' : ''}`;
 
+    const fitScoreGuide = `
+## 적합도 점수 (fitScore) 산정 기준 — 각 장소마다 0~100 정수 기재
+- 취향/분위기 일치도 (40점): 사용자 선택 vibe와 얼마나 잘 맞는가
+- 목적 적합도 (25점): "${purpose.first}" 목적에 얼마나 적합한가${vibeWeights && Object.keys(vibeWeights).length > 0 ? '\n- 가중치 반영 (추가 +15점 풀): 위 재추천 가중치가 높은 항목일수록 더 높게' : ''}
+- 예산 적합도 (20점): 예산 조건 충족 여부 (예산 없으면 만점)
+- 혼잡도/시간 적합도 (15점): 현재 시각 기준 혼잡도와 영업 여부
+rank 1이 반드시 가장 높아야 하며, 장소마다 솔직하고 차별화된 점수를 부여하세요.`;
+
     const placeSchema = `{
   "rank": 1,
   "sourceIndex": 1,
@@ -383,6 +391,7 @@ ${weatherSection}${weightsSection}
   "address": "주소 (목록에서 그대로)",
   "area": "지역명",
   "congestionLevel": "혼잡도",
+  "fitScore": 85,
   "lat": 0,
   "lng": 0
 }`;
@@ -390,12 +399,13 @@ ${weatherSection}${weightsSection}
     const placeSchemaWithWalking = placeSchema.replace('"lng": 0', '"lng": 0,\n  "walkingToNext": 10');
 
     const rankSchema = (rank: number) =>
-      placeSchema.replace('"rank": 1', `"rank": ${rank}`).replace('"sourceIndex": 1', `"sourceIndex": <목록번호>`);
+      placeSchema.replace('"rank": 1', `"rank": ${rank}`).replace('"sourceIndex": 1', `"sourceIndex": <목록번호>`).replace('"fitScore": 85', '"fitScore": <0~100>');
 
     const prompt = effectiveTwoPurposes
       ? `당신은 한국 모임 장소 큐레이터입니다. 1차·2차 코스 장소를 추천해주세요.
 ${naverSection}
 ${commonInfo}
+${fitScoreGuide}
 
 ## 응답 구성 (총 6곳)
 - rank 1: 1차 "${purpose.first}" 최적 (1차 목록에서 선택). walkingToNext에 rank 2까지 도보 분 기재
@@ -415,6 +425,7 @@ ${commonInfo}
       : `당신은 한국 모임 장소 큐레이터입니다. "${purpose.first}" 장소 3곳을 추천해주세요.
 ${naverSection}
 ${commonInfo}
+${fitScoreGuide}
 
 ## 응답 구성 (서로 다른 3곳, 모두 1차 목록에서 선택)
 - rank 1: 최적, rank 2·3: 대안 (서로 다른 sourceIndex 사용)

@@ -71,6 +71,21 @@ interface CardProps {
   shadowColor: string;
 }
 
+function FitScoreBar({ score, className = '' }: { score?: number; className?: string }) {
+  if (score == null) return null;
+  const pct = Math.min(100, Math.max(0, score));
+  const color = pct >= 80 ? 'bg-white' : pct >= 60 ? 'bg-white/75' : 'bg-white/50';
+  return (
+    <div className={`flex items-center gap-2 ${className}`}>
+      <span className="text-[10px] text-white/60 font-bold shrink-0">적합도</span>
+      <div className="flex-1 h-1.5 bg-white/20 rounded-full overflow-hidden">
+        <div className={`h-full rounded-full transition-all ${color}`} style={{ width: `${pct}%` }} />
+      </div>
+      <span className="text-xs font-black text-white shrink-0">{score}점</span>
+    </div>
+  );
+}
+
 function PlaceCard({ place, extraResults = [], gradient, shadowColor }: CardProps) {
   const [moreVisible, setMoreVisible] = useState(false);
   const openStatus = parseOpenStatus(place.openingHours);
@@ -97,6 +112,9 @@ function PlaceCard({ place, extraResults = [], gradient, shadowColor }: CardProp
 
         {/* 장소명 */}
         <h2 className="text-xl font-black leading-tight mb-1.5">{place.placeName}</h2>
+
+        {/* 적합도 점수 */}
+        <FitScoreBar score={place.fitScore} className="mb-2" />
 
         {/* 해시태그 */}
         <div className="flex flex-wrap gap-1 mb-2">
@@ -159,7 +177,12 @@ function PlaceCard({ place, extraResults = [], gradient, shadowColor }: CardProp
                   <p className="text-sm font-black">{p.placeName}</p>
                   <p className="text-xs text-white/70">{p.category}</p>
                 </div>
-                <div className="flex items-center gap-1 flex-shrink-0">
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  {p.fitScore != null && (
+                    <span className="text-xs font-black text-white/90 bg-white/20 px-1.5 py-0.5 rounded-full">
+                      {p.fitScore}점
+                    </span>
+                  )}
                   <div className={`w-1.5 h-1.5 rounded-full ${congestionDotClass(p.congestionLevel as CongestionLevel)}`} />
                   <span className="text-xs text-white/60">{p.congestionLevel}</span>
                 </div>
@@ -325,6 +348,7 @@ export default function ResultCard({
                 );
               })()}
               <h2 className="text-xl font-black leading-tight mb-1.5">{secondResult.placeName}</h2>
+              <FitScoreBar score={secondResult.fitScore} className="mb-2" />
               <div className="flex flex-wrap gap-1 mb-2">
                 {secondResult.vibeTags.slice(0, 3).map((tag) => (
                   <span key={tag} className="text-xs text-white/80 bg-white/15 px-2 py-0.5 rounded-full">
@@ -380,7 +404,12 @@ export default function ResultCard({
                         <p className="text-sm font-black">{p.placeName}</p>
                         <p className="text-xs text-white/70">{p.category}</p>
                       </div>
-                      <div className="flex items-center gap-1 flex-shrink-0">
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        {p.fitScore != null && (
+                          <span className="text-xs font-black text-white/90 bg-white/20 px-1.5 py-0.5 rounded-full">
+                            {p.fitScore}점
+                          </span>
+                        )}
                         <div className={`w-1.5 h-1.5 rounded-full ${congestionDotClass(p.congestionLevel as CongestionLevel)}`} />
                         <span className="text-xs text-white/60">{p.congestionLevel}</span>
                       </div>
