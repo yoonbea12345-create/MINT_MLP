@@ -10,6 +10,7 @@ export interface UserInput {
   occasion?: string | null;
   budget?: string | null;
   vibeWeights?: Record<string, number>;
+  keywords?: string[];
 }
 
 export interface PlaceRecommendation {

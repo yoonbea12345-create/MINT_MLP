@@ -26,17 +26,34 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(404).json({ error: '세션을 찾을 수 없어요.' });
     }
 
-    const { data: members, error: mErr } = await supabase
+    // Try with keywords; fallback without if column doesn't exist (pg error 42703)
+    let { data: members, error: mErr } = await supabase
       .from('mint_session_members')
-      .select('member_name, location_name, location_lat, location_lng, vibe_atmosphere, vibe_budget')
+      .select('member_name, location_name, location_lat, location_lng, vibe_atmosphere, vibe_budget, vibe_keywords')
       .eq('session_id', id)
       .order('submitted_at', { ascending: true });
 
+    if (mErr?.code === '42703') {
+      ({ data: members, error: mErr } = await supabase
+        .from('mint_session_members')
+        .select('member_name, location_name, location_lat, location_lng, vibe_atmosphere, vibe_budget')
+        .eq('session_id', id)
+        .order('submitted_at', { ascending: true }));
+    }
+
     if (mErr) return res.status(500).json({ error: mErr.message });
+
+    // Parse vibe_keywords from JSON string back to array
+    const parsedMembers = (members ?? []).map((m: Record<string, unknown>) => ({
+      ...m,
+      vibe_keywords: m.vibe_keywords
+        ? (() => { try { return JSON.parse(m.vibe_keywords as string); } catch { return []; } })()
+        : [],
+    }));
 
     return res.status(200).json({
       expected_count: session.expected_count,
-      members: members ?? [],
+      members: parsedMembers,
     });
   } catch (e) {
     return res.status(500).json({ error: (e as Error).message });

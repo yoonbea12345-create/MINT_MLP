@@ -287,6 +287,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const occasion: string | null = input.occasion ?? null;
     const budget: string | null = input.budget ?? null;
 
+    const keywords: string[] = Array.isArray(input.keywords) ? input.keywords : [];
+
     const areaNames = (congestionData as { areaName: string; level: string }[])
       .map((c) => c.areaName)
       .join(', ');
@@ -349,6 +351,9 @@ ${formatNaverPlaces(naverSecondPlaces)}` : ''}
     const relationLine = relation ? `\n- 모임 관계: ${relation}` : '';
     const occasionLine = occasion ? `\n- 특별한 행사: ${occasion} → ${OCCASION_HINT[occasion] ?? '분위기에 맞는 곳'}` : '';
     const budgetLine = budget ? `\n- 예산: 1인 ${budget}` : '';
+    const keywordsLine = keywords.length > 0
+      ? `\n- 필수 키워드: ${keywords.map((k) => `#${k}`).join(' ')} ← 이 조건에 부합하는 장소 최우선 추천`
+      : '';
 
     const WEIGHT_DESC: Record<number, string> = { 1: '거의 무시', 2: '낮음', 3: '보통', 4: '중요', 5: '최우선 반영' };
     const vibeWeights: Record<string, number> = input.vibeWeights ?? {};
@@ -360,7 +365,7 @@ ${formatNaverPlaces(naverSecondPlaces)}` : ''}
 ## 모임 정보
 - 출발지: ${locationStr}
 - 추천 지역: ${areaNames}
-- 인원: ${groupSize}명${groupSize >= 5 ? ' (단체석 또는 넓은 공간 필수)' : ''}${relationLine}${occasionLine}${budgetLine}
+- 인원: ${groupSize}명${groupSize >= 5 ? ' (단체석 또는 넓은 공간 필수)' : ''}${relationLine}${occasionLine}${budgetLine}${keywordsLine}
 - 분위기: ${vibeFirstStr}${vibeSecondStr ? ` / 2차: ${vibeSecondStr}` : ''}
 - 현재 시각: ${currentTime}
 - 혼잡도: ${congestionSummary || '정보 없음'}

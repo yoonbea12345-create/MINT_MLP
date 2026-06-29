@@ -88,8 +88,12 @@ CREATE TABLE IF NOT EXISTS mint_session_members (
   location_lng DOUBLE PRECISION NOT NULL,
   vibe_atmosphere TEXT,
   vibe_budget TEXT,
+  vibe_keywords TEXT,
   submitted_at TIMESTAMPTZ DEFAULT now()
 );
+
+-- 기존 테이블에 vibe_keywords 컬럼 추가 (이미 테이블이 있는 경우)
+ALTER TABLE mint_session_members ADD COLUMN IF NOT EXISTS vibe_keywords TEXT;
 
 -- RLS
 ALTER TABLE mint_sessions ENABLE ROW LEVEL SECURITY;

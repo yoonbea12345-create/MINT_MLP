@@ -19,6 +19,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       location_lng?: number;
       vibe_atmosphere?: string | null;
       vibe_budget?: string | null;
+      vibe_keywords?: string[] | null;
     };
 
     const { session_id, member_name, location_name } = body;
@@ -30,7 +31,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     const supabase = createClient(url, key);
-    const { error } = await supabase.from('mint_session_members').insert({
+
+    const baseData = {
       session_id,
       member_name,
       location_name,
@@ -38,9 +40,26 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       location_lng,
       vibe_atmosphere: body.vibe_atmosphere ?? null,
       vibe_budget: body.vibe_budget ?? null,
-    });
+    };
 
-    if (error) return res.status(500).json({ error: error.message });
+    const keywords = Array.isArray(body.vibe_keywords) && body.vibe_keywords.length > 0
+      ? body.vibe_keywords
+      : null;
+
+    // Try insert with keywords first; fallback without if column doesn't exist yet (pg error 42703)
+    const { error } = await supabase
+      .from('mint_session_members')
+      .insert(keywords ? { ...baseData, vibe_keywords: JSON.stringify(keywords) } : baseData);
+
+    if (error) {
+      if (error.code === '42703' && keywords) {
+        const { error: e2 } = await supabase.from('mint_session_members').insert(baseData);
+        if (e2) return res.status(500).json({ error: e2.message });
+        return res.status(200).json({ ok: true });
+      }
+      return res.status(500).json({ error: error.message });
+    }
+
     return res.status(200).json({ ok: true });
   } catch (e) {
     return res.status(500).json({ error: (e as Error).message });

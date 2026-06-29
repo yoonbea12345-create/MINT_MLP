@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import KeywordSelect from './KeywordSelect';
 
 export type GroupVibeState = { first: string | null; second: string | null };
 export type VibeState = Record<string, GroupVibeState>;
@@ -49,9 +50,11 @@ interface Props {
   purpose?: { first: string | null; second?: string | null };
   budget: string | null;
   onBudgetChange: (b: string | null) => void;
+  keywords?: string[];
+  onKeywordsChange?: (k: string[]) => void;
 }
 
-export default function VibeSelect({ value, onChange, purpose, budget, onBudgetChange }: Props) {
+export default function VibeSelect({ value, onChange, purpose, budget, onBudgetChange, keywords = [], onKeywordsChange }: Props) {
   const [wasDoubled, setWasDoubled] = useState<Record<string, boolean>>({});
 
   function toggle(groupLabel: string, key: string) {
@@ -173,6 +176,11 @@ export default function VibeSelect({ value, onChange, purpose, budget, onBudgetC
           })}
         </div>
       </div>
+
+      {/* 키워드 */}
+      {onKeywordsChange && (
+        <KeywordSelect selected={keywords} onChange={onKeywordsChange} />
+      )}
     </div>
   );
 }

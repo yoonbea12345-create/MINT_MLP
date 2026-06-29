@@ -15,7 +15,9 @@
       "PowerShell(Copy-Item *)",
       "PowerShell($env:ANTHROPIC_API_KEY)",
       "PowerShell(vercel *)",
-      "Skill(update-config)"
+      "Skill(update-config)",
+      "Bash(./node_modules/.bin/tsc --noEmit)",
+      "Bash(npx vite *)"
     ]
   }
 }

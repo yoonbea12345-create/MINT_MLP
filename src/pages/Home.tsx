@@ -31,6 +31,7 @@ interface GroupMember {
   location_lng: number;
   vibe_atmosphere: string | null;
   vibe_budget: string | null;
+  vibe_keywords?: string[];
 }
 
 interface TravelResult {
@@ -83,6 +84,7 @@ export default function Home() {
   const [loadingProgress, setLoadingProgress] = useState(0);
   const [result, setResult] = useState<PlaceRecommendation[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [keywords, setKeywords] = useState<string[]>([]);
   const [showRetryModal, setShowRetryModal] = useState(false);
   const [midpointData, setMidpointData] = useState<{
     midpoint: Coordinates;
@@ -183,6 +185,9 @@ export default function Home() {
     }));
     setLocations(groupLocations);
     setVibe(aggregateVibe(groupMembers));
+    // 멤버들이 선택한 키워드 합집합
+    const memberKeywords = Array.from(new Set(groupMembers.flatMap((m) => m.vibe_keywords ?? [])));
+    setKeywords(memberKeywords);
     setStep(1);
     setView('steps');
     setAppMode('group-ready');
@@ -294,6 +299,7 @@ export default function Home() {
         occasion: purpose?.occasion ?? null,
         budget,
         ...(vibeWeights && Object.keys(vibeWeights).length > 0 ? { vibeWeights } : {}),
+        ...(keywords.length > 0 ? { keywords } : {}),
       };
 
       // AI 호출 동안 25→90% 타이머 (Claude 응답이 단일 fetch라 내부 진행도 불가)
@@ -563,6 +569,7 @@ export default function Home() {
   if (appMode === 'group-waiting') {
     const shareLink = sessionId ? `${window.location.origin}/join?id=${sessionId}` : '';
     const ready = groupMembers.length >= 2;
+    const allVoted = groupMembers.length >= expectedCount && groupMembers.length > 0;
     return (
       <div className="min-h-[100dvh] bg-[#F5FBF8] flex flex-col">
         <div className="text-center pt-8 px-4">
@@ -573,7 +580,7 @@ export default function Home() {
           <p className="text-sm text-gray-400 text-center mb-6">링크를 공유하면 각자 출발지를 입력해요</p>
 
           {/* 공유 링크 */}
-          <div className="bg-white shadow-sm rounded-2xl p-4 mb-5">
+          <div className="bg-white shadow-sm rounded-2xl p-4 mb-4">
             <p className="text-xs text-gray-400 mb-2">공유 링크</p>
             <div className="flex items-center gap-2">
               <p className="flex-1 text-sm text-gray-700 truncate">{shareLink}</p>
@@ -586,40 +593,70 @@ export default function Home() {
             </div>
           </div>
 
-          {/* 진행률 */}
-          <div className="bg-white shadow-sm rounded-2xl p-6 mb-5 text-center">
-            <p className="text-xs text-gray-400 mb-1">입력 완료</p>
-            <p className="text-4xl font-black text-[#2AB5A0]">
-              {groupMembers.length}
-              <span className="text-gray-300"> / {expectedCount}</span>
-              <span className="text-lg text-gray-400 font-bold"> 명</span>
-            </p>
-            {groupMembers.length > 0 && (
-              <div className="flex flex-wrap gap-2 justify-center mt-4">
-                {groupMembers.map((m, i) => (
-                  <span
-                    key={`${m.member_name}-${i}`}
-                    className="px-3 py-1 rounded-full bg-[#E8F8F5] text-[#2AB5A0] text-sm font-bold"
+          {/* 호스트 바로 참여 버튼 */}
+          <button
+            onClick={() => { window.location.href = shareLink; }}
+            className="w-full py-3 rounded-2xl font-black text-sm transition-all active:scale-95 mb-5 bg-[#E8F8F5] text-[#2AB5A0] border-2 border-[#3CDBC0]/40 hover:bg-[#d4f3ee]"
+          >
+            나도 참여하기 →
+          </button>
+
+          {/* 진행률 + 슬롯 */}
+          <div className="bg-white shadow-sm rounded-2xl p-5 mb-5">
+            <div className="flex items-center justify-between mb-4">
+              <p className="text-xs text-gray-400">입력 현황</p>
+              <p className="text-lg font-black text-[#2AB5A0]">
+                {groupMembers.length}
+                <span className="text-gray-300 font-bold"> / {expectedCount}</span>
+              </p>
+            </div>
+            <div className="flex flex-col gap-2">
+              {Array.from({ length: expectedCount }).map((_, i) => {
+                const member = groupMembers[i];
+                return (
+                  <div
+                    key={i}
+                    className={`flex items-center gap-3 px-4 py-3 rounded-2xl transition-all ${
+                      member ? 'bg-[#E8F8F5]' : 'bg-gray-50 border border-dashed border-gray-200'
+                    }`}
                   >
-                    {m.member_name}
-                  </span>
-                ))}
-              </div>
-            )}
+                    <div
+                      className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-black flex-shrink-0 ${
+                        member ? 'bg-[#3CDBC0] text-white' : 'bg-gray-200 text-gray-400'
+                      }`}
+                    >
+                      {member ? '✓' : i + 1}
+                    </div>
+                    <span className={`text-sm font-bold ${member ? 'text-[#2AB5A0]' : 'text-gray-300'}`}>
+                      {member ? member.member_name : '대기 중...'}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
           </div>
 
           <div className="flex-1" />
+
+          {allVoted && (
+            <div className="mb-3 p-4 bg-[#E8F8F5] border border-[#3CDBC0]/40 rounded-2xl text-center">
+              <p className="text-base font-black text-[#2AB5A0]">🎉 전원 완료!</p>
+              <p className="text-xs text-[#2AB5A0]/70 mt-0.5">모두의 취향이 모였어요. 지금 바로 추천받아요!</p>
+            </div>
+          )}
 
           <button
             onClick={handleStartGroupRecommend}
             disabled={!ready}
             className={`w-full py-4 rounded-2xl font-black text-base transition-all active:scale-95 ${
-              ready
+              allVoted
+                ? 'bg-[#2AB5A0] text-white shadow-xl shadow-[#3CDBC0]/40 hover:bg-[#1E9E8C] animate-pulse'
+                : ready
                 ? 'bg-[#3CDBC0] text-white shadow-lg shadow-[#3CDBC0]/30 hover:bg-[#2AB5A0]'
                 : 'bg-gray-200 text-gray-400 cursor-not-allowed'
             }`}
           >
-            장소 추천받기
+            {allVoted ? '✨ 지금 바로 장소 추천받기' : '장소 추천받기'}
           </button>
           {!ready && (
             <p className="text-xs text-gray-400 text-center mt-2">최소 2명이 입력하면 시작할 수 있어요</p>
@@ -707,6 +744,7 @@ export default function Home() {
                 setPurpose(null);
                 setVibe({});
                 setBudget(null);
+                setKeywords([]);
                 setMeetingLocation(null);
                 setMidpointData(null);
                 setTreasurer(null);
@@ -790,6 +828,8 @@ export default function Home() {
               purpose={purpose ? { first: purpose.first, second: purpose.second } : undefined}
               budget={budget}
               onBudgetChange={setBudget}
+              keywords={keywords}
+              onKeywordsChange={setKeywords}
             />
           )}
           {step === 3 && (
