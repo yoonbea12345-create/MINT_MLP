@@ -61,7 +61,11 @@ export default function SharedResult() {
           <h2 className="text-2xl font-black mt-3 mb-1 leading-tight">
             오늘은<br /><span className="text-3xl">{result.placeName}</span>
           </h2>
-          <p className="text-sm opacity-90 mb-3">{result.description}</p>
+          {result.description && (
+            <p className="text-sm font-semibold opacity-95 mb-3 leading-snug bg-white/15 rounded-xl px-3 py-2">
+              💬 {result.description}
+            </p>
+          )}
 
           <div className="flex flex-wrap gap-1.5 mb-4">
             {result.vibeTags.map((tag) => (
@@ -89,11 +93,20 @@ export default function SharedResult() {
           </div>
         )}
 
+        <div className="text-center mb-4">
+          <p className="text-xs text-gray-400">AI가 이 모임에 딱 맞는 장소를 골라줬어요</p>
+        </div>
+        <a
+          href="/app"
+          className="block w-full py-4 rounded-2xl bg-[#3CDBC0] text-white font-black text-base text-center shadow-lg shadow-[#3CDBC0]/30 hover:bg-[#2AB5A0] transition-colors active:scale-95"
+        >
+          🌿 나도 30초 만에 추천받기
+        </a>
         <a
           href="/"
-          className="block w-full py-4 rounded-2xl bg-[#3CDBC0] text-white font-black text-base text-center shadow-lg shadow-[#3CDBC0]/30 hover:bg-[#2AB5A0] transition-colors"
+          className="block w-full py-3 text-center text-sm text-gray-400 hover:text-[#2AB5A0] transition-colors mt-1"
         >
-          🌿 나도 MINT로 정하기
+          MINT가 뭔지 알아보기 →
         </a>
       </div>
     </div>

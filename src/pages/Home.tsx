@@ -430,6 +430,22 @@ export default function Home() {
     const hasSecond = !!(purpose?.second && purpose.second !== '없음');
     const secondPlace = hasSecond && result.length > 1 ? result[1] : null;
 
+    // SharedResult URL — 수신자가 링크 누르면 결과 카드로 바로 이동
+    const sharedData = {
+      placeName: primary.placeName,
+      category: primary.category,
+      description: primary.description,
+      vibeTags: primary.vibeTags,
+      address: primary.address,
+      area: primary.area,
+      priceRange: primary.priceRange,
+      congestionLevel: primary.congestionLevel,
+      lat: primary.lat,
+      lng: primary.lng,
+      kakaoPlaceUrl: primary.kakaoPlaceUrl,
+    };
+    const sharedUrl = `${mlpUrl}/shared?data=${encodeURIComponent(JSON.stringify(sharedData))}`;
+
     const mapUrl = (p: typeof primary) =>
       p.lat && p.lng
         ? `https://map.kakao.com/link/to/${encodeURIComponent(p.placeName)},${p.lat},${p.lng}`
@@ -450,13 +466,13 @@ export default function Home() {
             ...(treasurer ? [`💰 ${treasurer}에서 출발하는 분이 오늘의 총무!`] : []),
           ]
         : [
-            `장소: ${primary.placeName}`,
-            `가격대: ${primary.priceRange || ''}`,
+            primary.description,
+            `📍 ${primary.address || primary.area} · 💰 ${primary.priceRange || ''}`,
             ...(treasurer ? [`💰 ${treasurer}에서 출발하는 분이 오늘의 총무!`] : []),
           ];
 
       const buttons: object[] = [
-        { title: 'MINT로 장소 정하러 가기', link: { mobileWebUrl: mlpUrl, webUrl: mlpUrl } },
+        { title: '추천 결과 보기', link: { mobileWebUrl: sharedUrl, webUrl: sharedUrl } },
       ];
       if (secondMapUrl) {
         buttons.push({ title: `2차(${purpose!.second}) 카카오맵 보기`, link: { mobileWebUrl: secondMapUrl, webUrl: secondMapUrl } });
@@ -467,10 +483,10 @@ export default function Home() {
       window.Kakao.Share.sendDefault({
         objectType: 'feed',
         content: {
-          title: `🍀 MINT 추천${hasSecond ? ` | 1차(${purpose!.first}) · 2차(${purpose!.second})` : ''}`,
+          title: `🍀 MINT 추천${hasSecond ? ` | 1차(${purpose!.first}) · 2차(${purpose!.second})` : ` | ${primary.placeName}`}`,
           description: descLines.join('\n'),
           imageUrl: `${mlpUrl}/image/step5.png`,
-          link: { mobileWebUrl: mlpUrl, webUrl: mlpUrl },
+          link: { mobileWebUrl: sharedUrl, webUrl: sharedUrl },
         },
         buttons,
       });
@@ -479,7 +495,9 @@ export default function Home() {
 
     // 카카오 SDK 없을 때 텍스트 공유
     const lines = [
-      '🍀 MINT 추천 장소 🍀',
+      `🍀 MINT 추천 — ${primary.placeName}`,
+      '',
+      primary.description,
       '',
       ...(hasSecond && secondPlace
         ? [
@@ -490,13 +508,13 @@ export default function Home() {
             `  카카오맵 → ${secondMapUrl}`,
           ]
         : [
-            `장소: ${primary.placeName}`,
+            `📍 ${primary.address || primary.area}`,
             `  카카오맵 → ${primaryMapUrl}`,
           ]),
-      ...(treasurer ? ['', `💰 ${treasurer}에서 출발하는 분이 오늘의 총무 담첨!`] : []),
+      ...(treasurer ? ['', `💰 ${treasurer}에서 출발하는 분이 오늘의 총무 담당!`] : []),
       '',
-      '이젠, MINT로 우리 모임 장소 정해봐요!',
-      mlpUrl,
+      '👇 결과 직접 확인',
+      sharedUrl,
     ];
 
     const shareText = lines.join('\n');

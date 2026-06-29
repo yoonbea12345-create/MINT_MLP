@@ -111,7 +111,12 @@ function PlaceCard({ place, extraResults = [], gradient, shadowColor }: CardProp
         </div>
 
         {/* 장소명 */}
-        <h2 className="text-xl font-black leading-tight mb-1.5">{place.placeName}</h2>
+        <h2 className="text-xl font-black leading-tight mb-1">{place.placeName}</h2>
+
+        {/* 추천 이유 — 큐레이션의 핵심 */}
+        {place.description && (
+          <p className="text-sm text-white/90 leading-snug mb-2 font-medium">{place.description}</p>
+        )}
 
         {/* 적합도 점수 */}
         <FitScoreBar score={place.fitScore} className="mb-2" />
