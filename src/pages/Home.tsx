@@ -422,6 +422,43 @@ export default function Home() {
     handleRecommend(midpointData.midpoint, midpointData.nearestAreas, validLocs, labeledWeights);
   }
 
+  function handleReject(reason: 'expensive' | 'far' | 'vibe') {
+    if (!midpointData) return;
+    trackEvent(`reject_${reason}`);
+    const validLocs = locations.filter((l) => l.lat != null && l.lng != null);
+    setTreasurer(null);
+    setResultTravelTimes(null);
+
+    // 거절 이유를 labeled weights로 변환해서 AI에 전달
+    const rejectWeights: Record<string, number> = {};
+    if (reason === 'expensive') {
+      // 현재 vibe 유지 + 저렴한 힌트
+      Object.values(vibe).forEach((g) => {
+        if (g.first) rejectWeights[VIBE_KEY_TO_LABEL[g.first] ?? g.first] = 3;
+        if (g.second) rejectWeights[VIBE_KEY_TO_LABEL[g.second] ?? g.second] = 3;
+      });
+      rejectWeights['저렴한'] = 5;
+      rejectWeights['가성비'] = 5;
+    } else if (reason === 'far') {
+      // 현재 vibe 유지 + 접근성 힌트
+      Object.values(vibe).forEach((g) => {
+        if (g.first) rejectWeights[VIBE_KEY_TO_LABEL[g.first] ?? g.first] = 3;
+        if (g.second) rejectWeights[VIBE_KEY_TO_LABEL[g.second] ?? g.second] = 3;
+      });
+      rejectWeights['가까운'] = 5;
+      rejectWeights['접근하기 쉬운'] = 5;
+    } else {
+      // vibe 거절: 현재 분위기 weight 낮추고 다른 분위기 탐색
+      Object.values(vibe).forEach((g) => {
+        if (g.first) rejectWeights[VIBE_KEY_TO_LABEL[g.first] ?? g.first] = 1;
+        if (g.second) rejectWeights[VIBE_KEY_TO_LABEL[g.second] ?? g.second] = 1;
+      });
+      rejectWeights['새로운 분위기'] = 5;
+    }
+
+    handleRecommend(midpointData.midpoint, midpointData.nearestAreas, validLocs, rejectWeights);
+  }
+
   function handleShare() {
     if (!result || result.length === 0) return;
     trackEvent('kakao_share');
@@ -812,6 +849,7 @@ export default function Home() {
             onRetry={handleRetry}
             onShare={handleShare}
             onReserve={() => setView('reserve')}
+            onReject={handleReject}
           />
 
           {showRetryModal && (

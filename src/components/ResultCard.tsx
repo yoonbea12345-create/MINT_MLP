@@ -24,6 +24,7 @@ interface Props {
   onRetry: () => void;
   onShare: () => void;
   onReserve: () => void;
+  onReject?: (reason: 'expensive' | 'far' | 'vibe') => void;
 }
 
 function GpsPin({ className = '' }: { className?: string }) {
@@ -218,6 +219,7 @@ export default function ResultCard({
   onRetry,
   onShare,
   onReserve,
+  onReject,
 }: Props) {
   const [secondMoreVisible, setSecondMoreVisible] = useState(false);
   const [showTreasurerPopup, setShowTreasurerPopup] = useState(false);
@@ -454,6 +456,29 @@ export default function ResultCard({
         </svg>
         카카오톡으로 공유하기
       </button>
+
+      {/* 거절 기반 재큐레이션 */}
+      {onReject && (
+        <div className="flex flex-col gap-1.5">
+          <p className="text-[10px] text-gray-400 text-center font-medium">이 추천이 마음에 안 드는 이유는?</p>
+          <div className="grid grid-cols-3 gap-2">
+            {([
+              { reason: 'expensive', emoji: '💸', label: '너무 비싸' },
+              { reason: 'far',       emoji: '📍', label: '너무 멀어' },
+              { reason: 'vibe',      emoji: '🎭', label: '분위기 달라' },
+            ] as const).map(({ reason, emoji, label }) => (
+              <button
+                key={reason}
+                onClick={() => onReject(reason)}
+                className="flex flex-col items-center justify-center gap-0.5 py-2.5 rounded-xl border border-gray-200 bg-white text-gray-500 text-xs font-bold hover:border-[#3CDBC0] hover:text-[#2AB5A0] hover:bg-[#E8F8F5] transition-all active:scale-95"
+              >
+                <span className="text-base leading-none">{emoji}</span>
+                <span>{label}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* 총무 + 다시뽑기 반반 */}
       <div className="flex gap-2">
