@@ -112,6 +112,8 @@ export default function Home() {
   const [keywords, setKeywords] = useState<string[]>([]);
   const [vibeCustom, setVibeCustom] = useState<Record<string, string>>({});
   const [showRetryModal, setShowRetryModal] = useState(false);
+  const [selectedRegionId, setSelectedRegionId] = useState<string | null>(null);
+  const [regionMode, setRegionMode] = useState<'area' | 'midpoint'>('area');
   const [midpointData, setMidpointData] = useState<{
     midpoint: Coordinates;
     areaName: string;
@@ -225,7 +227,7 @@ export default function Home() {
   function canNext(): boolean {
     if (step === 0) return appMode === 'solo' && !!purpose?.first;
     if (step === 1) return true; // 관계·특별한날은 선택사항
-    if (step === 2) return locations.length >= 2;
+    if (step === 2) return regionMode === 'area' ? selectedRegionId !== null : locations.length >= 2;
     return false;
   }
 
@@ -814,8 +816,19 @@ export default function Home() {
       <div className="h-full max-w-md mx-auto flex flex-col">
 
         {/* 헤더 */}
-        <div className="flex-shrink-0 text-center pt-5 px-4">
-          <h1 className="text-2xl font-black text-[#2AB5A0] tracking-tight">MINT</h1>
+        <div className="flex-shrink-0 text-center pt-4 px-4 relative">
+          <button
+            onClick={() => { window.location.href = '/'; }}
+            className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-[#2AB5A0] transition-colors p-1 text-lg"
+          >
+            ←
+          </button>
+          <h1
+            className="text-2xl font-black text-[#2AB5A0] tracking-tight cursor-pointer"
+            onClick={() => { window.location.href = '/'; }}
+          >
+            MINT
+          </h1>
         </div>
 
         {/* 스텝 프로그레스 */}
@@ -824,21 +837,21 @@ export default function Home() {
         </div>
 
         {/* 스텝 제목 */}
-        <div className="flex-shrink-0 text-center px-4 pt-3 pb-1">
+        <div className="flex-shrink-0 text-center px-4 pt-2 pb-0">
           <h2 className="text-xl font-black text-gray-800">
             {step === 0 && '어떤 모임인가요?'}
             {step === 1 && '누구와 함께하나요?'}
-            {step === 2 && '각자의 출발지를 입력해주세요'}
+            {step === 2 && '어디서 만날까요?'}
             {step === 3 && '원하는 분위기를 골라봐요'}
           </h2>
           {step === 1 && (
-            <p className="text-xs text-gray-400 mt-1">모두 선택사항 · 선택할수록 추천이 정확해져요</p>
+            <p className="text-xs text-[#2AB5A0] font-medium mt-1">모두 선택사항 · 선택할수록 추천이 정확해져요</p>
           )}
           {step === 2 && (
-            <p className="text-xs text-gray-400 mt-1">최소 2곳 입력 · AI가 딱 좋은 가운데를 찾아드려요</p>
+            <p className="text-xs text-[#2AB5A0] font-medium mt-1">원하는 동네 선택 · 또는 중간지점을 AI에게 맡겨요</p>
           )}
           {step === 3 && (
-            <p className="text-xs text-gray-400 mt-1">최소 1개 이상 선택 · 많이 고를수록 추천이 정확해져요</p>
+            <p className="text-xs text-[#2AB5A0] font-medium mt-1">최소 1개 이상 선택 · 많이 고를수록 추천이 정확해져요</p>
           )}
         </div>
 
@@ -939,10 +952,54 @@ export default function Home() {
             );
           })()}
 
-          {/* Step 2: 출발지 */}
+          {/* Step 2: 지역 선택 or 중간지점 */}
           {step === 2 && (
-            <div className="min-h-full flex flex-col justify-center">
-              <LocationInput locations={locations} onChange={setLocations} />
+            <div className="px-4 pt-2 pb-4 flex flex-col gap-3">
+              {/* 인기 지역 칩 (3열) */}
+              <div className="grid grid-cols-3 gap-2">
+                {PRESET_REGIONS.slice(0, 9).map((region) => {
+                  const isSelected = selectedRegionId === region.id && regionMode === 'area';
+                  return (
+                    <button
+                      key={region.id}
+                      onClick={() => { setSelectedRegionId(region.id); setRegionMode('area'); setLocations([]); }}
+                      className={`flex flex-col items-center justify-center h-16 rounded-xl border-2 transition-all active:scale-[0.97] ${
+                        isSelected
+                          ? 'border-[#3CDBC0] bg-[#E8F8F5] shadow-md shadow-[#3CDBC0]/20'
+                          : 'border-gray-200 bg-white hover:border-[#3CDBC0]/50'
+                      }`}
+                    >
+                      <span className={`text-xs font-bold leading-tight text-center ${isSelected ? 'text-[#2AB5A0]' : 'text-gray-700'}`}>
+                        {region.label}
+                      </span>
+                      <span className="text-[9px] text-gray-400 leading-tight text-center px-1 mt-0.5">
+                        {region.sublabel.split('·')[0]}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* 중간지점 강조 버튼 */}
+              <button
+                onClick={() => { setRegionMode('midpoint'); setSelectedRegionId(null); }}
+                className={`w-full py-3.5 rounded-2xl border-2 font-bold text-sm flex items-center justify-center gap-2 transition-all active:scale-[0.98] ${
+                  regionMode === 'midpoint'
+                    ? 'border-[#3CDBC0] bg-[#E8F8F5] text-[#2AB5A0]'
+                    : 'border-dashed border-[#3CDBC0]/60 bg-white text-[#2AB5A0] hover:bg-[#E8F8F5]'
+                }`}
+              >
+                <span>📍</span>
+                <span>중간지점으로 찾기</span>
+                <span className="text-[10px] font-normal text-gray-400 ml-1">출발지 각자 입력</span>
+              </button>
+
+              {/* 중간지점 모드: 출발지 입력 */}
+              {regionMode === 'midpoint' && (
+                <div className="animate-fade-in-up border-t border-gray-100 pt-2">
+                  <LocationInput locations={locations} onChange={setLocations} />
+                </div>
+              )}
             </div>
           )}
 
@@ -1003,7 +1060,14 @@ export default function Home() {
                 ←
               </button>
               <button
-                onClick={() => handleMidpointSelect()}
+                onClick={() => {
+                  if (regionMode === 'area') {
+                    const region = PRESET_REGIONS.find(r => r.id === selectedRegionId);
+                    if (region) handleMidpointSelect(region);
+                  } else {
+                    handleMidpointSelect();
+                  }
+                }}
                 className="flex-1 py-4 rounded-2xl font-black text-base bg-[#3CDBC0] text-white shadow-lg shadow-[#3CDBC0]/30 hover:bg-[#2AB5A0] transition-all active:scale-95"
               >
                 ✨ 장소 추천받기

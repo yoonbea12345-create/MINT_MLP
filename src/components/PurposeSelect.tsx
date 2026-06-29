@@ -31,12 +31,10 @@ export default function PurposeSelect({ value, onChange }: Props) {
   );
 
   function selectFirst(opt: '밥' | '술' | '카페' | '기타') {
-    const newSecondRaw = value.secondRaw === opt ? null : value.secondRaw;
-    const newSecond = value.secondRaw === opt ? null : value.second;
     if (opt === '기타') {
-      onChange({ ...value, first: firstText.trim() || null, firstRaw: '기타', second: newSecond, secondRaw: newSecondRaw });
+      onChange({ ...value, first: firstText.trim() || null, firstRaw: '기타' });
     } else {
-      onChange({ ...value, first: opt, firstRaw: opt, second: newSecond, secondRaw: newSecondRaw });
+      onChange({ ...value, first: opt, firstRaw: opt });
     }
   }
 
@@ -117,18 +115,14 @@ export default function PurposeSelect({ value, onChange }: Props) {
         </div>
         <div className="grid grid-cols-4 gap-2 mb-2.5">
           {OPTIONS.map((opt) => {
-            const isDisabled = opt.value !== '기타' && opt.value === value.firstRaw;
             const selected = value.secondRaw === opt.value;
             const showInput = selected && opt.value === '기타';
             return (
               <button
                 key={opt.value}
-                onClick={() => !isDisabled && selectSecond(opt.value)}
-                disabled={isDisabled}
+                onClick={() => selectSecond(opt.value)}
                 className={`flex flex-col items-center justify-center h-[72px] rounded-2xl border-2 transition-all duration-200 ${
-                  isDisabled
-                    ? 'border-gray-100 bg-gray-50 opacity-40 cursor-not-allowed'
-                    : selected
+                  selected
                     ? 'border-[#3CDBC0] bg-[#E8F8F5] shadow-md shadow-[#3CDBC0]/20'
                     : 'border-gray-200 bg-white hover:border-[#3CDBC0]/50'
                 }`}
