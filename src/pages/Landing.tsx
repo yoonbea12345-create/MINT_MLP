@@ -123,7 +123,7 @@ export default function Landing() {
             만날 곳 못 정해서 실랑이하던 시간, 이제 끝.<br />
             <strong className="text-gray-700">30초 만에 딱 하나</strong>, 이 모임에 딱 맞는 장소를 골라줍니다.
           </p>
-          <div className="flex flex-col gap-3 w-full max-w-xs mb-6">
+          <div className="flex flex-col gap-3 w-full max-w-xs mb-6 mx-auto">
             <button
               onClick={goToApp}
               className="w-full bg-[#36CFA0] text-white font-black text-lg py-4 rounded-2xl shadow-lg shadow-teal-200 active:scale-95 transition-all hover:bg-[#2AB58C]"
