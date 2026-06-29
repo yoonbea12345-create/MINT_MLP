@@ -17,7 +17,9 @@
       "PowerShell(vercel *)",
       "Skill(update-config)",
       "Bash(./node_modules/.bin/tsc --noEmit)",
-      "Bash(npx vite *)"
+      "Bash(npx vite *)",
+      "Bash(git config *)",
+      "PowerShell(git push *)"
     ]
   }
 }

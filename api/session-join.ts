@@ -17,6 +17,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       location_name?: string;
       location_lat?: number;
       location_lng?: number;
+      purpose_first?: string | null;
+      purpose_second?: string | null;
       vibe_atmosphere?: string | null;
       vibe_budget?: string | null;
       vibe_keywords?: string[] | null;
@@ -46,13 +48,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       ? body.vibe_keywords
       : null;
 
-    // Try insert with keywords first; fallback without if column doesn't exist yet (pg error 42703)
-    const { error } = await supabase
-      .from('mint_session_members')
-      .insert(keywords ? { ...baseData, vibe_keywords: JSON.stringify(keywords) } : baseData);
+    const fullData = {
+      ...baseData,
+      purpose_first: body.purpose_first ?? null,
+      purpose_second: body.purpose_second ?? null,
+      ...(keywords ? { vibe_keywords: JSON.stringify(keywords) } : {}),
+    };
+
+    const { error } = await supabase.from('mint_session_members').insert(fullData);
 
     if (error) {
-      if (error.code === '42703' && keywords) {
+      // 컬럼 없으면 기본 데이터로 fallback
+      if (error.code === '42703') {
         const { error: e2 } = await supabase.from('mint_session_members').insert(baseData);
         if (e2) return res.status(500).json({ error: e2.message });
         return res.status(200).json({ ok: true });

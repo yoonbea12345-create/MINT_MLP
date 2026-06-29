@@ -29,6 +29,8 @@ interface GroupMember {
   location_name: string;
   location_lat: number;
   location_lng: number;
+  purpose_first?: string | null;
+  purpose_second?: string | null;
   vibe_atmosphere: string | null;
   vibe_budget: string | null;
   vibe_keywords?: string[];
@@ -39,6 +41,28 @@ interface TravelResult {
   formatted: string;
   source?: string;
   error?: boolean;
+}
+
+function aggregatePurpose(members: GroupMember[]): PurposeValue | null {
+  const fc: Record<string, number> = {};
+  const sc: Record<string, number> = {};
+  members.forEach((m) => {
+    if (m.purpose_first) fc[m.purpose_first] = (fc[m.purpose_first] || 0) + 1;
+    if (m.purpose_second) sc[m.purpose_second] = (sc[m.purpose_second] || 0) + 1;
+  });
+  const topFirst = Object.entries(fc).sort((a, b) => b[1] - a[1])[0]?.[0] ?? null;
+  const topSecond = Object.entries(sc).sort((a, b) => b[1] - a[1])[0]?.[0] ?? '없음';
+  if (!topFirst) return null;
+  const toRaw = (v: string | null): '밥' | '술' | '카페' | '기타' | null =>
+    ['밥', '술', '카페'].includes(v ?? '') ? (v as '밥' | '술' | '카페') : v ? '기타' : null;
+  return {
+    first: topFirst,
+    firstRaw: toRaw(topFirst),
+    second: topSecond,
+    secondRaw: topSecond === '없음' ? '없음' : toRaw(topSecond),
+    relation: null,
+    occasion: null,
+  };
 }
 
 function aggregateVibe(members: GroupMember[]): VibeState {
@@ -68,6 +92,7 @@ export default function Home() {
   const [appMode, setAppMode] = useState<AppMode>('mode-select');
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [expectedCount, setExpectedCount] = useState<number>(3);
+  const [groupHasSecond, setGroupHasSecond] = useState(false);
   const [groupMembers, setGroupMembers] = useState<GroupMember[]>([]);
   const [creatingSession, setCreatingSession] = useState(false);
   const [groupError, setGroupError] = useState<string | null>(null);
@@ -85,6 +110,7 @@ export default function Home() {
   const [result, setResult] = useState<PlaceRecommendation[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [keywords, setKeywords] = useState<string[]>([]);
+  const [vibeCustom, setVibeCustom] = useState<Record<string, string>>({});
   const [showRetryModal, setShowRetryModal] = useState(false);
   const [midpointData, setMidpointData] = useState<{
     midpoint: Coordinates;
@@ -150,7 +176,7 @@ export default function Home() {
       const res = await fetch('/api/session-create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ expected_count: expectedCount }),
+        body: JSON.stringify({ expected_count: expectedCount, has_second: groupHasSecond }),
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
@@ -185,6 +211,9 @@ export default function Home() {
     }));
     setLocations(groupLocations);
     setVibe(aggregateVibe(groupMembers));
+    // 멤버들의 목적 다수결 집계
+    const aggregated = aggregatePurpose(groupMembers);
+    if (aggregated) setPurpose(aggregated);
     // 멤버들이 선택한 키워드 합집합
     const memberKeywords = Array.from(new Set(groupMembers.flatMap((m) => m.vibe_keywords ?? [])));
     setKeywords(memberKeywords);
@@ -299,7 +328,10 @@ export default function Home() {
         occasion: purpose?.occasion ?? null,
         budget,
         ...(vibeWeights && Object.keys(vibeWeights).length > 0 ? { vibeWeights } : {}),
-        ...(keywords.length > 0 ? { keywords } : {}),
+        ...((() => {
+          const allKw = [...keywords, ...Object.values(vibeCustom).filter(Boolean)];
+          return allKw.length > 0 ? { keywords: allKw } : {};
+        })()),
       };
 
       // AI 호출 동안 25→90% 타이머 (Claude 응답이 단일 fetch라 내부 진행도 불가)
@@ -534,6 +566,35 @@ export default function Home() {
             ))}
           </div>
 
+          {/* 코스 타입 */}
+          <div className="mb-6">
+            <p className="text-sm font-bold text-gray-700 text-center mb-3">코스 선택</p>
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                onClick={() => setGroupHasSecond(false)}
+                className={`py-4 rounded-2xl font-black text-sm transition-all active:scale-95 border-2 flex flex-col items-center gap-1 ${
+                  !groupHasSecond
+                    ? 'bg-[#3CDBC0] text-white border-[#3CDBC0] shadow-lg shadow-[#3CDBC0]/30'
+                    : 'bg-white text-gray-600 border-gray-200'
+                }`}
+              >
+                <span className="text-xl">🍽️</span>
+                <span>1차만</span>
+              </button>
+              <button
+                onClick={() => setGroupHasSecond(true)}
+                className={`py-4 rounded-2xl font-black text-sm transition-all active:scale-95 border-2 flex flex-col items-center gap-1 ${
+                  groupHasSecond
+                    ? 'bg-[#3CDBC0] text-white border-[#3CDBC0] shadow-lg shadow-[#3CDBC0]/30'
+                    : 'bg-white text-gray-600 border-gray-200'
+                }`}
+              >
+                <span className="text-xl">🍻</span>
+                <span>1차+2차</span>
+              </button>
+            </div>
+          </div>
+
           {groupError && (
             <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-600 text-center">
               {groupError}
@@ -745,6 +806,7 @@ export default function Home() {
                 setVibe({});
                 setBudget(null);
                 setKeywords([]);
+                setVibeCustom({});
                 setMeetingLocation(null);
                 setMidpointData(null);
                 setTreasurer(null);
@@ -830,6 +892,8 @@ export default function Home() {
               onBudgetChange={setBudget}
               keywords={keywords}
               onKeywordsChange={setKeywords}
+              vibeCustom={vibeCustom}
+              onVibeCustomChange={(label, text) => setVibeCustom((prev) => ({ ...prev, [label]: text }))}
             />
           )}
           {step === 3 && (

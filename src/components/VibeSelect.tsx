@@ -16,6 +16,7 @@ export const VIBE_KEY_TO_LABEL: Record<string, string> = {
 const GROUPS = [
   {
     label: '분위기',
+    customPlaceholder: '기타 분위기 입력 (예: 약간 시끄럽지만 대화 가능한)',
     options: [
       { key: 'noise_loud',    label: '시끌벅적',  emoji: '🎵' },
       { key: 'noise_quiet',   label: '조용하게',  emoji: '🌿' },
@@ -23,6 +24,7 @@ const GROUPS = [
   },
   {
     label: '페이스',
+    customPlaceholder: '기타 속도 입력 (예: 천천히 2~3시간)',
     options: [
       { key: 'pace_fast',  label: '빠르게 한잔', emoji: '⚡' },
       { key: 'pace_slow',  label: '오래 즐기기', emoji: '🌙' },
@@ -30,6 +32,7 @@ const GROUPS = [
   },
   {
     label: '취향',
+    customPlaceholder: '기타 취향 입력 (예: 뷰가 좋은 곳)',
     options: [
       { key: 'novelty_new',   label: '새로운 곳', emoji: '✨' },
       { key: 'novelty_known', label: '검증된 곳', emoji: '👍' },
@@ -52,9 +55,15 @@ interface Props {
   onBudgetChange: (b: string | null) => void;
   keywords?: string[];
   onKeywordsChange?: (k: string[]) => void;
+  vibeCustom?: Record<string, string>;
+  onVibeCustomChange?: (label: string, text: string) => void;
 }
 
-export default function VibeSelect({ value, onChange, purpose, budget, onBudgetChange, keywords = [], onKeywordsChange }: Props) {
+export default function VibeSelect({
+  value, onChange, purpose, budget, onBudgetChange,
+  keywords = [], onKeywordsChange,
+  vibeCustom = {}, onVibeCustomChange,
+}: Props) {
   const [wasDoubled, setWasDoubled] = useState<Record<string, boolean>>({});
 
   function toggle(groupLabel: string, key: string) {
@@ -146,6 +155,16 @@ export default function VibeSelect({ value, onChange, purpose, budget, onBudgetC
                 );
               })}
             </div>
+            {/* 기타 직접 입력 */}
+            {onVibeCustomChange && (
+              <input
+                type="text"
+                value={vibeCustom[group.label] ?? ''}
+                onChange={(e) => onVibeCustomChange(group.label, e.target.value)}
+                placeholder={group.customPlaceholder}
+                className="w-full mt-2 px-3 py-2.5 rounded-xl border border-gray-200 text-xs text-gray-700 outline-none focus:border-[#3CDBC0] bg-white placeholder:text-gray-300 transition-all"
+              />
+            )}
           </div>
         );
       })}

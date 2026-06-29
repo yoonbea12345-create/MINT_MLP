@@ -75,6 +75,7 @@ CREATE POLICY "anon delete events"
 CREATE TABLE IF NOT EXISTS mint_sessions (
   id TEXT PRIMARY KEY,
   expected_count INTEGER NOT NULL DEFAULT 2,
+  has_second BOOLEAN NOT NULL DEFAULT false,
   status TEXT NOT NULL DEFAULT 'waiting',
   created_at TIMESTAMPTZ DEFAULT now()
 );
@@ -86,13 +87,18 @@ CREATE TABLE IF NOT EXISTS mint_session_members (
   location_name TEXT NOT NULL,
   location_lat DOUBLE PRECISION NOT NULL,
   location_lng DOUBLE PRECISION NOT NULL,
+  purpose_first TEXT,
+  purpose_second TEXT,
   vibe_atmosphere TEXT,
   vibe_budget TEXT,
   vibe_keywords TEXT,
   submitted_at TIMESTAMPTZ DEFAULT now()
 );
 
--- 기존 테이블에 vibe_keywords 컬럼 추가 (이미 테이블이 있는 경우)
+-- 기존 테이블 마이그레이션 (이미 테이블이 있는 경우)
+ALTER TABLE mint_sessions ADD COLUMN IF NOT EXISTS has_second BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE mint_session_members ADD COLUMN IF NOT EXISTS purpose_first TEXT;
+ALTER TABLE mint_session_members ADD COLUMN IF NOT EXISTS purpose_second TEXT;
 ALTER TABLE mint_session_members ADD COLUMN IF NOT EXISTS vibe_keywords TEXT;
 
 -- RLS

@@ -16,24 +16,34 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     const supabase = createClient(url, key);
 
-    const { data: session, error: sErr } = await supabase
+    // has_second 포함 시도, 없으면 fallback
+    let { data: session, error: sErr } = await supabase
       .from('mint_sessions')
-      .select('expected_count')
+      .select('expected_count, has_second')
       .eq('id', id)
       .single();
+
+    if (sErr?.code === '42703') {
+      ({ data: session, error: sErr } = await supabase
+        .from('mint_sessions')
+        .select('expected_count')
+        .eq('id', id)
+        .single());
+    }
 
     if (sErr || !session) {
       return res.status(404).json({ error: '세션을 찾을 수 없어요.' });
     }
 
-    // Try with keywords; fallback without if column doesn't exist (pg error 42703)
+    // 멤버 조회 (purpose + keywords 포함 시도, 없으면 fallback)
     let { data: members, error: mErr } = await supabase
       .from('mint_session_members')
-      .select('member_name, location_name, location_lat, location_lng, vibe_atmosphere, vibe_budget, vibe_keywords')
+      .select('member_name, location_name, location_lat, location_lng, vibe_atmosphere, vibe_budget, vibe_keywords, purpose_first, purpose_second')
       .eq('session_id', id)
       .order('submitted_at', { ascending: true });
 
     if (mErr?.code === '42703') {
+      // 일부 컬럼 없을 수 있음, 기본 필드만 조회
       ({ data: members, error: mErr } = await supabase
         .from('mint_session_members')
         .select('member_name, location_name, location_lat, location_lng, vibe_atmosphere, vibe_budget')
@@ -43,7 +53,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     if (mErr) return res.status(500).json({ error: mErr.message });
 
-    // Parse vibe_keywords from JSON string back to array
     const parsedMembers = (members ?? []).map((m: Record<string, unknown>) => ({
       ...m,
       vibe_keywords: m.vibe_keywords
@@ -53,6 +62,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     return res.status(200).json({
       expected_count: session.expected_count,
+      has_second: (session as Record<string, unknown>).has_second ?? false,
       members: parsedMembers,
     });
   } catch (e) {

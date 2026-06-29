@@ -2,16 +2,12 @@ import { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { searchAddress } from '../services/kakaoMap';
 import type { KakaoPlace } from '../services/kakaoMap';
-import KeywordSelect from '../components/KeywordSelect';
+import PurposeSelect from '../components/PurposeSelect';
+import type { PurposeValue } from '../components/PurposeSelect';
+import VibeSelect from '../components/VibeSelect';
+import type { VibeState } from '../components/VibeSelect';
 
-type Phase = 'step0' | 'step1' | 'done';
-
-const ATMOSPHERE_OPTIONS = [
-  { key: 'noise_loud', label: '🎉 시끌벅적' },
-  { key: 'noise_quiet', label: '🤫 조용하게' },
-];
-
-const BUDGET_OPTIONS = ['~2만원', '2~4만원', '4만원+', '상관없음'];
+type Phase = 'step0' | 'step1' | 'step2' | 'done';
 
 function SuggestionDropdown({
   suggestions,
@@ -44,6 +40,8 @@ function SuggestionDropdown({
   );
 }
 
+const STEP_LABELS = ['출발지', '코스', '취향'];
+
 export default function MemberInput() {
   const params = new URLSearchParams(window.location.search);
   const sessionId = params.get('id');
@@ -51,6 +49,7 @@ export default function MemberInput() {
   const [phase, setPhase] = useState<Phase>('step0');
   const [name, setName] = useState('');
 
+  // 출발지
   const [locValue, setLocValue] = useState('');
   const [locSelected, setLocSelected] = useState(false);
   const [locLat, setLocLat] = useState<number | null>(null);
@@ -58,13 +57,21 @@ export default function MemberInput() {
   const [suggestions, setSuggestions] = useState<KakaoPlace[]>([]);
   const [searching, setSearching] = useState(false);
 
-  const [atmosphere, setAtmosphere] = useState<string | null>(null);
+  // 목적
+  const [purpose, setPurpose] = useState<PurposeValue>({
+    first: null, firstRaw: null, second: '없음', secondRaw: '없음', relation: null, occasion: null,
+  });
+
+  // 분위기 + 예산 + 키워드
+  const [vibe, setVibe] = useState<VibeState>({});
   const [budget, setBudget] = useState<string | null>(null);
   const [keywords, setKeywords] = useState<string[]>([]);
+  const [vibeCustom, setVibeCustom] = useState<Record<string, string>>({});
 
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // 세션 정보
   const [expectedCount, setExpectedCount] = useState<number | null>(null);
   const [members, setMembers] = useState<{ member_name: string }[]>([]);
 
@@ -72,12 +79,14 @@ export default function MemberInput() {
   const locInputRef = useRef<HTMLInputElement | null>(null);
   const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // 이미 제출했으면 done으로
   useEffect(() => {
     if (sessionId && sessionStorage.getItem(`mint_joined_${sessionId}`)) {
       setPhase('done');
     }
   }, [sessionId]);
 
+  // done 화면 폴링
   useEffect(() => {
     if (phase !== 'done' || !sessionId) return;
     let active = true;
@@ -90,17 +99,12 @@ export default function MemberInput() {
         if (!active) return;
         setExpectedCount(data.expected_count ?? null);
         setMembers(Array.isArray(data.members) ? data.members : []);
-      } catch {
-        // ignore
-      }
+      } catch { /* ignore */ }
     }
 
     poll();
     const interval = setInterval(poll, 3000);
-    return () => {
-      active = false;
-      clearInterval(interval);
-    };
+    return () => { active = false; clearInterval(interval); };
   }, [phase, sessionId]);
 
   function handleLocChange(value: string) {
@@ -116,11 +120,8 @@ export default function MemberInput() {
       try {
         const results = await searchAddress(value);
         setSuggestions(results.slice(0, 5));
-      } catch {
-        // ignore
-      } finally {
-        setSearching(false);
-      }
+      } catch { /* ignore */ }
+      finally { setSearching(false); }
     }, 200);
   }
 
@@ -134,6 +135,7 @@ export default function MemberInput() {
   }
 
   const canGoStep1 = name.trim().length > 0 && locSelected && locLat != null && locLng != null;
+  const canGoStep2 = !!purpose.first;
 
   async function handleSubmit() {
     if (!sessionId) {
@@ -152,9 +154,14 @@ export default function MemberInput() {
           location_name: locValue,
           location_lat: locLat,
           location_lng: locLng,
-          vibe_atmosphere: atmosphere,
+          purpose_first: purpose.first,
+          purpose_second: purpose.second !== '없음' ? purpose.second : null,
+          vibe_atmosphere: Object.values(vibe).find((g) => g.first)?.first ?? null,
           vibe_budget: budget,
-          vibe_keywords: keywords.length > 0 ? keywords : null,
+          vibe_keywords: (() => {
+            const all = [...keywords, ...Object.values(vibeCustom).filter(Boolean)];
+            return all.length > 0 ? all : null;
+          })(),
         }),
       });
       if (!res.ok) {
@@ -225,7 +232,7 @@ export default function MemberInput() {
     );
   }
 
-  const stepIndex = phase === 'step0' ? 0 : 1;
+  const stepIndex = phase === 'step0' ? 0 : phase === 'step1' ? 1 : 2;
 
   return (
     <div className="h-[100dvh] bg-[#F5FBF8] flex flex-col overflow-hidden">
@@ -237,7 +244,7 @@ export default function MemberInput() {
       {/* 스텝 프로그레스 */}
       <div className="flex-shrink-0 px-6 pt-4 pb-2">
         <div className="flex gap-2 mb-2">
-          {[0, 1].map((i) => (
+          {[0, 1, 2].map((i) => (
             <div
               key={i}
               className={`h-1.5 flex-1 rounded-full transition-all duration-500 ${
@@ -246,9 +253,10 @@ export default function MemberInput() {
             />
           ))}
         </div>
-        <div className="flex justify-between text-[10px] font-medium text-gray-400">
-          <span className={stepIndex >= 0 ? 'text-[#2AB5A0]' : ''}>출발지</span>
-          <span className={stepIndex >= 1 ? 'text-[#2AB5A0]' : ''}>취향</span>
+        <div className="flex justify-between text-[10px] font-medium px-0.5">
+          {STEP_LABELS.map((label, i) => (
+            <span key={i} className={i <= stepIndex ? 'text-[#2AB5A0]' : 'text-gray-400'}>{label}</span>
+          ))}
         </div>
       </div>
 
@@ -256,17 +264,18 @@ export default function MemberInput() {
       <div className="flex-shrink-0 text-center px-4 pt-2 pb-1">
         <h2 className="text-xl font-black text-gray-800">
           {phase === 'step0' && '이름과 출발지를 알려주세요'}
-          {phase === 'step1' && '어떤 분위기를 원하시나요?'}
+          {phase === 'step1' && '오늘의 코스 선택'}
+          {phase === 'step2' && '원하는 분위기를 골라봐요'}
         </h2>
-        {phase === 'step1' && (
-          <p className="text-xs text-gray-400 mt-1">선택하지 않아도 괜찮아요</p>
+        {phase === 'step2' && (
+          <p className="text-xs text-gray-400 mt-1">취향을 많이 고를수록 추천이 정확해져요</p>
         )}
       </div>
 
       {/* 콘텐츠 */}
-      <div className="flex-1 min-h-0 overflow-y-auto px-5 pt-3 pb-4">
+      <div key={phase} className="flex-1 min-h-0 overflow-y-auto animate-fade-in-up">
         {phase === 'step0' && (
-          <div className="flex flex-col gap-5">
+          <div className="px-5 pt-3 pb-4 flex flex-col gap-5">
             {/* 이름 */}
             <div>
               <label className="block text-sm font-bold text-gray-700 mb-2">이름</label>
@@ -278,7 +287,6 @@ export default function MemberInput() {
                 className="w-full px-4 py-3 rounded-2xl border-2 border-gray-200 bg-white text-sm outline-none focus:border-[#3CDBC0] transition-all"
               />
             </div>
-
             {/* 출발지 */}
             <div>
               <label className="block text-sm font-bold text-gray-700 mb-2">출발지</label>
@@ -317,71 +325,48 @@ export default function MemberInput() {
         )}
 
         {phase === 'step1' && (
-          <div className="flex flex-col gap-5">
-            {/* 분위기 */}
-            <div>
-              <label className="block text-sm font-bold text-gray-700 mb-2">
-                분위기 <span className="text-xs font-normal text-gray-400">(선택)</span>
-              </label>
-              <div className="grid grid-cols-2 gap-2">
-                {ATMOSPHERE_OPTIONS.map((opt) => (
-                  <button
-                    key={opt.key}
-                    onClick={() => setAtmosphere((cur) => (cur === opt.key ? null : opt.key))}
-                    className={`py-4 rounded-2xl font-bold text-sm transition-all active:scale-95 border-2 ${
-                      atmosphere === opt.key
-                        ? 'bg-[#3CDBC0] text-white border-[#3CDBC0] shadow-lg shadow-[#3CDBC0]/20'
-                        : 'bg-white text-gray-600 border-gray-200'
-                    }`}
-                  >
-                    {opt.label}
-                  </button>
-                ))}
-              </div>
-            </div>
+          <PurposeSelect value={purpose} onChange={setPurpose} />
+        )}
 
-            {/* 예산 */}
-            <div>
-              <label className="block text-sm font-bold text-gray-700 mb-2">
-                예산 <span className="text-xs font-normal text-gray-400">(선택)</span>
-              </label>
-              <div className="grid grid-cols-2 gap-2">
-                {BUDGET_OPTIONS.map((opt) => (
-                  <button
-                    key={opt}
-                    onClick={() => setBudget((cur) => (cur === opt ? null : opt))}
-                    className={`py-3 rounded-2xl font-bold text-sm transition-all active:scale-95 border-2 ${
-                      budget === opt
-                        ? 'bg-[#3CDBC0] text-white border-[#3CDBC0] shadow-lg shadow-[#3CDBC0]/20'
-                        : 'bg-white text-gray-600 border-gray-200'
-                    }`}
-                  >
-                    {opt}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* 키워드 */}
-            <KeywordSelect selected={keywords} onChange={setKeywords} />
-
-            {error && (
-              <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-600 text-center">
-                {error}
-              </div>
-            )}
-          </div>
+        {phase === 'step2' && (
+          <VibeSelect
+            value={vibe}
+            onChange={setVibe}
+            purpose={{ first: purpose.first, second: purpose.second }}
+            budget={budget}
+            onBudgetChange={setBudget}
+            keywords={keywords}
+            onKeywordsChange={setKeywords}
+            vibeCustom={vibeCustom}
+            onVibeCustomChange={(label, text) => setVibeCustom((prev) => ({ ...prev, [label]: text }))}
+          />
         )}
       </div>
 
+      {/* 에러 */}
+      {error && (
+        <div className="flex-shrink-0 mx-5 mb-2 p-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-600 text-center">
+          {error}
+        </div>
+      )}
+
       {/* 하단 버튼 */}
       <div className="flex-shrink-0 px-5 pt-2 pb-8 flex flex-col gap-2">
-        {phase === 'step0' ? (
-          <>
+        <div className="flex gap-3">
+          {stepIndex > 0 && (
+            <button
+              onClick={() => setPhase(stepIndex === 1 ? 'step0' : 'step1')}
+              className="w-14 py-4 rounded-2xl border-2 border-gray-200 bg-white text-gray-500 font-bold text-lg hover:border-gray-300 transition-all active:scale-95"
+            >
+              ←
+            </button>
+          )}
+
+          {phase === 'step0' && (
             <button
               onClick={() => setPhase('step1')}
               disabled={!canGoStep1}
-              className={`w-full py-4 rounded-2xl font-black text-base transition-all active:scale-95 ${
+              className={`flex-1 py-4 rounded-2xl font-black text-base transition-all active:scale-95 ${
                 canGoStep1
                   ? 'bg-[#3CDBC0] text-white shadow-lg shadow-[#3CDBC0]/30 hover:bg-[#2AB5A0]'
                   : 'bg-gray-200 text-gray-400 cursor-not-allowed'
@@ -389,18 +374,23 @@ export default function MemberInput() {
             >
               다음
             </button>
-            {!canGoStep1 && (
-              <p className="text-xs text-gray-400 text-center">이름과 출발지를 입력해주세요</p>
-            )}
-          </>
-        ) : (
-          <div className="flex gap-3">
+          )}
+
+          {phase === 'step1' && (
             <button
-              onClick={() => setPhase('step0')}
-              className="w-14 py-4 rounded-2xl border-2 border-gray-200 bg-white text-gray-500 font-bold text-lg hover:border-gray-300 transition-all active:scale-95"
+              onClick={() => setPhase('step2')}
+              disabled={!canGoStep2}
+              className={`flex-1 py-4 rounded-2xl font-black text-base transition-all active:scale-95 ${
+                canGoStep2
+                  ? 'bg-[#3CDBC0] text-white shadow-lg shadow-[#3CDBC0]/30 hover:bg-[#2AB5A0]'
+                  : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+              }`}
             >
-              ←
+              다음
             </button>
+          )}
+
+          {phase === 'step2' && (
             <button
               onClick={handleSubmit}
               disabled={submitting}
@@ -412,7 +402,14 @@ export default function MemberInput() {
             >
               {submitting ? '제출 중...' : '제출하기'}
             </button>
-          </div>
+          )}
+        </div>
+
+        {phase === 'step0' && !canGoStep1 && (
+          <p className="text-xs text-gray-400 text-center">이름과 출발지를 입력해주세요</p>
+        )}
+        {phase === 'step1' && !canGoStep2 && (
+          <p className="text-xs text-gray-400 text-center">1차 목적을 선택해주세요</p>
         )}
       </div>
     </div>
