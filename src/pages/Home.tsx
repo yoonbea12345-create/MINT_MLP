@@ -223,8 +223,8 @@ export default function Home() {
   }
 
   function canNext(): boolean {
-    if (step === 0) return !!purpose?.first;
-    if (step === 1) return locations.length >= 2;
+    if (step === 0) return locations.length >= 2;
+    if (step === 1) return !!purpose?.first;
     if (step === 2) return Object.values(vibe).some((g) => g.first !== null);
     if (step === 3) return meetingLocation !== null;
     return false;
@@ -508,42 +508,126 @@ export default function Home() {
 
   // 모드 선택 화면
   if (appMode === 'mode-select') {
+    const RELATION_OPTIONS = [
+      { value: '친구들', emoji: '👥' },
+      { value: '연인', emoji: '💑' },
+      { value: '가족', emoji: '👨‍👩‍👧' },
+      { value: '직장동료', emoji: '💼' },
+    ];
+    const OCCASION_OPTIONS = [
+      { value: '생일', emoji: '🎂' },
+      { value: '기념일', emoji: '💕' },
+      { value: '소개팅', emoji: '💫' },
+      { value: '축하', emoji: '🎉' },
+      { value: '위로', emoji: '🤗' },
+    ];
+    const curRelation = purpose?.relation ?? null;
+    const curOccasion = purpose?.occasion ?? null;
+
+    function toggleRelation(v: string) {
+      setPurpose((prev) => {
+        const base = prev ?? { first: null, firstRaw: null, second: '없음', secondRaw: '없음', relation: null, occasion: null };
+        return { ...base, relation: base.relation === v ? null : v };
+      });
+    }
+    function toggleOccasion(v: string) {
+      setPurpose((prev) => {
+        const base = prev ?? { first: null, firstRaw: null, second: '없음', secondRaw: '없음', relation: null, occasion: null };
+        return { ...base, occasion: base.occasion === v ? null : v };
+      });
+    }
+    function enterFlow(mode: 'solo' | 'group') {
+      if (mode === 'solo') {
+        setAppMode('solo');
+        setStep(0);
+      } else {
+        setAppMode('group-setup');
+      }
+    }
+
     return (
-      <div className="min-h-[100dvh] bg-[#F5FBF8] flex flex-col">
-        <div className="text-center pt-12 px-4">
+      <div className="min-h-[100dvh] bg-[#F5FBF8] flex flex-col overflow-y-auto">
+        <div className="text-center pt-10 px-4 pb-4">
           <h1 className="text-3xl font-black text-[#2AB5A0] tracking-tight">MINT</h1>
-          <p className="text-sm text-gray-500 mt-2">이 모임에 딱 맞는 장소를 정해드릴게요</p>
+          <p className="text-sm text-gray-500 mt-1">이 모임에 딱 맞는 장소를 정해드릴게요</p>
         </div>
 
-        <div className="flex-1 flex flex-col justify-center gap-4 px-6 max-w-md mx-auto w-full">
-          <button
-            onClick={() => {
-              setPurpose(null);
-              setAppMode('solo');
-              setStep(0);
-            }}
-            className="bg-white shadow-sm rounded-2xl p-5 text-left transition-all active:scale-95 hover:shadow-md border-2 border-transparent hover:border-[#3CDBC0]/40"
-          >
-            <div className="flex items-center gap-3">
-              <span className="text-2xl">🙋</span>
-              <div>
-                <p className="text-base font-black text-gray-800">혼자 정할게요</p>
-                <p className="text-xs text-gray-400 mt-0.5">출발지만 입력하면 바로 추천받아요</p>
-              </div>
+        <div className="flex flex-col gap-5 px-6 max-w-md mx-auto w-full">
+          {/* 오늘 모임은요? */}
+          <div>
+            <div className="flex items-center gap-2 mb-2.5">
+              <p className="text-[11px] font-bold text-gray-500 uppercase tracking-widest">오늘 모임은요?</p>
+              <span className="text-[10px] text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full font-medium">선택사항</span>
             </div>
-          </button>
-          <button
-            onClick={() => setAppMode('group-setup')}
-            className="bg-white shadow-sm rounded-2xl p-5 text-left transition-all active:scale-95 hover:shadow-md border-2 border-transparent hover:border-[#3CDBC0]/40"
-          >
-            <div className="flex items-center gap-3">
-              <span className="text-2xl">👥</span>
-              <div>
-                <p className="text-base font-black text-gray-800">모임원이랑 다같이 정할게요</p>
-                <p className="text-xs text-gray-400 mt-0.5">링크를 공유해서 각자 출발지를 모아요</p>
-              </div>
+            <div className="grid grid-cols-4 gap-2">
+              {RELATION_OPTIONS.map((opt) => (
+                <button
+                  key={opt.value}
+                  onClick={() => toggleRelation(opt.value)}
+                  className={`flex flex-col items-center justify-center gap-1 h-[60px] rounded-xl border-2 transition-all active:scale-[0.97] ${
+                    curRelation === opt.value
+                      ? 'border-[#3CDBC0] bg-[#E8F8F5] shadow-sm shadow-[#3CDBC0]/20'
+                      : 'border-gray-200 bg-white hover:border-[#3CDBC0]/50'
+                  }`}
+                >
+                  <span className="text-lg leading-none">{opt.emoji}</span>
+                  <span className={`text-[11px] font-bold leading-none ${curRelation === opt.value ? 'text-[#2AB5A0]' : 'text-gray-600'}`}>{opt.value}</span>
+                </button>
+              ))}
             </div>
-          </button>
+          </div>
+
+          {/* 특별한 날인가요? */}
+          <div>
+            <div className="flex items-center gap-2 mb-2.5">
+              <p className="text-[11px] font-bold text-gray-500 uppercase tracking-widest">특별한 날인가요?</p>
+              <span className="text-[10px] text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full font-medium">선택사항</span>
+            </div>
+            <div className="grid grid-cols-5 gap-1.5">
+              {OCCASION_OPTIONS.map((opt) => (
+                <button
+                  key={opt.value}
+                  onClick={() => toggleOccasion(opt.value)}
+                  className={`flex flex-col items-center justify-center gap-1 h-[60px] rounded-xl border-2 transition-all active:scale-[0.97] ${
+                    curOccasion === opt.value
+                      ? 'border-[#3CDBC0] bg-[#E8F8F5] shadow-sm shadow-[#3CDBC0]/20'
+                      : 'border-gray-200 bg-white hover:border-[#3CDBC0]/50'
+                  }`}
+                >
+                  <span className="text-base leading-none">{opt.emoji}</span>
+                  <span className={`text-[10px] font-bold leading-none ${curOccasion === opt.value ? 'text-[#2AB5A0]' : 'text-gray-600'}`}>{opt.value}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* 혼자/그룹 */}
+          <div className="flex flex-col gap-3 pt-1">
+            <button
+              onClick={() => enterFlow('solo')}
+              className="bg-white shadow-sm rounded-2xl p-5 text-left transition-all active:scale-95 hover:shadow-md border-2 border-transparent hover:border-[#3CDBC0]/40"
+            >
+              <div className="flex items-center gap-3">
+                <span className="text-2xl">🙋</span>
+                <div>
+                  <p className="text-base font-black text-gray-800">혼자 정할게요</p>
+                  <p className="text-xs text-gray-400 mt-0.5">출발지만 입력하면 바로 추천받아요</p>
+                </div>
+              </div>
+            </button>
+            <button
+              onClick={() => enterFlow('group')}
+              className="bg-white shadow-sm rounded-2xl p-5 text-left transition-all active:scale-95 hover:shadow-md border-2 border-transparent hover:border-[#3CDBC0]/40"
+            >
+              <div className="flex items-center gap-3">
+                <span className="text-2xl">👥</span>
+                <div>
+                  <p className="text-base font-black text-gray-800">모임원이랑 다같이 정할게요</p>
+                  <p className="text-xs text-gray-400 mt-0.5">링크를 공유해서 각자 출발지를 모아요</p>
+                </div>
+              </div>
+            </button>
+          </div>
         </div>
         <div className="pb-10" />
       </div>
@@ -871,8 +955,8 @@ export default function Home() {
         {/* 스텝 제목 */}
         <div className="flex-shrink-0 text-center px-4 pt-3 pb-1">
           <h2 className="text-xl font-black text-gray-800">
-            {step === 0 && '오늘의 코스 선택'}
-            {step === 1 && '각자의 출발지를 입력해주세요'}
+            {step === 0 && '각자의 출발지를 입력해주세요'}
+            {step === 1 && '오늘의 코스 선택'}
             {step === 2 && '원하는 분위기를 골라봐요'}
             {step === 3 && '어디서 만날까요?'}
           </h2>
@@ -886,13 +970,13 @@ export default function Home() {
 
         {/* 콘텐츠 */}
         <div key={step} className="flex-1 min-h-0 overflow-y-auto animate-fade-in-up">
-          {step === 0 && (
+          {step === 0 && <LocationInput locations={locations} onChange={setLocations} />}
+          {step === 1 && (
             <PurposeSelect
               value={purpose ?? { first: null, firstRaw: null, second: '없음', secondRaw: '없음', relation: null, occasion: null }}
               onChange={setPurpose}
             />
           )}
-          {step === 1 && <LocationInput locations={locations} onChange={setLocations} />}
           {step === 2 && (
             <VibeSelect
               value={vibe}
@@ -945,7 +1029,7 @@ export default function Home() {
                   다음
                 </button>
               </div>
-              {step === 0 && !canNext() && (
+              {step === 1 && !canNext() && (
                 <p className="text-xs text-gray-400 text-center">1차 목적을 선택해주세요</p>
               )}
             </>
