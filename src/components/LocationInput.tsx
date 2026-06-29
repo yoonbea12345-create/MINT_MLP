@@ -126,7 +126,7 @@ export default function LocationInput({ locations, onChange }: Props) {
     <div className="flex flex-col gap-2.5 px-4 py-3">
       {inputs.map((inp, i) => (
         <div key={i} className="flex items-center gap-2">
-          <span className="w-6 h-6 rounded-full bg-[#E8F8F5] border border-[#3CDBC0]/50 text-[#3CDBC0] text-xs font-black flex items-center justify-center flex-shrink-0">
+          <span className="w-7 h-7 rounded-full bg-[#E8F8F5] border border-[#3CDBC0]/50 text-[#3CDBC0] text-xs font-black flex items-center justify-center flex-shrink-0">
             {i + 1}
           </span>
           <div
@@ -140,7 +140,7 @@ export default function LocationInput({ locations, onChange }: Props) {
               onChange={(e) => handleChange(i, e.target.value)}
               onFocus={() => handleFocus(i)}
               placeholder={i === 0 ? '예: 성수역, 합정역...' : '예: 강남역, 이태원...'}
-              className={`w-full pl-4 pr-9 py-2.5 rounded-xl border-2 text-sm outline-none transition-all duration-200 bg-white ${
+              className={`w-full pl-4 pr-9 py-3.5 rounded-xl border-2 text-sm outline-none transition-all duration-200 bg-white ${
                 inp.selected ? 'border-[#3CDBC0] bg-[#E8F8F5]' : 'border-gray-200 focus:border-[#3CDBC0]'
               }`}
             />
@@ -174,7 +174,7 @@ export default function LocationInput({ locations, onChange }: Props) {
       {inputs.length < 6 && (
         <button
           onClick={addInput}
-          className="flex items-center justify-center gap-2 py-2.5 rounded-xl border-2 border-dashed border-[#3CDBC0]/60 text-[#3CDBC0] text-sm font-medium hover:bg-[#E8F8F5] transition-colors"
+          className="flex items-center justify-center gap-2 py-3 rounded-xl border-2 border-dashed border-[#3CDBC0]/60 text-[#3CDBC0] text-sm font-medium hover:bg-[#E8F8F5] transition-colors"
         >
           <span className="text-base leading-none">+</span>
           출발지 추가

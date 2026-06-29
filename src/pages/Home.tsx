@@ -834,6 +834,9 @@ export default function Home() {
           {step === 1 && (
             <p className="text-xs text-gray-400 mt-1">모두 선택사항 · 선택할수록 추천이 정확해져요</p>
           )}
+          {step === 2 && (
+            <p className="text-xs text-gray-400 mt-1">최소 2곳 입력 · AI가 딱 좋은 가운데를 찾아드려요</p>
+          )}
           {step === 3 && (
             <p className="text-xs text-gray-400 mt-1">최소 1개 이상 선택 · 많이 고를수록 추천이 정확해져요</p>
           )}
@@ -865,7 +868,7 @@ export default function Home() {
                 >
                   <span className="text-2xl">👥</span>
                   <span className="text-sm font-black text-gray-700">다같이 정할게요</span>
-                  <span className="text-[10px] text-gray-400">링크로 각자 입력</span>
+                  <span className="text-[10px] text-gray-400">링크로 각자 입력 →</span>
                 </button>
               </div>
 
@@ -907,13 +910,13 @@ export default function Home() {
               });
             }
             return (
-              <div className="px-4 py-3 flex flex-col gap-5">
+              <div className="px-4 flex flex-col justify-center gap-6 min-h-full py-6">
                 <div>
                   <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-2.5">오늘 모임은요?</p>
                   <div className="grid grid-cols-4 gap-2">
                     {RELATION_OPTIONS.map((opt) => (
                       <button key={opt.value} onClick={() => toggleRel(opt.value)}
-                        className={`flex flex-col items-center justify-center gap-1 h-[60px] rounded-xl border-2 transition-all active:scale-[0.97] ${curRelation === opt.value ? 'border-[#3CDBC0] bg-[#E8F8F5]' : 'border-gray-200 bg-white hover:border-[#3CDBC0]/50'}`}>
+                        className={`flex flex-col items-center justify-center gap-1 h-[64px] rounded-xl border-2 transition-all active:scale-[0.97] ${curRelation === opt.value ? 'border-[#3CDBC0] bg-[#E8F8F5]' : 'border-gray-200 bg-white hover:border-[#3CDBC0]/50'}`}>
                         <span className="text-lg leading-none">{opt.emoji}</span>
                         <span className={`text-[11px] font-bold leading-none ${curRelation === opt.value ? 'text-[#2AB5A0]' : 'text-gray-600'}`}>{opt.value}</span>
                       </button>
@@ -922,12 +925,12 @@ export default function Home() {
                 </div>
                 <div>
                   <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-2.5">특별한 날인가요?</p>
-                  <div className="grid grid-cols-5 gap-1.5">
+                  <div className="grid grid-cols-5 gap-2">
                     {OCCASION_OPTIONS.map((opt) => (
                       <button key={opt.value} onClick={() => toggleOcc(opt.value)}
-                        className={`flex flex-col items-center justify-center gap-1 h-[60px] rounded-xl border-2 transition-all active:scale-[0.97] ${curOccasion === opt.value ? 'border-[#3CDBC0] bg-[#E8F8F5]' : 'border-gray-200 bg-white hover:border-[#3CDBC0]/50'}`}>
+                        className={`flex flex-col items-center justify-center gap-1 h-[64px] rounded-xl border-2 transition-all active:scale-[0.97] ${curOccasion === opt.value ? 'border-[#3CDBC0] bg-[#E8F8F5]' : 'border-gray-200 bg-white hover:border-[#3CDBC0]/50'}`}>
                         <span className="text-base leading-none">{opt.emoji}</span>
-                        <span className={`text-[10px] font-bold leading-none ${curOccasion === opt.value ? 'text-[#2AB5A0]' : 'text-gray-600'}`}>{opt.value}</span>
+                        <span className={`text-[11px] font-bold leading-none ${curOccasion === opt.value ? 'text-[#2AB5A0]' : 'text-gray-600'}`}>{opt.value}</span>
                       </button>
                     ))}
                   </div>
@@ -937,7 +940,11 @@ export default function Home() {
           })()}
 
           {/* Step 2: 출발지 */}
-          {step === 2 && <LocationInput locations={locations} onChange={setLocations} />}
+          {step === 2 && (
+            <div className="min-h-full flex flex-col justify-center">
+              <LocationInput locations={locations} onChange={setLocations} />
+            </div>
+          )}
 
           {/* Step 3: 분위기 */}
           {step === 3 && (

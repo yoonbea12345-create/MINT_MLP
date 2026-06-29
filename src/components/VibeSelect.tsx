@@ -97,7 +97,7 @@ export default function VibeSelect({ value, onChange, purpose, keywords = [], on
   const hasSecond = purpose?.second && purpose.second !== '없음';
 
   return (
-    <div className="px-4 py-3 flex flex-col gap-5">
+    <div className="px-4 pt-3 pb-6 flex flex-col gap-5">
       {GROUPS.map((group, groupIdx) => {
         const g = value[group.label] ?? { first: null, second: null };
         return (
