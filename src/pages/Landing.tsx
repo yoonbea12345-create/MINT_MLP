@@ -113,33 +113,37 @@ export default function Landing() {
         {/* ── HERO ── */}
         <section className="text-center px-6 pt-12 pb-10">
           <div className="inline-flex items-center gap-1.5 bg-teal-50 border border-teal-200 text-[#36CFA0] text-xs font-bold px-4 py-1.5 rounded-full mb-6">
-            ✦ AI 장소 추천 서비스
+            ✦ 만남장소 완벽 큐레이션 서비스
           </div>
           <h1 className="text-4xl font-black text-gray-800 leading-tight mb-3">
             약속은 잡았는데<br />
             <span className="text-[#36CFA0]">어디 가지?</span>
           </h1>
           <p className="text-gray-500 text-base leading-relaxed mb-8">
-            검색어가 없어도 괜찮아요.<br />
-            <strong className="text-gray-700">30초 만에 딱 하나</strong>, AI가 골라줍니다.<br />
-            <span className="text-sm">서울부터 제주까지, 전국 어디서든.</span>
+            만날 곳 못 정해서 실랑이하던 시간, 이제 끝.<br />
+            <strong className="text-gray-700">30초 만에 딱 하나</strong>, 이 모임에 딱 맞는 장소를 골라줍니다.
           </p>
-          <button
-            onClick={goToApp}
-            className="w-full max-w-xs bg-[#36CFA0] text-white font-black text-lg py-4 rounded-2xl shadow-lg shadow-teal-200 active:scale-95 transition-all hover:bg-[#2AB58C] mb-3"
-          >
-            지금 바로 시작하기
-          </button>
-          {canInstall && (
+          <div className="flex gap-3 w-full max-w-xs mb-6">
             <button
-              onClick={triggerInstall}
-              className="w-full max-w-xs flex items-center justify-center gap-2 border-2 border-[#36CFA0] text-[#36CFA0] font-bold text-sm py-3 rounded-2xl active:scale-95 transition-all hover:bg-teal-50 mb-6"
+              onClick={goToApp}
+              className="flex-1 bg-[#36CFA0] text-white font-black text-lg py-4 rounded-2xl shadow-lg shadow-teal-200 active:scale-95 transition-all hover:bg-[#2AB58C]"
             >
-              <span className="text-base">📱</span>
-              {isIOS ? '홈 화면에 추가하기' : '앱으로 설치하기'}
+              지금 바로 시작하기
             </button>
-          )}
-          {!canInstall && <div className="mb-6" />}
+            {canInstall && (
+              <button
+                onClick={triggerInstall}
+                className="flex-shrink-0 w-14 flex items-center justify-center border-2 border-[#36CFA0] text-[#36CFA0] rounded-2xl active:scale-95 transition-all hover:bg-teal-50"
+                title={isIOS ? '홈 화면에 추가하기' : '앱으로 설치하기'}
+              >
+                <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                  <polyline points="7 10 12 15 17 10"/>
+                  <line x1="12" y1="15" x2="12" y2="3"/>
+                </svg>
+              </button>
+            )}
+          </div>
           {/* 통계 — 높이 맞춤 */}
           <div className="flex justify-center gap-8 items-end text-center mb-10">
             <div>
@@ -155,8 +159,6 @@ export default function Landing() {
               <div className="text-xs text-gray-400 mt-0.5">서울 · 부산 · 제주</div>
             </div>
           </div>
-          {/* 원래 폰 목업 높이의 절반 빈 공간 */}
-          <div className="h-48" />
         </section>
 
         {/* ── PROBLEM ── */}
@@ -229,7 +231,7 @@ export default function Landing() {
             <div className="text-center w-full">
               <span className="inline-block bg-[#36CFA0] text-white text-xs font-bold px-3 py-1 rounded-full mb-3">STEP 1</span>
               <h3 className="text-lg font-black text-gray-800 mb-1">각자 출발지를 입력해요</h3>
-              <p className="text-sm text-gray-400 mb-5">동네나 역 이름만 치면 중간 지점을 자동으로 계산합니다</p>
+              <p className="text-sm text-gray-400 mb-5">모임 목적과 출발지를 입력하면 조건을 한 번에 분석합니다</p>
               <PhoneMockup src="/image/step1.png" alt="출발지 입력" />
             </div>
             <div className="w-0.5 h-8 bg-gradient-to-b from-[#36CFA0] to-transparent my-2" />
@@ -293,7 +295,7 @@ export default function Landing() {
                 <span className="font-black text-[#36CFA0]">MINT</span>
               </div>
               <ul className="flex flex-col gap-2">
-                {['검색어 없이 조건만 선택하면 끝', 'AI가 딱 1곳만 추천 — 로컬 맛집 우선', '전국 어디서든 중간 지점 자동 계산', '혼잡도 · 날씨 · 그룹 규모까지 고려', '카카오톡 한 번이면 공유 완료'].map((t) => (
+                {['검색어 없이 조건만 선택하면 끝', 'AI가 딱 1곳만 추천 — 로컬 맛집 우선', '출발지가 같든 다르든, 어디서든 모임 장소 결정', '혼잡도 · 날씨 · 그룹 규모까지 고려', '카카오톡 한 번이면 공유 완료'].map((t) => (
                   <li key={t} className="flex items-start gap-2 text-sm text-gray-800">
                     <span className="text-[#36CFA0] font-bold mt-0.5">✓</span>{t}
                   </li>
@@ -328,8 +330,8 @@ export default function Landing() {
             </div>
           </div>
           <p className="text-base text-gray-500 text-center mt-2 leading-relaxed font-medium">
-            더 이상 '어디로 갈까' 단톡방 폭격 없이,<br />
-            <strong className="text-gray-600">한 명이 정하고 모두가 편한</strong> 약속.
+            더 이상 어디 가지 실랑이 없이,<br />
+            <strong className="text-gray-600">이 모임에 딱 맞는 장소</strong>가 30초 만에 결정됩니다.
           </p>
         </section>
 
@@ -342,22 +344,27 @@ export default function Landing() {
             지금 바로<br />30초 만에 해결하세요
           </h2>
           <p className="text-sm text-gray-400 mb-8">무료로 시작하세요. 회원가입도 없어요.</p>
-          <button
-            onClick={goToApp}
-            className="w-full max-w-xs bg-[#36CFA0] text-white font-black text-lg py-4 rounded-2xl shadow-lg shadow-teal-200 active:scale-95 transition-all hover:bg-[#2AB58C] mb-3"
-          >
-            MINT 시작하기
-          </button>
-          {canInstall && (
+          <div className="flex gap-3 w-full max-w-xs mb-6 mx-auto">
             <button
-              onClick={triggerInstall}
-              className="w-full max-w-xs flex items-center justify-center gap-2 border-2 border-[#36CFA0] text-[#36CFA0] font-bold text-sm py-3 rounded-2xl active:scale-95 transition-all hover:bg-teal-50 mb-6"
+              onClick={goToApp}
+              className="flex-1 bg-[#36CFA0] text-white font-black text-lg py-4 rounded-2xl shadow-lg shadow-teal-200 active:scale-95 transition-all hover:bg-[#2AB58C]"
             >
-              <span className="text-base">📱</span>
-              {isIOS ? '홈 화면에 추가하기' : '앱으로 설치하기'}
+              MINT 시작하기
             </button>
-          )}
-          {!canInstall && <div className="mb-6" />}
+            {canInstall && (
+              <button
+                onClick={triggerInstall}
+                className="flex-shrink-0 w-14 flex items-center justify-center border-2 border-[#36CFA0] text-[#36CFA0] rounded-2xl active:scale-95 transition-all hover:bg-teal-50"
+                title={isIOS ? '홈 화면에 추가하기' : '앱으로 설치하기'}
+              >
+                <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                  <polyline points="7 10 12 15 17 10"/>
+                  <line x1="12" y1="15" x2="12" y2="3"/>
+                </svg>
+              </button>
+            )}
+          </div>
           {/* 아이콘 칩 */}
           <div className="flex justify-center gap-4 flex-wrap">
             {/* 30초면 끝 */}

@@ -508,32 +508,88 @@ export default function Home() {
 
   // 모드 선택 화면
   if (appMode === 'mode-select') {
+    const purposeOptions = [
+      { key: '밥', emoji: '🍽️' },
+      { key: '술', emoji: '🍺' },
+      { key: '카페', emoji: '☕' },
+      { key: '기타', emoji: '✨' },
+    ] as const;
+
+    const toRaw = (v: string): '밥' | '술' | '카페' | '기타' =>
+      (['밥', '술', '카페'] as const).includes(v as '밥' | '술' | '카페') ? (v as '밥' | '술' | '카페') : '기타';
+
+    const selectedFirst = purpose?.first ?? null;
+
+    function selectPurpose(key: string) {
+      setPurpose({
+        first: key,
+        firstRaw: toRaw(key),
+        second: '없음',
+        secondRaw: '없음',
+        relation: null,
+        occasion: null,
+      });
+    }
+
     return (
       <div className="min-h-[100dvh] bg-[#F5FBF8] flex flex-col">
         <div className="text-center pt-12 px-4">
           <h1 className="text-3xl font-black text-[#2AB5A0] tracking-tight">MINT</h1>
-          <p className="text-sm text-gray-500 mt-2">우리 모임, 어디서 만날까요?</p>
+          <p className="text-sm text-gray-500 mt-2">이 모임에 딱 맞는 장소를 정해드릴게요</p>
         </div>
-        <div className="flex-1 flex flex-col justify-center gap-4 px-6 max-w-md mx-auto w-full">
-          <button
-            onClick={() => {
-              setAppMode('solo');
-              setStep(0);
-            }}
-            className="bg-white shadow-sm rounded-2xl p-6 text-left transition-all active:scale-95 hover:shadow-md border-2 border-transparent hover:border-[#3CDBC0]/40"
-          >
-            <p className="text-2xl mb-2">🙋</p>
-            <p className="text-lg font-black text-gray-800">혼자 정할게요</p>
-            <p className="text-sm text-gray-400 mt-1">출발지만 입력하면 바로 추천받아요</p>
-          </button>
-          <button
-            onClick={() => setAppMode('group-setup')}
-            className="bg-white shadow-sm rounded-2xl p-6 text-left transition-all active:scale-95 hover:shadow-md border-2 border-transparent hover:border-[#3CDBC0]/40"
-          >
-            <p className="text-2xl mb-2">👥</p>
-            <p className="text-lg font-black text-gray-800">모임원이랑 다같이 정할게요</p>
-            <p className="text-sm text-gray-400 mt-1">링크를 공유해서 각자 출발지를 모아요</p>
-          </button>
+
+        <div className="flex-1 flex flex-col justify-center gap-6 px-6 max-w-md mx-auto w-full">
+          {/* 목적 선택 */}
+          <div>
+            <p className="text-base font-black text-gray-700 mb-3 text-center">어떤 모임인가요?</p>
+            <div className="grid grid-cols-4 gap-2">
+              {purposeOptions.map(({ key, emoji }) => (
+                <button
+                  key={key}
+                  onClick={() => selectPurpose(key)}
+                  className={`py-4 rounded-2xl flex flex-col items-center gap-1.5 transition-all active:scale-95 border-2 ${
+                    selectedFirst === key
+                      ? 'bg-[#3CDBC0] text-white border-[#3CDBC0] shadow-lg shadow-[#3CDBC0]/30'
+                      : 'bg-white text-gray-600 border-gray-200'
+                  }`}
+                >
+                  <span className="text-xl">{emoji}</span>
+                  <span className="text-xs font-bold">{key}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* 혼자/같이 선택 */}
+          <div className="flex flex-col gap-3">
+            <button
+              onClick={() => {
+                setAppMode('solo');
+                setStep(0);
+              }}
+              className="bg-white shadow-sm rounded-2xl p-5 text-left transition-all active:scale-95 hover:shadow-md border-2 border-transparent hover:border-[#3CDBC0]/40"
+            >
+              <div className="flex items-center gap-3">
+                <span className="text-2xl">🙋</span>
+                <div>
+                  <p className="text-base font-black text-gray-800">혼자 정할게요</p>
+                  <p className="text-xs text-gray-400 mt-0.5">출발지만 입력하면 바로 추천받아요</p>
+                </div>
+              </div>
+            </button>
+            <button
+              onClick={() => setAppMode('group-setup')}
+              className="bg-white shadow-sm rounded-2xl p-5 text-left transition-all active:scale-95 hover:shadow-md border-2 border-transparent hover:border-[#3CDBC0]/40"
+            >
+              <div className="flex items-center gap-3">
+                <span className="text-2xl">👥</span>
+                <div>
+                  <p className="text-base font-black text-gray-800">모임원이랑 다같이 정할게요</p>
+                  <p className="text-xs text-gray-400 mt-0.5">링크를 공유해서 각자 출발지를 모아요</p>
+                </div>
+              </div>
+            </button>
+          </div>
         </div>
         <div className="pb-10" />
       </div>

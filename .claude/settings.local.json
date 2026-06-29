@@ -22,7 +22,16 @@
       "PowerShell(git push *)",
       "Bash(gh repo *)",
       "WebFetch(domain:github.com)",
-      "WebFetch(domain:raw.githubusercontent.com)"
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "WebFetch(domain:api.github.com)",
+      "PowerShell(Get-ChildItem *)",
+      "PowerShell(Get-Content *)",
+      "PowerShell($content = Get-Content -Path \"$env:TEMP/Toxic/src/components/StepResult.tsx\" -Raw; $lines = $content -split \"`n\"; $lineNum = 0; foreach \\($line in $lines\\) { $lineNum++; if \\($lineNum -ge 1340 -and $lineNum -le 1365\\) { Write-Output \"$lineNum : $line\" } })",
+      "PowerShell($content = Get-Content -Path \"$env:TEMP/Toxic/src/components/StepResult.tsx\" -Raw; $lines = $content -split \"`n\"; $lineNum = 0; foreach \\($line in $lines\\) { $lineNum++; if \\($lineNum -ge 1 -and $lineNum -le 100\\) { Write-Output \"$lineNum : $line\" } })",
+      "PowerShell($content = Get-Content -Path \"$env:TEMP/Toxic/src/components/StepResult.tsx\" -Raw; $lines = $content -split \"`n\"; $lineNum = 0; foreach \\($line in $lines\\) { $lineNum++; if \\($lineNum -ge 1585 -and $lineNum -le 1610\\) { Write-Output \"$lineNum : $line\" } })",
+      "PowerShell($content = Get-Content -Path \"$env:TEMP/Toxic/src/components/StepResult.tsx\" -Raw; $lines = $content -split \"`n\"; $lineNum = 0; foreach \\($line in $lines\\) { $lineNum++; if \\($lineNum -ge 1395 -and $lineNum -le 1430\\) { Write-Output \"$lineNum : $line\" } })",
+      "PowerShell(Start-Process \"https://vercel.com/dashboard\")",
+      "PowerShell(Start-Process \"https://vercel.com/account/tokens\")"
     ]
   }
 }
