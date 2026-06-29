@@ -123,24 +123,24 @@ export default function Landing() {
             만날 곳 못 정해서 실랑이하던 시간, 이제 끝.<br />
             <strong className="text-gray-700">30초 만에 딱 하나</strong>, 이 모임에 딱 맞는 장소를 골라줍니다.
           </p>
-          <div className="flex gap-3 w-full max-w-xs mb-6">
+          <div className="flex flex-col gap-3 w-full max-w-xs mb-6">
             <button
               onClick={goToApp}
-              className="flex-1 bg-[#36CFA0] text-white font-black text-lg py-4 rounded-2xl shadow-lg shadow-teal-200 active:scale-95 transition-all hover:bg-[#2AB58C]"
+              className="w-full bg-[#36CFA0] text-white font-black text-lg py-4 rounded-2xl shadow-lg shadow-teal-200 active:scale-95 transition-all hover:bg-[#2AB58C]"
             >
-              지금 바로 시작하기
+              지금 바로 추천받기
             </button>
             {canInstall && (
               <button
                 onClick={triggerInstall}
-                className="flex-shrink-0 w-14 flex items-center justify-center border-2 border-[#36CFA0] text-[#36CFA0] rounded-2xl active:scale-95 transition-all hover:bg-teal-50"
-                title={isIOS ? '홈 화면에 추가하기' : '앱으로 설치하기'}
+                className="w-full flex items-center justify-center gap-2 bg-white border-2 border-[#36CFA0] text-[#36CFA0] font-black text-base py-4 rounded-2xl active:scale-95 transition-all hover:bg-teal-50"
               >
                 <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
                   <polyline points="7 10 12 15 17 10"/>
                   <line x1="12" y1="15" x2="12" y2="3"/>
                 </svg>
+                {isIOS ? '홈 화면에 추가하기' : '앱으로 설치하기'}
               </button>
             )}
           </div>
@@ -344,24 +344,24 @@ export default function Landing() {
             지금 바로<br />30초 만에 해결하세요
           </h2>
           <p className="text-sm text-gray-400 mb-8">무료로 시작하세요. 회원가입도 없어요.</p>
-          <div className="flex gap-3 w-full max-w-xs mb-6 mx-auto">
+          <div className="flex flex-col gap-3 w-full max-w-xs mb-6 mx-auto">
             <button
               onClick={goToApp}
-              className="flex-1 bg-[#36CFA0] text-white font-black text-lg py-4 rounded-2xl shadow-lg shadow-teal-200 active:scale-95 transition-all hover:bg-[#2AB58C]"
+              className="w-full bg-[#36CFA0] text-white font-black text-lg py-4 rounded-2xl shadow-lg shadow-teal-200 active:scale-95 transition-all hover:bg-[#2AB58C]"
             >
-              MINT 시작하기
+              지금 바로 추천받기
             </button>
             {canInstall && (
               <button
                 onClick={triggerInstall}
-                className="flex-shrink-0 w-14 flex items-center justify-center border-2 border-[#36CFA0] text-[#36CFA0] rounded-2xl active:scale-95 transition-all hover:bg-teal-50"
-                title={isIOS ? '홈 화면에 추가하기' : '앱으로 설치하기'}
+                className="w-full flex items-center justify-center gap-2 bg-white border-2 border-[#36CFA0] text-[#36CFA0] font-black text-base py-4 rounded-2xl active:scale-95 transition-all hover:bg-teal-50"
               >
                 <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
                   <polyline points="7 10 12 15 17 10"/>
                   <line x1="12" y1="15" x2="12" y2="3"/>
                 </svg>
+                {isIOS ? '홈 화면에 추가하기' : '앱으로 설치하기'}
               </button>
             )}
           </div>
