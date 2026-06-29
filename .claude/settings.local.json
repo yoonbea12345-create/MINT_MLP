@@ -19,7 +19,10 @@
       "Bash(./node_modules/.bin/tsc --noEmit)",
       "Bash(npx vite *)",
       "Bash(git config *)",
-      "PowerShell(git push *)"
+      "PowerShell(git push *)",
+      "Bash(gh repo *)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:raw.githubusercontent.com)"
     ]
   }
 }

@@ -1,5 +1,49 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { trackEvent } from '../utils/analytics';
+
+interface BeforeInstallPromptEvent extends Event {
+  prompt(): Promise<void>;
+  userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
+}
+
+function useInstallPrompt() {
+  const [prompt, setPrompt] = useState<BeforeInstallPromptEvent | null>(null);
+  const [isIOS, setIsIOS] = useState(false);
+  const [isInstalled, setIsInstalled] = useState(false);
+  const [showIOSGuide, setShowIOSGuide] = useState(false);
+
+  useEffect(() => {
+    // 이미 standalone(설치됨) 상태면 숨김
+    if (window.matchMedia('(display-mode: standalone)').matches) {
+      setIsInstalled(true);
+      return;
+    }
+    const ios = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as Window & { MSStream?: unknown }).MSStream;
+    setIsIOS(ios);
+
+    const handler = (e: Event) => {
+      e.preventDefault();
+      setPrompt(e as BeforeInstallPromptEvent);
+    };
+    window.addEventListener('beforeinstallprompt', handler);
+    return () => window.removeEventListener('beforeinstallprompt', handler);
+  }, []);
+
+  async function triggerInstall() {
+    if (isIOS) {
+      setShowIOSGuide(true);
+      return;
+    }
+    if (!prompt) return;
+    trackEvent('pwa_install_click');
+    await prompt.prompt();
+    const { outcome } = await prompt.userChoice;
+    if (outcome === 'accepted') setPrompt(null);
+  }
+
+  const canInstall = !isInstalled && (!!prompt || isIOS);
+  return { canInstall, triggerInstall, isIOS, showIOSGuide, setShowIOSGuide };
+}
 
 function goToApp() {
   trackEvent('cta_click');
@@ -42,6 +86,7 @@ function useFadeUp() {
 
 export default function Landing() {
   useEffect(() => { trackEvent('landing_view'); }, []);
+  const { canInstall, triggerInstall, isIOS, showIOSGuide, setShowIOSGuide } = useInstallPrompt();
 
   const s2 = useFadeUp();
   const s3 = useFadeUp();
@@ -81,10 +126,20 @@ export default function Landing() {
           </p>
           <button
             onClick={goToApp}
-            className="w-full max-w-xs bg-[#36CFA0] text-white font-black text-lg py-4 rounded-2xl shadow-lg shadow-teal-200 active:scale-95 transition-all hover:bg-[#2AB58C] mb-6"
+            className="w-full max-w-xs bg-[#36CFA0] text-white font-black text-lg py-4 rounded-2xl shadow-lg shadow-teal-200 active:scale-95 transition-all hover:bg-[#2AB58C] mb-3"
           >
             지금 바로 시작하기
           </button>
+          {canInstall && (
+            <button
+              onClick={triggerInstall}
+              className="w-full max-w-xs flex items-center justify-center gap-2 border-2 border-[#36CFA0] text-[#36CFA0] font-bold text-sm py-3 rounded-2xl active:scale-95 transition-all hover:bg-teal-50 mb-6"
+            >
+              <span className="text-base">📱</span>
+              {isIOS ? '홈 화면에 추가하기' : '앱으로 설치하기'}
+            </button>
+          )}
+          {!canInstall && <div className="mb-6" />}
           {/* 통계 — 높이 맞춤 */}
           <div className="flex justify-center gap-8 items-end text-center mb-10">
             <div>
@@ -289,10 +344,20 @@ export default function Landing() {
           <p className="text-sm text-gray-400 mb-8">무료로 시작하세요. 회원가입도 없어요.</p>
           <button
             onClick={goToApp}
-            className="w-full max-w-xs bg-[#36CFA0] text-white font-black text-lg py-4 rounded-2xl shadow-lg shadow-teal-200 active:scale-95 transition-all hover:bg-[#2AB58C] mb-6"
+            className="w-full max-w-xs bg-[#36CFA0] text-white font-black text-lg py-4 rounded-2xl shadow-lg shadow-teal-200 active:scale-95 transition-all hover:bg-[#2AB58C] mb-3"
           >
             MINT 시작하기
           </button>
+          {canInstall && (
+            <button
+              onClick={triggerInstall}
+              className="w-full max-w-xs flex items-center justify-center gap-2 border-2 border-[#36CFA0] text-[#36CFA0] font-bold text-sm py-3 rounded-2xl active:scale-95 transition-all hover:bg-teal-50 mb-6"
+            >
+              <span className="text-base">📱</span>
+              {isIOS ? '홈 화면에 추가하기' : '앱으로 설치하기'}
+            </button>
+          )}
+          {!canInstall && <div className="mb-6" />}
           {/* 아이콘 칩 */}
           <div className="flex justify-center gap-4 flex-wrap">
             {/* 30초면 끝 */}
@@ -330,6 +395,52 @@ export default function Landing() {
       <footer className="bg-white border-t border-gray-100 py-6 text-center">
         <p className="text-xs text-gray-400">© 2025 MINT. All rights reserved.</p>
       </footer>
+
+      {/* iOS 홈 화면 추가 가이드 모달 */}
+      {showIOSGuide && (
+        <div
+          className="fixed inset-0 z-50 bg-black/50 flex items-end justify-center"
+          onClick={() => setShowIOSGuide(false)}
+        >
+          <div
+            className="bg-white rounded-t-3xl w-full max-w-lg px-6 pt-6 pb-10"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="w-10 h-1 bg-gray-200 rounded-full mx-auto mb-5" />
+            <h3 className="text-lg font-black text-gray-800 mb-2">홈 화면에 추가하기</h3>
+            <p className="text-sm text-gray-500 mb-5">Safari에서 아래 순서를 따라하면 앱처럼 사용할 수 있어요.</p>
+            <div className="flex flex-col gap-3 mb-6">
+              <div className="flex items-start gap-3">
+                <div className="w-7 h-7 rounded-full bg-[#3CDBC0] text-white text-xs font-black flex items-center justify-center flex-shrink-0">1</div>
+                <div>
+                  <p className="text-sm font-bold text-gray-800">Safari 하단 공유 버튼 탭</p>
+                  <p className="text-xs text-gray-400">화면 하단 가운데 □↑ 아이콘</p>
+                </div>
+              </div>
+              <div className="flex items-start gap-3">
+                <div className="w-7 h-7 rounded-full bg-[#3CDBC0] text-white text-xs font-black flex items-center justify-center flex-shrink-0">2</div>
+                <div>
+                  <p className="text-sm font-bold text-gray-800">홈 화면에 추가 선택</p>
+                  <p className="text-xs text-gray-400">스크롤해서 "홈 화면에 추가" 탭</p>
+                </div>
+              </div>
+              <div className="flex items-start gap-3">
+                <div className="w-7 h-7 rounded-full bg-[#3CDBC0] text-white text-xs font-black flex items-center justify-center flex-shrink-0">3</div>
+                <div>
+                  <p className="text-sm font-bold text-gray-800">추가 탭</p>
+                  <p className="text-xs text-gray-400">오른쪽 상단 '추가'를 탭하면 완료!</p>
+                </div>
+              </div>
+            </div>
+            <button
+              onClick={() => setShowIOSGuide(false)}
+              className="w-full py-3.5 rounded-2xl bg-[#3CDBC0] text-white font-black text-sm active:scale-95 transition-all"
+            >
+              확인
+            </button>
+          </div>
+        </div>
+      )}
 
     </div>
   );
