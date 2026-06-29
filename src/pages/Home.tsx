@@ -217,14 +217,14 @@ export default function Home() {
     // 멤버들이 선택한 키워드 합집합
     const memberKeywords = Array.from(new Set(groupMembers.flatMap((m) => m.vibe_keywords ?? [])));
     setKeywords(memberKeywords);
-    setStep(1);
+    setStep(2);
     setView('steps');
     setAppMode('group-ready');
   }
 
   function canNext(): boolean {
-    if (step === 0) return locations.length >= 2;
-    if (step === 1) return !!purpose?.first;
+    if (step === 0) return !!purpose?.first;
+    if (step === 1) return locations.length >= 2;
     if (step === 2) return Object.values(vibe).some((g) => g.first !== null);
     if (step === 3) return meetingLocation !== null;
     return false;
@@ -235,7 +235,7 @@ export default function Home() {
   }
 
   function handleBack() {
-    const minStep = appMode === 'group-ready' ? 1 : 0;
+    const minStep = appMode === 'group-ready' ? 2 : 0;
     if (step > minStep) setStep((s) => (s - 1) as Step);
   }
 
@@ -508,29 +508,6 @@ export default function Home() {
 
   // 모드 선택 화면
   if (appMode === 'mode-select') {
-    const purposeOptions = [
-      { key: '밥', emoji: '🍽️' },
-      { key: '술', emoji: '🍺' },
-      { key: '카페', emoji: '☕' },
-      { key: '기타', emoji: '✨' },
-    ] as const;
-
-    const toRaw = (v: string): '밥' | '술' | '카페' | '기타' =>
-      (['밥', '술', '카페'] as const).includes(v as '밥' | '술' | '카페') ? (v as '밥' | '술' | '카페') : '기타';
-
-    const selectedFirst = purpose?.first ?? null;
-
-    function selectPurpose(key: string) {
-      setPurpose({
-        first: key,
-        firstRaw: toRaw(key),
-        second: '없음',
-        secondRaw: '없음',
-        relation: null,
-        occasion: null,
-      });
-    }
-
     return (
       <div className="min-h-[100dvh] bg-[#F5FBF8] flex flex-col">
         <div className="text-center pt-12 px-4">
@@ -538,58 +515,35 @@ export default function Home() {
           <p className="text-sm text-gray-500 mt-2">이 모임에 딱 맞는 장소를 정해드릴게요</p>
         </div>
 
-        <div className="flex-1 flex flex-col justify-center gap-6 px-6 max-w-md mx-auto w-full">
-          {/* 목적 선택 */}
-          <div>
-            <p className="text-base font-black text-gray-700 mb-3 text-center">어떤 모임인가요?</p>
-            <div className="grid grid-cols-4 gap-2">
-              {purposeOptions.map(({ key, emoji }) => (
-                <button
-                  key={key}
-                  onClick={() => selectPurpose(key)}
-                  className={`py-4 rounded-2xl flex flex-col items-center gap-1.5 transition-all active:scale-95 border-2 ${
-                    selectedFirst === key
-                      ? 'bg-[#3CDBC0] text-white border-[#3CDBC0] shadow-lg shadow-[#3CDBC0]/30'
-                      : 'bg-white text-gray-600 border-gray-200'
-                  }`}
-                >
-                  <span className="text-xl">{emoji}</span>
-                  <span className="text-xs font-bold">{key}</span>
-                </button>
-              ))}
+        <div className="flex-1 flex flex-col justify-center gap-4 px-6 max-w-md mx-auto w-full">
+          <button
+            onClick={() => {
+              setPurpose(null);
+              setAppMode('solo');
+              setStep(0);
+            }}
+            className="bg-white shadow-sm rounded-2xl p-5 text-left transition-all active:scale-95 hover:shadow-md border-2 border-transparent hover:border-[#3CDBC0]/40"
+          >
+            <div className="flex items-center gap-3">
+              <span className="text-2xl">🙋</span>
+              <div>
+                <p className="text-base font-black text-gray-800">혼자 정할게요</p>
+                <p className="text-xs text-gray-400 mt-0.5">출발지만 입력하면 바로 추천받아요</p>
+              </div>
             </div>
-          </div>
-
-          {/* 혼자/같이 선택 */}
-          <div className="flex flex-col gap-3">
-            <button
-              onClick={() => {
-                setAppMode('solo');
-                setStep(0);
-              }}
-              className="bg-white shadow-sm rounded-2xl p-5 text-left transition-all active:scale-95 hover:shadow-md border-2 border-transparent hover:border-[#3CDBC0]/40"
-            >
-              <div className="flex items-center gap-3">
-                <span className="text-2xl">🙋</span>
-                <div>
-                  <p className="text-base font-black text-gray-800">혼자 정할게요</p>
-                  <p className="text-xs text-gray-400 mt-0.5">출발지만 입력하면 바로 추천받아요</p>
-                </div>
+          </button>
+          <button
+            onClick={() => setAppMode('group-setup')}
+            className="bg-white shadow-sm rounded-2xl p-5 text-left transition-all active:scale-95 hover:shadow-md border-2 border-transparent hover:border-[#3CDBC0]/40"
+          >
+            <div className="flex items-center gap-3">
+              <span className="text-2xl">👥</span>
+              <div>
+                <p className="text-base font-black text-gray-800">모임원이랑 다같이 정할게요</p>
+                <p className="text-xs text-gray-400 mt-0.5">링크를 공유해서 각자 출발지를 모아요</p>
               </div>
-            </button>
-            <button
-              onClick={() => setAppMode('group-setup')}
-              className="bg-white shadow-sm rounded-2xl p-5 text-left transition-all active:scale-95 hover:shadow-md border-2 border-transparent hover:border-[#3CDBC0]/40"
-            >
-              <div className="flex items-center gap-3">
-                <span className="text-2xl">👥</span>
-                <div>
-                  <p className="text-base font-black text-gray-800">모임원이랑 다같이 정할게요</p>
-                  <p className="text-xs text-gray-400 mt-0.5">링크를 공유해서 각자 출발지를 모아요</p>
-                </div>
-              </div>
-            </button>
-          </div>
+            </div>
+          </button>
         </div>
         <div className="pb-10" />
       </div>
@@ -917,8 +871,8 @@ export default function Home() {
         {/* 스텝 제목 */}
         <div className="flex-shrink-0 text-center px-4 pt-3 pb-1">
           <h2 className="text-xl font-black text-gray-800">
-            {step === 0 && '각자의 출발지를 입력해주세요'}
-            {step === 1 && '오늘의 코스 선택'}
+            {step === 0 && '오늘의 코스 선택'}
+            {step === 1 && '각자의 출발지를 입력해주세요'}
             {step === 2 && '원하는 분위기를 골라봐요'}
             {step === 3 && '어디서 만날까요?'}
           </h2>
@@ -932,13 +886,13 @@ export default function Home() {
 
         {/* 콘텐츠 */}
         <div key={step} className="flex-1 min-h-0 overflow-y-auto animate-fade-in-up">
-          {step === 0 && <LocationInput locations={locations} onChange={setLocations} />}
-          {step === 1 && (
+          {step === 0 && (
             <PurposeSelect
               value={purpose ?? { first: null, firstRaw: null, second: '없음', secondRaw: '없음', relation: null, occasion: null }}
               onChange={setPurpose}
             />
           )}
+          {step === 1 && <LocationInput locations={locations} onChange={setLocations} />}
           {step === 2 && (
             <VibeSelect
               value={vibe}
@@ -995,7 +949,7 @@ export default function Home() {
                   다음
                 </button>
               </div>
-              {step === 1 && !canNext() && (
+              {step === 0 && !canNext() && (
                 <p className="text-xs text-gray-400 text-center">1차 목적을 선택해주세요</p>
               )}
             </>
