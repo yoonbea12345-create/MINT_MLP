@@ -7,8 +7,6 @@ export type VibeState = Record<string, GroupVibeState>;
 export const VIBE_KEY_TO_LABEL: Record<string, string> = {
   noise_loud:    '시끌벅적',
   noise_quiet:   '조용하게',
-  pace_fast:     '빠르게 한잔',
-  pace_slow:     '오래 즐기기',
   novelty_new:   '새로운 곳',
   novelty_known: '검증된 곳',
 };
@@ -20,14 +18,6 @@ const GROUPS = [
     options: [
       { key: 'noise_loud',    label: '시끌벅적',  emoji: '🎵' },
       { key: 'noise_quiet',   label: '조용하게',  emoji: '🌿' },
-    ],
-  },
-  {
-    label: '페이스',
-    customPlaceholder: '기타 속도 입력 (예: 천천히 2~3시간)',
-    options: [
-      { key: 'pace_fast',  label: '빠르게 한잔', emoji: '⚡' },
-      { key: 'pace_slow',  label: '오래 즐기기', emoji: '🌙' },
     ],
   },
   {
