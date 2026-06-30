@@ -123,12 +123,12 @@ export default function VibeSelect({ value, onChange, purpose, keywords = [], on
               <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest">{group.label}</p>
               {groupIdx === 0 && (
                 <div className="flex items-center gap-1.5">
-                  <span className="text-[10px] font-black bg-green-600 text-white px-2 py-0.5 rounded-full">
+                  <span className="text-[10px] font-black bg-[#1E9E8C] text-white px-2 py-0.5 rounded-full">
                     🍀 {purpose?.first ? `1차: ${purpose.first}` : '1차'}
                   </span>
                   {hasSecond && (
-                    <span className="text-[10px] font-black bg-[#3CDBC0] text-white px-2 py-0.5 rounded-full">
-                      🍀 2차: {purpose!.second}
+                    <span className="text-[10px] font-black bg-orange-400 text-white px-2 py-0.5 rounded-full">
+                      🔥 2차: {purpose!.second}
                     </span>
                   )}
                 </div>
@@ -144,8 +144,10 @@ export default function VibeSelect({ value, onChange, purpose, keywords = [], on
                     key={opt.key}
                     onClick={() => toggle(group.label, opt.key)}
                     className={`relative flex flex-col items-center justify-center h-16 rounded-xl border-2 text-xs font-bold transition-all duration-200 active:scale-[0.97] ${
-                      isActive
+                      isFirst
                         ? 'border-[#3CDBC0] bg-[#E8F8F5] text-[#2AB5A0] shadow-md shadow-[#3CDBC0]/20'
+                        : isSecond
+                        ? 'border-orange-400 bg-orange-50 text-orange-500 shadow-md shadow-orange-200/50'
                         : 'border-gray-200 bg-white text-gray-700 hover:border-[#3CDBC0]/50'
                     }`}
                   >
@@ -153,7 +155,7 @@ export default function VibeSelect({ value, onChange, purpose, keywords = [], on
                       <span className="absolute -top-1.5 -right-1.5 text-[7px] font-black bg-[#1E9E8C] text-white px-1.5 py-0.5 rounded-full leading-none z-10 shadow-sm">1차</span>
                     )}
                     {isSecond && (
-                      <span className="absolute -top-1.5 -right-1.5 text-[7px] font-black bg-[#3CDBC0] text-white px-1.5 py-0.5 rounded-full leading-none z-10 shadow-sm">2차</span>
+                      <span className="absolute -top-1.5 -right-1.5 text-[7px] font-black bg-orange-400 text-white px-1.5 py-0.5 rounded-full leading-none z-10 shadow-sm">2차</span>
                     )}
                     <span className="text-lg mb-1 leading-none">{opt.emoji}</span>
                     <span>{opt.label}</span>
