@@ -6,6 +6,7 @@ import PurposeSelect from '../components/PurposeSelect';
 import type { PurposeValue } from '../components/PurposeSelect';
 import VibeSelect from '../components/VibeSelect';
 import type { VibeState } from '../components/VibeSelect';
+import StepProgress from '../components/StepProgress';
 
 type Phase = 'step0' | 'step1' | 'step2' | 'done';
 
@@ -39,8 +40,6 @@ function SuggestionDropdown({
     document.body
   );
 }
-
-const STEP_LABELS = ['출발지', '코스', '취향'];
 
 export default function MemberInput() {
   const params = new URLSearchParams(window.location.search);
@@ -237,27 +236,19 @@ export default function MemberInput() {
   return (
     <div className="h-[100dvh] bg-[#F5FBF8] flex flex-col overflow-hidden">
       {/* 헤더 */}
-      <div className="flex-shrink-0 text-center pt-5 px-4">
+      <div className="flex-shrink-0 text-center pt-4 px-4 relative">
+        <button
+          onClick={() => window.location.href = '/'}
+          className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-[#2AB5A0] transition-colors p-1 text-lg"
+        >
+          ←
+        </button>
         <h1 className="text-2xl font-black text-[#2AB5A0] tracking-tight">MINT</h1>
       </div>
 
       {/* 스텝 프로그레스 */}
-      <div className="flex-shrink-0 px-6 pt-4 pb-2">
-        <div className="flex gap-2 mb-2">
-          {[0, 1, 2].map((i) => (
-            <div
-              key={i}
-              className={`h-1.5 flex-1 rounded-full transition-all duration-500 ${
-                i <= stepIndex ? 'bg-[#3CDBC0]' : 'bg-gray-200'
-              }`}
-            />
-          ))}
-        </div>
-        <div className="flex justify-between text-[10px] font-medium px-0.5">
-          {STEP_LABELS.map((label, i) => (
-            <span key={i} className={i <= stepIndex ? 'text-[#2AB5A0]' : 'text-gray-400'}>{label}</span>
-          ))}
-        </div>
+      <div className="flex-shrink-0">
+        <StepProgress current={stepIndex} total={3} labels={['출발지', '코스', '취향']} />
       </div>
 
       {/* 스텝 제목 */}

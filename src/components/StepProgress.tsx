@@ -1,11 +1,13 @@
 interface Props {
   current: number;
   total: number;
+  labels?: string[];
 }
 
-const STEP_LABELS = ['모임·목적', '관계', '지역·장소', '분위기', '추천'];
+const DEFAULT_LABELS = ['모임·목적', '관계', '지역·장소', '분위기', '추천'];
 
-export default function StepProgress({ current, total }: Props) {
+export default function StepProgress({ current, total, labels }: Props) {
+  const STEP_LABELS = labels ?? DEFAULT_LABELS;
   return (
     <div className="w-full px-4 pt-6 pb-2">
       <div className="flex items-center justify-between mb-3">
