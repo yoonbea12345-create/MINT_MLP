@@ -198,40 +198,38 @@ export default function Home() {
     });
   }
 
-  function handleStartGroupRecommend() {
-    if (groupMembers.length < 2) return;
-    const groupLocations: LocationEntry[] = groupMembers.map((m) => ({
-      name: m.member_name,
-      lat: m.location_lat,
-      lng: m.location_lng,
-    }));
-    setLocations(groupLocations);
-    setVibe(aggregateVibe(groupMembers));
-    // 멤버들의 목적 다수결 집계
-    const aggregated = aggregatePurpose(groupMembers);
-    if (aggregated) setPurpose(aggregated);
-    // 멤버들이 선택한 키워드 합집합
-    const memberKeywords = Array.from(new Set(groupMembers.flatMap((m) => m.vibe_keywords ?? [])));
-    setKeywords(memberKeywords);
-    setStep(3);
-    setView('steps');
-    setAppMode('group-ready');
-  }
-
   function canNext(): boolean {
-    if (step === 0) return appMode === 'solo' && !!purpose?.first;
+    if (step === 0) {
+      if (appMode === 'solo') return !!purpose?.first;
+      if (appMode === 'group-waiting' || appMode === 'group-ready') return groupMembers.length >= 2;
+      return false;
+    }
     if (step === 1) return true; // 관계·특별한날은 선택사항
     if (step === 2) return meetingLocation !== null && (meetingLocation.type === 'manual' || locations.length >= 2);
     return false;
   }
 
   function handleNext() {
+    // 그룹 모드에서 step 0 → 1 진행 시 멤버 데이터 집계
+    if (step === 0 && (appMode === 'group-waiting' || appMode === 'group-ready')) {
+      const groupLocations: LocationEntry[] = groupMembers.map((m) => ({
+        name: m.member_name,
+        lat: m.location_lat,
+        lng: m.location_lng,
+      }));
+      setLocations(groupLocations);
+      setVibe(aggregateVibe(groupMembers));
+      const aggregated = aggregatePurpose(groupMembers);
+      if (aggregated) setPurpose(aggregated);
+      const memberKeywords = Array.from(new Set(groupMembers.flatMap((m) => m.vibe_keywords ?? [])));
+      setKeywords(memberKeywords);
+      setAppMode('group-ready');
+    }
     setStep((s) => (s + 1) as Step);
   }
 
   function handleBack() {
-    const minStep = appMode === 'group-ready' ? 3 : 0;
-    if (step > minStep) setStep((s) => (s - 1) as Step);
+    if (step > 0) setStep((s) => (s - 1) as Step);
   }
 
   function applyCompromiseMessage(msg?: string) {
@@ -556,193 +554,6 @@ export default function Home() {
     }
   }
 
-  // 그룹 세션 생성 화면
-  if (appMode === 'group-setup') {
-    return (
-      <div className="min-h-[100dvh] bg-[#F5FBF8] flex flex-col">
-        <div className="text-center pt-8 px-4">
-          <h1 className="text-2xl font-black text-[#2AB5A0] tracking-tight">MINT</h1>
-        </div>
-        <div className="flex-1 flex flex-col justify-center px-6 max-w-md mx-auto w-full">
-          <h2 className="text-xl font-black text-gray-800 text-center mb-1">모임 인원이 몇 명인가요?</h2>
-          <p className="text-sm text-gray-400 text-center mb-7">호스트 포함 전체 인원을 골라주세요</p>
-          <div className="grid grid-cols-3 gap-3 mb-8">
-            {[2, 3, 4, 5, 6].map((n) => (
-              <button
-                key={n}
-                onClick={() => setExpectedCount(n)}
-                className={`py-4 rounded-2xl font-black text-base transition-all active:scale-95 border-2 ${
-                  expectedCount === n
-                    ? 'bg-[#3CDBC0] text-white border-[#3CDBC0] shadow-lg shadow-[#3CDBC0]/30'
-                    : 'bg-white text-gray-600 border-gray-200'
-                }`}
-              >
-                {n === 6 ? '6명+' : `${n}명`}
-              </button>
-            ))}
-          </div>
-
-          {/* 코스 타입 */}
-          <div className="mb-6">
-            <p className="text-sm font-bold text-gray-700 text-center mb-3">코스 선택</p>
-            <div className="grid grid-cols-2 gap-3">
-              <button
-                onClick={() => setGroupHasSecond(false)}
-                className={`py-4 rounded-2xl font-black text-sm transition-all active:scale-95 border-2 flex flex-col items-center gap-1 ${
-                  !groupHasSecond
-                    ? 'bg-[#3CDBC0] text-white border-[#3CDBC0] shadow-lg shadow-[#3CDBC0]/30'
-                    : 'bg-white text-gray-600 border-gray-200'
-                }`}
-              >
-                <span className="text-xl">🍽️</span>
-                <span>1차만</span>
-              </button>
-              <button
-                onClick={() => setGroupHasSecond(true)}
-                className={`py-4 rounded-2xl font-black text-sm transition-all active:scale-95 border-2 flex flex-col items-center gap-1 ${
-                  groupHasSecond
-                    ? 'bg-[#3CDBC0] text-white border-[#3CDBC0] shadow-lg shadow-[#3CDBC0]/30'
-                    : 'bg-white text-gray-600 border-gray-200'
-                }`}
-              >
-                <span className="text-xl">🍻</span>
-                <span>1차+2차</span>
-              </button>
-            </div>
-          </div>
-
-          {groupError && (
-            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-600 text-center">
-              {groupError}
-            </div>
-          )}
-
-          <button
-            onClick={handleCreateSession}
-            disabled={creatingSession}
-            className={`w-full py-4 rounded-2xl font-black text-base transition-all active:scale-95 ${
-              creatingSession
-                ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                : 'bg-[#3CDBC0] text-white shadow-lg shadow-[#3CDBC0]/30 hover:bg-[#2AB5A0]'
-            }`}
-          >
-            {creatingSession ? '생성 중...' : '링크 생성하기'}
-          </button>
-          <button
-            onClick={() => {
-              setAppMode('mode-select');
-              setGroupError(null);
-            }}
-            className="w-full py-3 mt-3 text-sm text-gray-400 hover:text-gray-600"
-          >
-            ← 뒤로
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  // 그룹 대기 화면
-  if (appMode === 'group-waiting') {
-    const shareLink = sessionId ? `${window.location.origin}/join?id=${sessionId}` : '';
-    const ready = groupMembers.length >= 2;
-    const allVoted = groupMembers.length >= expectedCount && groupMembers.length > 0;
-    return (
-      <div className="min-h-[100dvh] bg-[#F5FBF8] flex flex-col">
-        <div className="text-center pt-8 px-4">
-          <h1 className="text-2xl font-black text-[#2AB5A0] tracking-tight">MINT</h1>
-        </div>
-        <div className="flex-1 flex flex-col px-6 max-w-md mx-auto w-full pt-6 pb-10">
-          <h2 className="text-xl font-black text-gray-800 text-center mb-1">친구들을 초대해요</h2>
-          <p className="text-sm text-gray-400 text-center mb-6">링크를 공유하면 각자 출발지를 입력해요</p>
-
-          {/* 공유 링크 */}
-          <div className="bg-white shadow-sm rounded-2xl p-4 mb-4">
-            <p className="text-xs text-gray-400 mb-2">공유 링크</p>
-            <div className="flex items-center gap-2">
-              <p className="flex-1 text-sm text-gray-700 truncate">{shareLink}</p>
-              <button
-                onClick={handleCopyLink}
-                className="flex-shrink-0 px-4 py-2 rounded-xl bg-[#3CDBC0] text-white text-sm font-bold transition-all active:scale-95 hover:bg-[#2AB5A0]"
-              >
-                {copied ? '복사됨!' : '복사'}
-              </button>
-            </div>
-          </div>
-
-          {/* 호스트 바로 참여 버튼 */}
-          <button
-            onClick={() => { window.location.href = shareLink; }}
-            className="w-full py-3 rounded-2xl font-black text-sm transition-all active:scale-95 mb-5 bg-[#E8F8F5] text-[#2AB5A0] border-2 border-[#3CDBC0]/40 hover:bg-[#d4f3ee]"
-          >
-            나도 참여하기 →
-          </button>
-
-          {/* 진행률 + 슬롯 */}
-          <div className="bg-white shadow-sm rounded-2xl p-5 mb-5">
-            <div className="flex items-center justify-between mb-4">
-              <p className="text-xs text-gray-400">입력 현황</p>
-              <p className="text-lg font-black text-[#2AB5A0]">
-                {groupMembers.length}
-                <span className="text-gray-300 font-bold"> / {expectedCount}</span>
-              </p>
-            </div>
-            <div className="flex flex-col gap-2">
-              {Array.from({ length: expectedCount }).map((_, i) => {
-                const member = groupMembers[i];
-                return (
-                  <div
-                    key={i}
-                    className={`flex items-center gap-3 px-4 py-3 rounded-2xl transition-all ${
-                      member ? 'bg-[#E8F8F5]' : 'bg-gray-50 border border-dashed border-gray-200'
-                    }`}
-                  >
-                    <div
-                      className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-black flex-shrink-0 ${
-                        member ? 'bg-[#3CDBC0] text-white' : 'bg-gray-200 text-gray-400'
-                      }`}
-                    >
-                      {member ? '✓' : i + 1}
-                    </div>
-                    <span className={`text-sm font-bold ${member ? 'text-[#2AB5A0]' : 'text-gray-300'}`}>
-                      {member ? member.member_name : '대기 중...'}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-
-          <div className="flex-1" />
-
-          {allVoted && (
-            <div className="mb-3 p-4 bg-[#E8F8F5] border border-[#3CDBC0]/40 rounded-2xl text-center">
-              <p className="text-base font-black text-[#2AB5A0]">🎉 전원 완료!</p>
-              <p className="text-xs text-[#2AB5A0]/70 mt-0.5">모두의 취향이 모였어요. 지금 바로 추천받아요!</p>
-            </div>
-          )}
-
-          <button
-            onClick={handleStartGroupRecommend}
-            disabled={!ready}
-            className={`w-full py-4 rounded-2xl font-black text-base transition-all active:scale-95 ${
-              allVoted
-                ? 'bg-[#2AB5A0] text-white shadow-xl shadow-[#3CDBC0]/40 hover:bg-[#1E9E8C] animate-pulse'
-                : ready
-                ? 'bg-[#3CDBC0] text-white shadow-lg shadow-[#3CDBC0]/30 hover:bg-[#2AB5A0]'
-                : 'bg-gray-200 text-gray-400 cursor-not-allowed'
-            }`}
-          >
-            {allVoted ? '✨ 지금 바로 장소 추천받기' : '장소 추천받기'}
-          </button>
-          {!ready && (
-            <p className="text-xs text-gray-400 text-center mt-2">최소 2명이 입력하면 시작할 수 있어요</p>
-          )}
-        </div>
-      </div>
-    );
-  }
-
   // 로딩
   if (loading) {
     const r = 52;
@@ -908,13 +719,13 @@ export default function Home() {
         {/* 콘텐츠 */}
         <div key={step} className="flex-1 min-h-0 overflow-y-auto animate-fade-in-up">
 
-          {/* Step 0: 모임 유형 + 목적 */}
+          {/* Step 0: 모임 유형 선택 */}
           {step === 0 && (
             <div className="px-4 py-3 flex flex-col gap-5">
-              {/* 혼자 / 그룹 */}
+              {/* 혼자 / 그룹 선택 버튼 */}
               <div className="grid grid-cols-2 gap-3">
                 <button
-                  onClick={() => setAppMode('solo')}
+                  onClick={() => { setAppMode('solo'); setSessionId(null); setGroupMembers([]); setGroupError(null); }}
                   className={`flex flex-col items-center justify-center gap-1.5 py-5 rounded-2xl border-2 transition-all active:scale-[0.97] ${
                     appMode === 'solo'
                       ? 'border-[#3CDBC0] bg-[#E8F8F5] shadow-md shadow-[#3CDBC0]/20'
@@ -926,42 +737,184 @@ export default function Home() {
                   <span className="text-[10px] text-gray-400">내가 직접 입력</span>
                 </button>
                 <button
-                  onClick={() => setAppMode('group-setup')}
-                  className="flex flex-col items-center justify-center gap-1.5 py-5 rounded-2xl border-2 border-gray-200 bg-white hover:border-[#3CDBC0]/50 transition-all active:scale-[0.97]"
+                  onClick={() => { if (!['group-setup', 'group-waiting', 'group-ready'].includes(appMode)) setAppMode('group-setup'); }}
+                  className={`flex flex-col items-center justify-center gap-1.5 py-5 rounded-2xl border-2 transition-all active:scale-[0.97] ${
+                    ['group-setup', 'group-waiting', 'group-ready'].includes(appMode)
+                      ? 'border-[#3CDBC0] bg-[#E8F8F5] shadow-md shadow-[#3CDBC0]/20'
+                      : 'border-gray-200 bg-white hover:border-[#3CDBC0]/50'
+                  }`}
                 >
                   <span className="text-2xl">👥</span>
-                  <span className="text-sm font-black text-gray-700">다같이 정할게요</span>
+                  <span className={`text-sm font-black ${['group-setup', 'group-waiting', 'group-ready'].includes(appMode) ? 'text-[#2AB5A0]' : 'text-gray-700'}`}>다같이 정할게요</span>
                   <span className="text-[10px] text-gray-400">링크로 각자 입력 →</span>
                 </button>
               </div>
 
-              {/* 인원수 — solo 선택 시 활성화 */}
+              {/* Solo: 인원수 + 목적 */}
               {appMode === 'solo' && (
-                <div>
-                  <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-2.5">모임 인원수</p>
-                  <div className="grid grid-cols-3 gap-2">
-                    {(['2명', '3~4명', '5명 이상'] as const).map((size) => (
+                <>
+                  <div>
+                    <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-2.5">모임 인원수</p>
+                    <div className="grid grid-cols-3 gap-2">
+                      {(['2명', '3~4명', '5명 이상'] as const).map((size) => (
+                        <button
+                          key={size}
+                          onClick={() => setGroupSize(size)}
+                          className={`flex items-center justify-center h-12 rounded-xl border-2 text-sm font-bold transition-all active:scale-[0.97] ${
+                            groupSize === size
+                              ? 'border-[#3CDBC0] bg-[#E8F8F5] text-[#2AB5A0] shadow-md shadow-[#3CDBC0]/20'
+                              : 'border-gray-200 bg-white text-gray-700 hover:border-[#3CDBC0]/50'
+                          }`}
+                        >
+                          {size}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <PurposeSelect
+                    value={purpose ?? { first: null, firstRaw: null, second: '없음', secondRaw: '없음', relation: null, occasion: null }}
+                    onChange={setPurpose}
+                  />
+                </>
+              )}
+
+              {/* Group setup: 인원수 + 코스 + 링크 생성 */}
+              {appMode === 'group-setup' && (
+                <div className="flex flex-col gap-4">
+                  <div>
+                    <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-2.5">참여 인원수 (호스트 포함)</p>
+                    <div className="grid grid-cols-3 gap-2">
+                      {[2, 3, 4, 5, 6].map((n) => (
+                        <button
+                          key={n}
+                          onClick={() => setExpectedCount(n)}
+                          className={`py-3 rounded-xl font-black text-sm transition-all active:scale-95 border-2 ${
+                            expectedCount === n
+                              ? 'bg-[#3CDBC0] text-white border-[#3CDBC0] shadow-lg shadow-[#3CDBC0]/30'
+                              : 'bg-white text-gray-600 border-gray-200 hover:border-[#3CDBC0]/50'
+                          }`}
+                        >
+                          {n === 6 ? '6명+' : `${n}명`}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div>
+                    <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-2.5">코스 선택</p>
+                    <div className="grid grid-cols-2 gap-2">
                       <button
-                        key={size}
-                        onClick={() => setGroupSize(size)}
-                        className={`flex items-center justify-center h-12 rounded-xl border-2 text-sm font-bold transition-all active:scale-[0.97] ${
-                          groupSize === size
-                            ? 'border-[#3CDBC0] bg-[#E8F8F5] text-[#2AB5A0] shadow-md shadow-[#3CDBC0]/20'
-                            : 'border-gray-200 bg-white text-gray-700 hover:border-[#3CDBC0]/50'
+                        onClick={() => setGroupHasSecond(false)}
+                        className={`py-3 rounded-xl font-black text-sm transition-all active:scale-95 border-2 flex flex-col items-center gap-1 ${
+                          !groupHasSecond
+                            ? 'bg-[#3CDBC0] text-white border-[#3CDBC0] shadow-lg shadow-[#3CDBC0]/30'
+                            : 'bg-white text-gray-600 border-gray-200 hover:border-[#3CDBC0]/50'
                         }`}
                       >
-                        {size}
+                        <span className="text-xl">🍽️</span>
+                        <span>1차만</span>
                       </button>
-                    ))}
+                      <button
+                        onClick={() => setGroupHasSecond(true)}
+                        className={`py-3 rounded-xl font-black text-sm transition-all active:scale-95 border-2 flex flex-col items-center gap-1 ${
+                          groupHasSecond
+                            ? 'bg-[#3CDBC0] text-white border-[#3CDBC0] shadow-lg shadow-[#3CDBC0]/30'
+                            : 'bg-white text-gray-600 border-gray-200 hover:border-[#3CDBC0]/50'
+                        }`}
+                      >
+                        <span className="text-xl">🍻</span>
+                        <span>1차+2차</span>
+                      </button>
+                    </div>
                   </div>
+                  {groupError && (
+                    <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-600 text-center">
+                      {groupError}
+                    </div>
+                  )}
+                  <button
+                    onClick={handleCreateSession}
+                    disabled={creatingSession}
+                    className={`w-full py-4 rounded-2xl font-black text-base transition-all active:scale-95 ${
+                      creatingSession
+                        ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                        : 'bg-[#3CDBC0] text-white shadow-lg shadow-[#3CDBC0]/30 hover:bg-[#2AB5A0]'
+                    }`}
+                  >
+                    {creatingSession ? '생성 중...' : '링크 생성하기 →'}
+                  </button>
                 </div>
               )}
 
-              {/* 목적 — solo 선택 시 활성화 */}
-              <PurposeSelect
-                value={purpose ?? { first: null, firstRaw: null, second: '없음', secondRaw: '없음', relation: null, occasion: null }}
-                onChange={setPurpose}
-              />
+              {/* Group waiting/ready: 링크 공유 + 멤버 슬롯 */}
+              {(appMode === 'group-waiting' || appMode === 'group-ready') && (() => {
+                const shareLink = sessionId ? `${window.location.origin}/join?id=${sessionId}` : '';
+                const allVoted = groupMembers.length >= expectedCount && groupMembers.length > 0;
+                return (
+                  <div className="flex flex-col gap-3">
+                    {/* 공유 링크 */}
+                    <div className="bg-white shadow-sm rounded-2xl p-4">
+                      <p className="text-xs text-gray-400 mb-2">공유 링크</p>
+                      <div className="flex items-center gap-2">
+                        <p className="flex-1 text-sm text-gray-700 truncate">{shareLink}</p>
+                        <button
+                          onClick={handleCopyLink}
+                          className="flex-shrink-0 px-4 py-2 rounded-xl bg-[#3CDBC0] text-white text-sm font-bold transition-all active:scale-95 hover:bg-[#2AB5A0]"
+                        >
+                          {copied ? '복사됨!' : '복사'}
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* 나도 참여하기 */}
+                    <button
+                      onClick={() => { window.location.href = shareLink; }}
+                      className="w-full py-3 rounded-2xl font-black text-sm transition-all active:scale-95 bg-[#E8F8F5] text-[#2AB5A0] border-2 border-[#3CDBC0]/40 hover:bg-[#d4f3ee]"
+                    >
+                      나도 참여하기 →
+                    </button>
+
+                    {/* 진행률 + 슬롯 */}
+                    <div className="bg-white shadow-sm rounded-2xl p-4">
+                      <div className="flex items-center justify-between mb-3">
+                        <p className="text-xs text-gray-400">입력 현황</p>
+                        <p className="text-lg font-black text-[#2AB5A0]">
+                          {groupMembers.length}
+                          <span className="text-gray-300 font-bold"> / {expectedCount}</span>
+                        </p>
+                      </div>
+                      <div className="flex flex-col gap-2">
+                        {Array.from({ length: expectedCount }).map((_, i) => {
+                          const member = groupMembers[i];
+                          return (
+                            <div
+                              key={i}
+                              className={`flex items-center gap-3 px-4 py-3 rounded-2xl transition-all ${
+                                member ? 'bg-[#E8F8F5]' : 'bg-gray-50 border border-dashed border-gray-200'
+                              }`}
+                            >
+                              <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-black flex-shrink-0 ${
+                                member ? 'bg-[#3CDBC0] text-white' : 'bg-gray-200 text-gray-400'
+                              }`}>
+                                {member ? '✓' : i + 1}
+                              </div>
+                              <span className={`text-sm font-bold ${member ? 'text-[#2AB5A0]' : 'text-gray-300'}`}>
+                                {member ? member.member_name : '대기 중...'}
+                              </span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {allVoted && (
+                      <div className="p-4 bg-[#E8F8F5] border border-[#3CDBC0]/40 rounded-2xl text-center">
+                        <p className="text-base font-black text-[#2AB5A0]">🎉 전원 완료!</p>
+                        <p className="text-xs text-[#2AB5A0]/70 mt-0.5">모두의 취향이 모였어요. 아래 다음 버튼을 눌러주세요!</p>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
             </div>
           )}
 
@@ -1101,7 +1054,12 @@ export default function Home() {
                 </button>
               </div>
               {step === 0 && !canNext() && (
-                <p className="text-xs text-gray-400 text-center">혼자 정하기 선택 후 1차 목적을 골라주세요</p>
+                <p className="text-xs text-gray-400 text-center">
+                  {appMode === 'mode-select' && '혼자 정하기 또는 다같이 정하기를 선택해주세요'}
+                  {appMode === 'solo' && '1차 목적을 선택해주세요'}
+                  {appMode === 'group-setup' && '인원수와 코스를 선택한 뒤 링크를 생성해주세요'}
+                  {appMode === 'group-waiting' && `최소 2명이 입력하면 다음으로 진행할 수 있어요 (현재 ${groupMembers.length}명)`}
+                </p>
               )}
             </>
           ) : (
