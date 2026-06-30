@@ -316,7 +316,7 @@ export default function Home() {
 
       const input: UserInput = {
         locations,
-        groupSize: groupSize,
+        groupSize: appMode === 'group-ready' ? (locations.length >= 5 ? '5명 이상' : locations.length >= 3 ? '3~4명' : '2명') : groupSize,
         purpose: { first: purpose!.first!, second: purpose!.second ?? null },
         vibe: { first: vibeFirst, second: vibeSecond },
         relation: purpose?.relation ?? null,
