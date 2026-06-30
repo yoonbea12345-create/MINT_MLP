@@ -1,3 +1,5 @@
+import { useState } from 'react';
+
 export type GroupVibeState = { first: string | null; second: string | null };
 export type VibeState = Record<string, GroupVibeState>;
 
@@ -65,7 +67,22 @@ interface Props {
   onVibeCustomChange?: (label: string, text: string) => void;
 }
 
+const PRESET_CHIP_LABELS = ['단체룸', '야외테라스', '주차가능', '루프탑', '포토존', '야경맛집', '24시간', '반려동물', '혼잡하지않은'];
+
 export default function VibeSelect({ value, onChange, purpose, keywords = [], onKeywordsChange }: Props) {
+  const [customInput, setCustomInput] = useState('');
+
+  function addCustomKeyword() {
+    if (!onKeywordsChange) return;
+    const trimmed = customInput.trim();
+    if (!trimmed || keywords.includes(trimmed)) {
+      setCustomInput('');
+      return;
+    }
+    onKeywordsChange([...keywords, trimmed]);
+    setCustomInput('');
+  }
+
   function toggle(groupLabel: string, key: string) {
     const g = value[groupLabel] ?? { first: null, second: null };
     let { first, second } = g;
@@ -119,17 +136,25 @@ export default function VibeSelect({ value, onChange, purpose, keywords = [], on
             </div>
             <div className="grid grid-cols-3 gap-2">
               {group.options.map((opt) => {
-                const isActive = g.first === opt.key || g.second === opt.key;
+                const isFirst = g.first === opt.key;
+                const isSecond = g.second === opt.key;
+                const isActive = isFirst || isSecond;
                 return (
                   <button
                     key={opt.key}
                     onClick={() => toggle(group.label, opt.key)}
-                    className={`flex flex-col items-center justify-center h-16 rounded-xl border-2 text-xs font-bold transition-all duration-200 active:scale-[0.97] ${
+                    className={`relative flex flex-col items-center justify-center h-16 rounded-xl border-2 text-xs font-bold transition-all duration-200 active:scale-[0.97] ${
                       isActive
                         ? 'border-[#3CDBC0] bg-[#E8F8F5] text-[#2AB5A0] shadow-md shadow-[#3CDBC0]/20'
                         : 'border-gray-200 bg-white text-gray-700 hover:border-[#3CDBC0]/50'
                     }`}
                   >
+                    {isFirst && (
+                      <span className="absolute -top-1.5 -right-1.5 text-[7px] font-black bg-[#1E9E8C] text-white px-1.5 py-0.5 rounded-full leading-none z-10 shadow-sm">1차</span>
+                    )}
+                    {isSecond && (
+                      <span className="absolute -top-1.5 -right-1.5 text-[7px] font-black bg-[#3CDBC0] text-white px-1.5 py-0.5 rounded-full leading-none z-10 shadow-sm">2차</span>
+                    )}
                     <span className="text-lg mb-1 leading-none">{opt.emoji}</span>
                     <span>{opt.label}</span>
                   </button>
@@ -166,6 +191,47 @@ export default function VibeSelect({ value, onChange, purpose, keywords = [], on
               );
             })}
           </div>
+
+          {/* 키워드 직접 입력 */}
+          <div className="flex gap-2 mt-2">
+            <input
+              type="text"
+              value={customInput}
+              onChange={(e) => setCustomInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  addCustomKeyword();
+                }
+              }}
+              placeholder="원하는 키워드 직접 입력"
+              className="flex-1 border-2 border-gray-200 rounded-xl px-4 py-2.5 text-sm text-gray-700 placeholder-gray-400 focus:outline-none focus:border-[#3CDBC0] transition-colors"
+            />
+            <button
+              onClick={addCustomKeyword}
+              className="flex-shrink-0 px-4 rounded-xl bg-[#3CDBC0] text-white text-sm font-bold transition-all active:scale-95 hover:bg-[#2AB5A0]"
+            >
+              추가
+            </button>
+          </div>
+
+          {/* 직접 입력한 키워드 태그 */}
+          {keywords.filter((k) => !PRESET_CHIP_LABELS.includes(k)).length > 0 && (
+            <div className="flex flex-wrap gap-2 mt-2.5">
+              {keywords
+                .filter((k) => !PRESET_CHIP_LABELS.includes(k))
+                .map((k) => (
+                  <button
+                    key={k}
+                    onClick={() => toggleKeyword(k)}
+                    className="flex items-center gap-1 px-3 py-1.5 rounded-full bg-[#E8F8F5] border border-[#3CDBC0]/40 text-[#2AB5A0] text-xs font-bold transition-all active:scale-95"
+                  >
+                    <span>#{k}</span>
+                    <span className="text-[#2AB5A0]/60">×</span>
+                  </button>
+                ))}
+            </div>
+          )}
         </div>
       )}
     </div>

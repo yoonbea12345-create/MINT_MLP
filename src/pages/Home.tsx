@@ -82,14 +82,10 @@ const LOADING_MESSAGES = [
   '✨ 오늘의 코스 완성 직전!',
 ];
 
-function deriveGroupSize(locationCount: number): UserInput['groupSize'] {
-  if (locationCount >= 5) return '5명 이상';
-  if (locationCount >= 3) return '3~4명';
-  return '2명';
-}
-
 export default function Home() {
   const [appMode, setAppMode] = useState<AppMode>('mode-select');
+  const [groupSize, setGroupSize] = useState<'2명' | '3~4명' | '5명 이상'>('2명');
+  const [customOccasion, setCustomOccasion] = useState('');
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [expectedCount, setExpectedCount] = useState<number>(3);
   const [groupHasSecond, setGroupHasSecond] = useState(false);
@@ -112,8 +108,6 @@ export default function Home() {
   const [keywords, setKeywords] = useState<string[]>([]);
   const [vibeCustom, setVibeCustom] = useState<Record<string, string>>({});
   const [showRetryModal, setShowRetryModal] = useState(false);
-  const [selectedRegionId, setSelectedRegionId] = useState<string | null>(null);
-  const [regionMode, setRegionMode] = useState<'area' | 'midpoint'>('area');
   const [midpointData, setMidpointData] = useState<{
     midpoint: Coordinates;
     areaName: string;
@@ -227,7 +221,7 @@ export default function Home() {
   function canNext(): boolean {
     if (step === 0) return appMode === 'solo' && !!purpose?.first;
     if (step === 1) return true; // 관계·특별한날은 선택사항
-    if (step === 2) return regionMode === 'area' ? selectedRegionId !== null : locations.length >= 2;
+    if (step === 2) return meetingLocation !== null && (meetingLocation.type === 'manual' || locations.length >= 2);
     return false;
   }
 
@@ -322,7 +316,7 @@ export default function Home() {
 
       const input: UserInput = {
         locations,
-        groupSize: deriveGroupSize(locations.length),
+        groupSize: groupSize,
         purpose: { first: purpose!.first!, second: purpose!.second ?? null },
         vibe: { first: vibeFirst, second: vibeSecond },
         relation: purpose?.relation ?? null,
@@ -941,6 +935,28 @@ export default function Home() {
                 </button>
               </div>
 
+              {/* 인원수 — solo 선택 시 활성화 */}
+              {appMode === 'solo' && (
+                <div>
+                  <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-2.5">모임 인원수</p>
+                  <div className="grid grid-cols-3 gap-2">
+                    {(['2명', '3~4명', '5명 이상'] as const).map((size) => (
+                      <button
+                        key={size}
+                        onClick={() => setGroupSize(size)}
+                        className={`flex items-center justify-center h-12 rounded-xl border-2 text-sm font-bold transition-all active:scale-[0.97] ${
+                          groupSize === size
+                            ? 'border-[#3CDBC0] bg-[#E8F8F5] text-[#2AB5A0] shadow-md shadow-[#3CDBC0]/20'
+                            : 'border-gray-200 bg-white text-gray-700 hover:border-[#3CDBC0]/50'
+                        }`}
+                      >
+                        {size}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {/* 목적 — solo 선택 시 활성화 */}
               <PurposeSelect
                 value={purpose ?? { first: null, firstRaw: null, second: '없음', secondRaw: '없음', relation: null, occasion: null }}
@@ -973,13 +989,22 @@ export default function Home() {
               });
             }
             function toggleOcc(v: string) {
+              setCustomOccasion('');
               setPurpose((prev) => {
                 const base = prev ?? { first: null, firstRaw: null, second: '없음', secondRaw: '없음', relation: null, occasion: null };
                 return { ...base, occasion: base.occasion === v ? null : v };
               });
             }
+            function handleCustomOccasion(text: string) {
+              setCustomOccasion(text);
+              setPurpose((prev) => {
+                const base = prev ?? { first: null, firstRaw: null, second: '없음', secondRaw: '없음', relation: null, occasion: null };
+                return { ...base, occasion: text.trim() ? text : null };
+              });
+            }
+            const isPresetOccasion = OCCASION_OPTIONS.some((o) => o.value === curOccasion);
             return (
-              <div className="px-4 flex flex-col justify-center gap-6 min-h-full py-6">
+              <div className="px-4 flex flex-col gap-5 pt-3 pb-4">
                 <div>
                   <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-2.5">오늘 모임은요?</p>
                   <div className="grid grid-cols-4 gap-2">
@@ -1003,56 +1028,28 @@ export default function Home() {
                       </button>
                     ))}
                   </div>
+                  <input
+                    type="text"
+                    value={customOccasion}
+                    onChange={(e) => handleCustomOccasion(e.target.value)}
+                    placeholder="직접 입력 (예: 졸업식, 취직 축하)"
+                    className={`w-full border-2 rounded-xl px-4 py-3 text-sm text-gray-700 placeholder-gray-400 focus:outline-none focus:border-[#3CDBC0] transition-colors mt-2 ${
+                      customOccasion && !isPresetOccasion ? 'border-[#3CDBC0] bg-[#E8F8F5]' : 'border-gray-200'
+                    }`}
+                  />
                 </div>
               </div>
             );
           })()}
 
-          {/* Step 2: 지역 선택 or 중간지점 */}
+          {/* Step 2: 만날 장소 선택 */}
           {step === 2 && (
-            <div className="px-4 pt-2 pb-4 flex flex-col gap-3">
-              {/* 인기 지역 칩 (3열) */}
-              <div className="grid grid-cols-3 gap-2">
-                {PRESET_REGIONS.slice(0, 9).map((region) => {
-                  const isSelected = selectedRegionId === region.id && regionMode === 'area';
-                  return (
-                    <button
-                      key={region.id}
-                      onClick={() => { setSelectedRegionId(region.id); setRegionMode('area'); setLocations([]); }}
-                      className={`flex flex-col items-center justify-center h-16 rounded-xl border-2 transition-all active:scale-[0.97] ${
-                        isSelected
-                          ? 'border-[#3CDBC0] bg-[#E8F8F5] shadow-md shadow-[#3CDBC0]/20'
-                          : 'border-gray-200 bg-white hover:border-[#3CDBC0]/50'
-                      }`}
-                    >
-                      <span className={`text-xs font-bold leading-tight text-center ${isSelected ? 'text-[#2AB5A0]' : 'text-gray-700'}`}>
-                        {region.label}
-                      </span>
-                      <span className="text-[9px] text-gray-400 leading-tight text-center px-1 mt-0.5">
-                        {region.sublabel.split('·')[0]}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
+            <div className="pb-4 flex flex-col gap-3">
+              <MeetingLocationSelect value={meetingLocation} onSelect={setMeetingLocation} />
 
-              {/* 중간지점 강조 버튼 */}
-              <button
-                onClick={() => { setRegionMode('midpoint'); setSelectedRegionId(null); }}
-                className={`w-full py-3.5 rounded-2xl border-2 font-bold text-sm flex items-center justify-center gap-2 transition-all active:scale-[0.98] ${
-                  regionMode === 'midpoint'
-                    ? 'border-[#3CDBC0] bg-[#E8F8F5] text-[#2AB5A0]'
-                    : 'border-dashed border-[#3CDBC0]/60 bg-white text-[#2AB5A0] hover:bg-[#E8F8F5]'
-                }`}
-              >
-                <span>📍</span>
-                <span>중간지점으로 찾기</span>
-                <span className="text-[10px] font-normal text-gray-400 ml-1">출발지 각자 입력</span>
-              </button>
-
-              {/* 중간지점 모드: 출발지 입력 */}
-              {regionMode === 'midpoint' && (
-                <div className="animate-fade-in-up border-t border-gray-100 pt-2">
+              {/* 중간지점(자동) 모드: 출발지 입력 */}
+              {meetingLocation?.type === 'auto' && (
+                <div className="animate-fade-in-up border-t border-gray-100 pt-2 px-4">
                   <LocationInput locations={locations} onChange={setLocations} />
                 </div>
               )}
@@ -1117,12 +1114,7 @@ export default function Home() {
               </button>
               <button
                 onClick={() => {
-                  if (regionMode === 'area') {
-                    const region = PRESET_REGIONS.find(r => r.id === selectedRegionId);
-                    if (region) handleMidpointSelect(region);
-                  } else {
-                    handleMidpointSelect();
-                  }
+                  if (meetingLocation) handleConfirmMeetingLocation(meetingLocation);
                 }}
                 className="flex-1 py-4 rounded-2xl font-black text-base bg-[#3CDBC0] text-white shadow-lg shadow-[#3CDBC0]/30 hover:bg-[#2AB5A0] transition-all active:scale-95"
               >
