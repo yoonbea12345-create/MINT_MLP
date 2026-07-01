@@ -72,6 +72,54 @@ interface CardProps {
   shadowColor: string;
 }
 
+// 대안 추천 카드 — 항상 펼쳐진 독립 카드
+function AltsSection({ alts, accentColor = '#3CDBC0' }: { alts: PlaceRecommendation[]; accentColor?: string }) {
+  if (!alts.length) return null;
+  return (
+    <div className="flex flex-col gap-2">
+      <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest px-1">다른 추천</p>
+      {alts.map((p, idx) => (
+        <div
+          key={idx}
+          className="bg-white rounded-2xl border border-gray-100 p-3.5 shadow-sm cursor-pointer active:scale-[0.99] transition-transform"
+          onClick={() => window.open(kakaoUrl(p), '_blank')}
+        >
+          <div className="flex items-start justify-between gap-2 mb-1">
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-1.5 mb-0.5">
+                <span className="text-[10px] font-black text-white px-2 py-0.5 rounded-full shrink-0" style={{ background: accentColor }}>
+                  #{idx + 2}
+                </span>
+                <p className="text-sm font-black text-gray-800 truncate">{p.placeName}</p>
+              </div>
+              <p className="text-xs text-gray-400">{p.category}</p>
+            </div>
+            {p.fitScore != null && (
+              <span className="text-sm font-black shrink-0" style={{ color: accentColor }}>{p.fitScore}점</span>
+            )}
+          </div>
+          <p className="text-xs text-gray-500 mb-2 leading-relaxed">{p.description}</p>
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-400">
+            <span>💰 {p.priceRange}</span>
+            {p.address && (
+              <span className="flex items-center gap-1 truncate">
+                <GpsPin className="opacity-50 text-gray-400" />{p.address}
+              </span>
+            )}
+          </div>
+          {p.vibeTags?.length > 0 && (
+            <div className="flex flex-wrap gap-1 mt-2">
+              {p.vibeTags.slice(0, 3).map((tag) => (
+                <span key={tag} className="text-[10px] text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded-full">#{tag}</span>
+              ))}
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function FitScoreBar({ score, className = '' }: { score?: number; className?: string }) {
   if (score == null) return null;
   const pct = Math.min(100, Math.max(0, score));
@@ -221,7 +269,6 @@ export default function ResultCard({
   onReserve,
   onReject,
 }: Props) {
-  const [secondMoreVisible, setSecondMoreVisible] = useState(false);
   const [showTreasurerPopup, setShowTreasurerPopup] = useState(false);
   const [destTarget, setDestTarget] = useState<'first' | 'second'>('first');
   const [transportMode, setTransportMode] = useState<'transit' | 'driving'>('transit');
@@ -311,10 +358,13 @@ export default function ResultCard({
       {/* 1차 카드 */}
       <PlaceCard
         place={result}
-        extraResults={extraFirstResults}
+        extraResults={[]}
         gradient="linear-gradient(135deg, #3CDBC0 0%, #2AB5A0 100%)"
         shadowColor="shadow-[#3CDBC0]/25"
       />
+
+      {/* 1차 대안 추천 — 항상 펼쳐진 독립 카드 */}
+      {!hasSecond && <AltsSection alts={extraFirstResults} accentColor="#3CDBC0" />}
 
       {/* 도보 정중앙 + 2차 배지 왼쪽 */}
       {hasSecond && secondResult && (
@@ -386,56 +436,17 @@ export default function ResultCard({
                 </div>
               </div>
 
-              {/* 2차 추천 더보기 */}
-              {extraSecondResults.length > 0 && (
-                <button
-                  onClick={(e) => { e.stopPropagation(); setSecondMoreVisible(!secondMoreVisible); }}
-                  className="w-full mt-3 text-white/70 text-sm font-bold flex items-center justify-center gap-1 active:scale-95 transition-all"
-                >
-                  {secondMoreVisible ? '접기 ▲' : `추천 더보기 (${extraSecondResults.length}개 더) ▼`}
-                </button>
-              )}
             </div>
-
-            {/* 2차 더보기 펼침 */}
-            {secondMoreVisible && extraSecondResults.length > 0 && (
-              <div className="border-t border-white/20 px-4 pb-3 pt-3 flex flex-col gap-2 animate-fade-in-up">
-                {extraSecondResults.map((p, idx) => (
-                  <div
-                    key={idx}
-                    className="bg-white/15 rounded-xl p-3 cursor-pointer active:bg-white/25 transition-colors"
-                    onClick={(e) => { e.stopPropagation(); window.open(kakaoUrl(p), '_blank'); }}
-                  >
-                    <div className="flex items-start justify-between mb-1">
-                      <div>
-                        <p className="text-sm font-black">{p.placeName}</p>
-                        <p className="text-xs text-white/70">{p.category}</p>
-                      </div>
-                      <div className="flex items-center gap-2 flex-shrink-0">
-                        {p.fitScore != null && (
-                          <span className="text-xs font-black text-white/90 bg-white/20 px-1.5 py-0.5 rounded-full">
-                            {p.fitScore}점
-                          </span>
-                        )}
-                        <div className={`w-1.5 h-1.5 rounded-full ${congestionDotClass(p.congestionLevel as CongestionLevel)}`} />
-                        <span className="text-xs text-white/60">{p.congestionLevel}</span>
-                      </div>
-                    </div>
-                    <p className="text-xs text-white/70 mb-1.5 leading-relaxed">{p.description}</p>
-                    <div className="flex items-center gap-3 text-xs text-white/60">
-                      <span>💰 {p.priceRange}</span>
-                      {p.address && (
-                        <span className="flex items-center gap-1 truncate flex-1">
-                          <GpsPin className="opacity-60" /> {p.address}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
           </div>
         </div>
+      )}
+
+      {/* 1차/2차 대안 추천 — 항상 펼쳐진 독립 카드 */}
+      {hasSecond && extraFirstResults.length > 0 && (
+        <AltsSection alts={extraFirstResults} accentColor="#3CDBC0" />
+      )}
+      {hasSecond && extraSecondResults.length > 0 && (
+        <AltsSection alts={extraSecondResults} accentColor="#1A7A6E" />
       )}
 
       {/* 예약하기 */}
