@@ -48,20 +48,6 @@ function filterByRadius(places: NaverPlace[], midLat: number, midLng: number): N
   return withDist.sort((a, b) => a._dist - b._dist);
 }
 
-// 대형 프랜차이즈 체인 키워드 (이름에 포함되면 프랜차이즈로 판단)
-const FRANCHISE_KEYWORDS = [
-  '스타벅스','이디야','투썸','메가커피','빽다방','컴포즈','탐앤탐스','폴바셋','커피빈',
-  '맥도날드','버거킹','롯데리아','KFC','맘스터치','서브웨이','노브랜드버거',
-  '파리바게뜨','뚜레쥬르','던킨','크리스피크림',
-  'CJ올리브','올리브영','GS25','CU편의점','세븐일레븐',
-  '본죽','한솥','김밥천국','국민','놀부','BBQ','BHC','교촌','굽네','네네치킨',
-  '이마트24','홈플러스','롯데마트',
-];
-
-function isFranchise(name: string): boolean {
-  return FRANCHISE_KEYWORDS.some((kw) => name.includes(kw));
-}
-
 // 목적별 검색 키워드 (각 10개, 병렬 쿼리로 최대 50개 장소 확보)
 const PURPOSE_KEYWORDS: Record<string, string[]> = {
   '밥':    ['맛집', '식당', '한식', '일식당', '고깃집', '파스타', '이탈리안', '삼겹살', '스시', '해산물'],
@@ -153,7 +139,6 @@ async function fetchNaverQuery(
  * - 1순위 지역: 전체 키워드(10개) × display=5 → 최대 50개 raw
  * - 2순위 지역: 상위 5개 키워드 추가
  * - 3순위 지역: 상위 3개 키워드 추가
- * 프랜차이즈는 로컬 뒤에 정렬.
  */
 async function searchNaverMulti(
   purpose: string,

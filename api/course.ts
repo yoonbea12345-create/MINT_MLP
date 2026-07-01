@@ -9,16 +9,6 @@ interface NaverPlace {
   lng: number;
 }
 
-const FRANCHISE_KEYWORDS = [
-  '스타벅스','이디야','투썸','메가커피','빽다방','컴포즈','탐앤탐스','폴바셋','커피빈',
-  '맥도날드','버거킹','롯데리아','KFC','맘스터치','서브웨이','노브랜드버거',
-  '파리바게뜨','뚜레쥬르','던킨','크리스피크림',
-];
-
-function isFranchise(name: string): boolean {
-  return FRANCHISE_KEYWORDS.some((kw) => name.includes(kw));
-}
-
 async function searchNaverLocal(query: string, display = 8): Promise<NaverPlace[]> {
   const clientId = process.env.NAVER_CLIENT_ID;
   const clientSecret = process.env.NAVER_CLIENT_SECRET;
