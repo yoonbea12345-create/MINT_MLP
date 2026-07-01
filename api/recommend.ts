@@ -121,7 +121,7 @@ async function fetchNaverQuery(
   clientSecret: string,
 ): Promise<NaverPlace[]> {
   try {
-    const url = `https://openapi.naver.com/v1/search/local.json?query=${encodeURIComponent(query)}&display=5&start=1&sort=comment`;
+    const url = `https://openapi.naver.com/v1/search/local.json?query=${encodeURIComponent(query)}&display=5&start=1&sort=random`;
     const res = await fetch(url, {
       headers: { 'X-Naver-Client-Id': clientId, 'X-Naver-Client-Secret': clientSecret },
     });
@@ -204,13 +204,8 @@ async function searchNaverMulti(
     }
   }
 
-  // 거리 가까운 순으로 정렬, 로컬 앞 / 프랜차이즈 뒤
-  all.sort((a, b) => {
-    const af = isFranchise(a.name) ? 1 : 0;
-    const bf = isFranchise(b.name) ? 1 : 0;
-    if (af !== bf) return af - bf;
-    return a.dist - b.dist;
-  });
+  // 거리 가까운 순으로만 정렬 (프랜차이즈 여부 무관 — Claude가 상황 맞게 판단)
+  all.sort((a, b) => a.dist - b.dist);
 
   return all.slice(0, 50);
 }
@@ -336,10 +331,10 @@ ${formatNaverPlaces(naverSecondPlaces)}` : ''}
 ⚠️ 반드시 위 목록의 번호(1~N)에서만 선택. 목록 외 장소 생성 절대 금지.
 ⚠️ sourceIndex는 선택한 목록 번호를 정확히 기재. 같은 목록 내 중복 사용 금지.
 ⚠️ placeName·address·lat·lng는 위 데이터 그대로 복사. 절대 임의 생성 금지.
-⚠️ 로컬 맛집·개인 운영 식당 최우선. 대형 프랜차이즈 전체 중 최대 1개.` : `
+⚠️ 상황(예산·인원·분위기·목적)에 가장 맞는 장소를 프랜차이즈 여부에 무관하게 선택.` : `
 ## 절대 규칙
 1. 실제 존재하고 영업 중인 장소만 추천
-2. 로컬 맛집·개인 운영 식당 우선, 대형 프랜차이즈는 전체 추천 중 최대 1개
+2. 상황(예산·인원·분위기·목적)에 가장 맞는 곳 우선 — 프랜차이즈 여부보다 조건 부합이 중요
 3. address 불확실하면 동네명만, lat/lng 모르면 0 기재`;
 
     // 날씨 컨텍스트
@@ -379,10 +374,15 @@ ${weatherSection}${weightsSection}
 
     const fitScoreGuide = `
 ## 적합도 점수 (fitScore) 산정 기준 — 각 장소마다 0~100 정수 기재
-- 취향/분위기 일치도 (40점): 사용자 선택 vibe와 얼마나 잘 맞는가
-- 목적 적합도 (25점): "${purpose.first}" 목적에 얼마나 적합한가${vibeWeights && Object.keys(vibeWeights).length > 0 ? '\n- 가중치 반영 (추가 +15점 풀): 위 재추천 가중치가 높은 항목일수록 더 높게' : ''}
-- 예산 적합도 (20점): 예산 조건 충족 여부 (예산 없으면 만점)
-- 혼잡도/시간 적합도 (15점): 현재 시각 기준 혼잡도와 영업 여부
+- 취향/분위기 일치도 (35점): 사용자 선택 vibe와 얼마나 잘 맞는가
+- 목적 적합도 (20점): "${purpose.first}" 목적에 얼마나 적합한가${vibeWeights && Object.keys(vibeWeights).length > 0 ? '\n- 가중치 반영 (추가 +10점 풀): 위 재추천 가중치가 높은 항목일수록 더 높게' : ''}
+- 예산 적합도 (15점): 예산 조건 충족 여부 (예산 없으면 만점)
+- 혼잡도/시간 적합도 (10점): 현재 시각 기준 혼잡도와 영업 여부
+- 진짜 맛집 신뢰도 (20점): 다음 신호로 판단 —
+  · 오래된 가게(노포) 혹은 전문성 있는 단일 메뉴 위주 (+5~8점)
+  · 리뷰가 음식 맛·재방문 위주이며 마케팅성 "인생샷/감성/협찬" 냄새가 없음 (+5~7점)
+  · 과도한 SNS 노출·체험단 냄새 없이 입소문으로 알려진 로컬 맛집 (+3~5점)
+  · 상황(예산·인원·목적)에 진짜로 맞는 선택인가 (프랜차이즈라도 최선이면 만점 가능) (+0~5점)
 rank 1이 반드시 가장 높아야 하며, 장소마다 솔직하고 차별화된 점수를 부여하세요.`;
 
     const placeSchema = `{

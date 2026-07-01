@@ -24,7 +24,7 @@ async function searchNaverLocal(query: string, display = 8): Promise<NaverPlace[
   const clientSecret = process.env.NAVER_CLIENT_SECRET;
   if (!clientId || !clientSecret) return [];
   try {
-    const url = `https://openapi.naver.com/v1/search/local.json?query=${encodeURIComponent(query)}&display=${display}&sort=comment`;
+    const url = `https://openapi.naver.com/v1/search/local.json?query=${encodeURIComponent(query)}&display=${display}&sort=random`;
     const res = await fetch(url, {
       headers: { 'X-Naver-Client-Id': clientId, 'X-Naver-Client-Secret': clientSecret },
     });
@@ -37,9 +37,7 @@ async function searchNaverLocal(query: string, display = 8): Promise<NaverPlace[
       lat: parseInt(item.mapy) / 1e7,
       lng: parseInt(item.mapx) / 1e7,
     }));
-    const local = all.filter((p) => !isFranchise(p.name));
-    const franchise = all.filter((p) => isFranchise(p.name));
-    return [...local, ...franchise].slice(0, 8);
+    return all.slice(0, 8);
   } catch {
     return [];
   }
