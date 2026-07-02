@@ -4,6 +4,7 @@ import { getBubbleScoreCached } from './_lib/blogBuzz';
 import { fetchStoresInRadius, matchStoreToPlace, lookupYearsAlive, computeLocalGem } from './_lib/publicData';
 import { getSupabaseAdmin } from './_lib/supabaseAdmin';
 import { placeKey } from './_lib/placeKey';
+import { computeFinalScores } from './_lib/scoring';
 
 interface NaverPlace {
   name: string;
@@ -547,9 +548,38 @@ ${fitScoreGuide}
       console.error('[recommend] L1 buzz analysis failed', e);
     }
 
-    // 최종 표시 개수로 슬라이스 (현재는 Claude의 slotRank 순서 그대로 — L3 재정렬은 후속 Phase)
+    // L3: naverRank(네이버 거리순 검색 결과에서의 위치 — 원 노출순위 프록시)와
+    // isPublicGem(L0에서 localGem 상위로 이미 선별된 공공데이터 발굴 후보) 태깅 후 finalScore 계산.
+    // 프랜차이즈 후순위 로직은 부활시키지 않는다 — naverRank는 정렬용이 아니라 괴리 감지용 신호일 뿐.
+    try {
+      for (const f of finalists) {
+        const list = f.purposeSlot === 2 ? naverSecondPlaces : naverFirstPlaces;
+        const idx = list.findIndex((p) => p.name === f.placeName && p.address === f.address);
+        f.naverRank = idx >= 0 ? idx : null;
+        f.isPublicGem = idx >= 0 ? Boolean(list[idx]._isPublicGem) : false;
+      }
+
+      const scoreSlot = (slot: number) =>
+        computeFinalScores(
+          finalists
+            .filter((f) => f.purposeSlot === slot)
+            .map((f) => ({ ...f, fitScore: f.fitScore ?? 0, bubbleScore: f.bubbleScore ?? 0 })),
+        );
+
+      const finalScoreByKey = new Map<string, number>();
+      for (const s of [...scoreSlot(1), ...scoreSlot(2)] as { placeName: string; address: string; finalScore: number }[]) {
+        finalScoreByKey.set(`${s.placeName}|${s.address}`, s.finalScore);
+      }
+      for (const f of finalists) {
+        f.finalScore = finalScoreByKey.get(`${f.placeName}|${f.address}`) ?? f.fitScore;
+      }
+    } catch (e) {
+      console.error('[recommend] L3 scoring failed', e);
+    }
+
+    // 최종 표시 개수로 슬라이스 — finalScore(L3 재정렬) 내림차순
     const bySlot = (slot: number) =>
-      finalists.filter((p) => p.purposeSlot === slot).sort((a, b) => a.slotRank - b.slotRank);
+      finalists.filter((p) => p.purposeSlot === slot).sort((a, b) => (b.finalScore ?? b.fitScore ?? 0) - (a.finalScore ?? a.fitScore ?? 0));
 
     let places;
     if (effectiveTwoPurposes) {
@@ -614,6 +644,7 @@ ${fitScoreGuide}
         const candidates = finalists.map((f: {
           placeName: string; address: string; purposeSlot: number; slotRank: number;
           fitScore?: number; bubbleScore?: number; buzzCount?: number;
+          naverRank?: number | null; isPublicGem?: boolean; finalScore?: number;
         }) => {
           const key = `${f.placeName}|${f.address}`;
           return {
@@ -623,6 +654,9 @@ ${fitScoreGuide}
             fitScore: f.fitScore ?? null,
             bubbleScore: f.bubbleScore ?? null,
             buzzCount: f.buzzCount ?? null,
+            naverRank: f.naverRank ?? null,
+            isPublicGem: f.isPublicGem ?? false,
+            finalScore: f.finalScore ?? null,
             finalRank: displayedByKey.get(key) ?? null,
             displayed: displayedByKey.has(key),
           };
