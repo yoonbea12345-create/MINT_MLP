@@ -151,3 +151,29 @@ CREATE INDEX IF NOT EXISTS idx_license_cache_region ON license_cache(region_code
 CREATE INDEX IF NOT EXISTS idx_license_cache_latlng ON license_cache(lat, lng);
 
 ALTER TABLE license_cache ENABLE ROW LEVEL SECURITY;
+
+-- =============================================
+-- L4: 추천 신호 로그 (추천 재설계 Phase 3)
+-- 분석은 v2 스코프 — 지금은 기록만. 서버 전용, anon 정책 없음.
+-- =============================================
+CREATE TABLE IF NOT EXISTS recommendation_log (
+  id                  BIGSERIAL PRIMARY KEY,
+  session_key         TEXT,
+  created_at          TIMESTAMPTZ DEFAULT now(),
+  group_size          INTEGER,
+  purpose_first       TEXT,
+  purpose_second      TEXT,
+  budget              TEXT,
+  vibe_first          TEXT,
+  vibe_second         TEXT,
+  midpoint_lat        DOUBLE PRECISION,
+  midpoint_lng        DOUBLE PRECISION,
+  candidates          JSONB NOT NULL,
+  selected_place_key  TEXT,
+  retried             BOOLEAN DEFAULT false,
+  shared              BOOLEAN DEFAULT false
+);
+
+CREATE INDEX IF NOT EXISTS idx_recommendation_log_created_at ON recommendation_log(created_at);
+
+ALTER TABLE recommendation_log ENABLE ROW LEVEL SECURITY;

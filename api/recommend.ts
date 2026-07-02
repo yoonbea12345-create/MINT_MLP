@@ -2,6 +2,8 @@ import Anthropic from '@anthropic-ai/sdk';
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { getBubbleScoreCached } from './_lib/blogBuzz';
 import { fetchStoresInRadius, matchStoreToPlace, lookupYearsAlive, computeLocalGem } from './_lib/publicData';
+import { getSupabaseAdmin } from './_lib/supabaseAdmin';
+import { placeKey } from './_lib/placeKey';
 
 interface NaverPlace {
   name: string;
@@ -600,6 +602,46 @@ ${fitScoreGuide}
           rank1.lat !== 0 && rank2.lat !== 0) {
         rank1.walkingToNext = walkingMinutes(rank1.lat, rank1.lng, rank2.lat, rank2.lng);
       }
+    }
+
+    // L4: 후보별 신호·노출·선택 기록 (분석은 v2 스코프 — 지금은 기록만, 실패해도 응답엔 무영향)
+    try {
+      const supabase = getSupabaseAdmin();
+      if (supabase) {
+        const displayedByKey = new Map(
+          places.map((p) => [`${p.placeName}|${p.address}`, p.rank as number]),
+        );
+        const candidates = finalists.map((f: {
+          placeName: string; address: string; purposeSlot: number; slotRank: number;
+          fitScore?: number; bubbleScore?: number; buzzCount?: number;
+        }) => {
+          const key = `${f.placeName}|${f.address}`;
+          return {
+            place_key: placeKey(f.placeName, f.address),
+            purposeSlot: f.purposeSlot,
+            slotRank: f.slotRank,
+            fitScore: f.fitScore ?? null,
+            bubbleScore: f.bubbleScore ?? null,
+            buzzCount: f.buzzCount ?? null,
+            finalRank: displayedByKey.get(key) ?? null,
+            displayed: displayedByKey.has(key),
+          };
+        });
+
+        await supabase.from('recommendation_log').insert({
+          group_size: groupSize,
+          purpose_first: purpose.first,
+          purpose_second: purpose.second,
+          budget,
+          vibe_first: vibeFirstStr,
+          vibe_second: vibeSecondStr || null,
+          midpoint_lat: midLat,
+          midpoint_lng: midLng,
+          candidates,
+        });
+      }
+    } catch (e) {
+      console.error('[recommend] L4 recommendation_log insert failed', e);
     }
 
     return res.status(200).json({
