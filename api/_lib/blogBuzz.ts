@@ -109,6 +109,45 @@ async function fetchBlogBuzz(placeName: string, areaName: string): Promise<Bubbl
   }
 }
 
+// L2 프롬프트 주입용: 라이브 API 호출 없이 캐시만 벌크 조회(place_buzz_cache 1회 IN 쿼리).
+// 파이널리스트 확정 전(=아직 어떤 후보가 최종 후보인지 모름) 단계라 전체 네이버 후보에 대해
+// 굳이 라이브 블로그 검색을 하지 않는다 — 이전 요청에서 이미 분석해 캐시된 것만 참고로 노출.
+export async function getBubbleScoresCacheOnly(
+  keys: { name: string; address: string }[],
+): Promise<Map<string, BubbleResult>> {
+  const result = new Map<string, BubbleResult>();
+  const supabase = getSupabaseAdmin();
+  if (!supabase || keys.length === 0) return result;
+
+  const keyToPlaceKey = new Map(keys.map((k) => [`${k.name}|${k.address}`, placeKey(k.name, k.address)]));
+  const placeKeys = [...new Set(keyToPlaceKey.values())];
+
+  try {
+    const { data } = await supabase
+      .from('place_buzz_cache')
+      .select('place_key, bubble_score, sponsored_ratio, burstiness, recent_spike, revisit_ratio, buzz_count, analyzed_at')
+      .in('place_key', placeKeys);
+
+    const rowByPlaceKey = new Map((data ?? []).map((r) => [r.place_key, r]));
+    for (const [origKey, pk] of keyToPlaceKey) {
+      const row = rowByPlaceKey.get(pk);
+      if (row && Date.now() - new Date(row.analyzed_at).getTime() < CACHE_TTL_MS) {
+        result.set(origKey, {
+          bubbleScore: row.bubble_score,
+          sponsoredRatio: row.sponsored_ratio,
+          burstiness: row.burstiness,
+          recentSpike: row.recent_spike,
+          revisitRatio: row.revisit_ratio,
+          buzzCount: row.buzz_count,
+        });
+      }
+    }
+  } catch (e) {
+    console.error('[blogBuzz] cache-only bulk read failed', e);
+  }
+  return result;
+}
+
 // place_buzz_cache 조회(TTL 14일) → 미스 시 라이브 분석 후 upsert. 항상 폴백 가능한 값을 반환.
 export async function getBubbleScoreCached(
   name: string,

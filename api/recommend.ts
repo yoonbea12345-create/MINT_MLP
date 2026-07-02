@@ -1,6 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk';
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { getBubbleScoreCached } from './_lib/blogBuzz';
+import { getBubbleScoreCached, getBubbleScoresCacheOnly } from './_lib/blogBuzz';
 import { fetchStoresInRadius, matchStoreToPlace, lookupYearsAlive, computeLocalGem } from './_lib/publicData';
 import { getSupabaseAdmin } from './_lib/supabaseAdmin';
 import { placeKey } from './_lib/placeKey';
@@ -249,10 +249,12 @@ async function searchKakaoPlaceUrl(
   }
 }
 
-function formatNaverPlaces(places: (NaverPlace & { _isPublicGem?: boolean })[]): string {
-  return places.map((p, i) =>
-    `${i + 1}. ${p._isPublicGem ? '[공공데이터 발굴 후보 — 정보 적음, 업종/연차 기반 보수적 평가, 배제 금지] ' : ''}${p.name} | ${p.category} | ${p.address} | lat:${p.lat.toFixed(4)}, lng:${p.lng.toFixed(4)}`
-  ).join('\n');
+function formatNaverPlaces(places: (NaverPlace & { _isPublicGem?: boolean; _buzzHint?: string })[]): string {
+  return places.map((p, i) => {
+    const tag = p._isPublicGem ? '[공공데이터 발굴 후보 — 정보 적음, 업종/연차 기반 보수적 평가, 배제 금지] ' : '';
+    const hint = p._buzzHint ? ` (참고: ${p._buzzHint})` : '';
+    return `${i + 1}. ${tag}${p.name} | ${p.category} | ${p.address} | lat:${p.lat.toFixed(4)}, lng:${p.lng.toFixed(4)}${hint}`;
+  }).join('\n');
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -349,6 +351,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // 2차 네이버 데이터 없으면 단일 목적 모드로 폴백 (할루시네이션 방지)
     const effectiveTwoPurposes = hasTwoPurposes && naverSecondPlaces.length > 0;
 
+    // L2: 이전 요청에서 이미 캐시된 버즈 신호가 있으면(재추천 등) 참고용으로 프롬프트에 노출.
+    // 라이브 블로그 분석(L1)은 파이널리스트 확정 후에만 돌기 때문에 최초 요청은 히트가 없을 수 있다.
+    try {
+      const allCandidates = [...naverFirstPlaces, ...naverSecondPlaces];
+      const bubbleCache = await getBubbleScoresCacheOnly(
+        allCandidates.map((p) => ({ name: p.name, address: p.address })),
+      );
+      for (const p of allCandidates as (NaverPlace & { _buzzHint?: string })[]) {
+        const hit = bubbleCache.get(`${p.name}|${p.address}`);
+        if (hit) p._buzzHint = `버즈 ${hit.buzzCount}건, 협찬률 ${Math.round(hit.sponsoredRatio * 100)}%`;
+      }
+    } catch (e) {
+      console.error('[recommend] L2 buzz cache hint injection failed', e);
+    }
+
     // 네이버 데이터 있을 때 전용 규칙
     const naverSection = hasNaverData ? `
 ## 네이버 검색으로 확인된 실존 장소 목록 (총 ${naverFirstPlaces.length}개 중 최적 선택)
@@ -413,6 +430,9 @@ ${weatherSection}${weightsSection}
   · 리뷰가 음식 맛·재방문 위주이며 마케팅성 "인생샷/감성/협찬" 냄새가 없음 (+5~7점)
   · 과도한 SNS 노출·체험단 냄새 없이 입소문으로 알려진 로컬 맛집 (+3~5점)
   · 상황(예산·인원·목적)에 진짜로 맞는 선택인가 (프랜차이즈라도 최선이면 만점 가능) (+0~5점)
+  · 목록에 "(참고: 버즈 N건, 협찬률 N%)"가 표기된 곳은 실측 데이터다 — 협찬률이 높을수록
+    "진짜 맛집 신뢰도" 배점을 보수적으로, 표기가 없는 곳은 이 항목에서 판단 재료 부족으로만
+    취급하고 불리하게 감점하지 말 것(정보 없음 ≠ 거품 있음)
 rank 1이 반드시 가장 높아야 하며, 장소마다 솔직하고 차별화된 점수를 부여하세요.`;
 
     // slotRank: 해당 purposeSlot 목록 내에서 Claude가 매긴 선호 순서(1이 최선).
@@ -559,15 +579,18 @@ ${fitScoreGuide}
         f.isPublicGem = idx >= 0 ? Boolean(list[idx]._isPublicGem) : false;
       }
 
-      const scoreSlot = (slot: number) =>
-        computeFinalScores(
-          finalists
-            .filter((f) => f.purposeSlot === slot)
-            .map((f) => ({ ...f, fitScore: f.fitScore ?? 0, bubbleScore: f.bubbleScore ?? 0 })),
-        );
+      const scoreSlot = (slot: number) => {
+        const input: {
+          placeName: string; address: string; fitScore: number; bubbleScore: number;
+          naverRank: number | null; isPublicGem: boolean;
+        }[] = finalists
+          .filter((f) => f.purposeSlot === slot)
+          .map((f) => ({ ...f, fitScore: f.fitScore ?? 0, bubbleScore: f.bubbleScore ?? 0 }));
+        return computeFinalScores(input);
+      };
 
       const finalScoreByKey = new Map<string, number>();
-      for (const s of [...scoreSlot(1), ...scoreSlot(2)] as { placeName: string; address: string; finalScore: number }[]) {
+      for (const s of [...scoreSlot(1), ...scoreSlot(2)]) {
         finalScoreByKey.set(`${s.placeName}|${s.address}`, s.finalScore);
       }
       for (const f of finalists) {
