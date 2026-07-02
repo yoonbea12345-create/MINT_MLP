@@ -30,6 +30,9 @@ interface HistoryItem {
   CRD_INFO_Y?: string;
 }
 
+// 실패 시 빈 배열이 아니라 throw — 호출부에서 "더 이상 데이터 없음"과 "일시적 오류"를
+// 구분해야 한다(구분 안 하면 일시적 오류를 done:true로 착각해 나머지 페이지를 조용히
+// 누락한다 — 실제로 겪은 문제).
 async function fetchPage(regionCode: string, baseDate: string, pageNo: number, serviceKey: string): Promise<HistoryItem[]> {
   const params = new URLSearchParams({
     serviceKey,
@@ -41,11 +44,12 @@ async function fetchPage(regionCode: string, baseDate: string, pageNo: number, s
     'cond[SALS_STTS_CD::EQ]': '01', // 영업/정상만
   });
   const res = await fetch(`https://apis.data.go.kr/1741000/general_restaurants/history?${params}`);
-  if (!res.ok) return [];
+  if (!res.ok) throw new Error(`data.go.kr HTTP ${res.status}`);
   const data = await res.json() as {
-    response?: { header?: { resultCode?: string }; body?: { items?: { item?: HistoryItem[] | HistoryItem } } };
+    response?: { header?: { resultCode?: string; resultMsg?: string }; body?: { items?: { item?: HistoryItem[] | HistoryItem } } };
   };
-  if (data.response?.header?.resultCode !== '0') return [];
+  const resultCode = data.response?.header?.resultCode;
+  if (resultCode !== '0') throw new Error(`data.go.kr resultCode=${resultCode} msg=${data.response?.header?.resultMsg}`);
 
   const rawItems = data.response?.body?.items?.item;
   return Array.isArray(rawItems) ? rawItems : rawItems ? [rawItems] : [];
@@ -90,9 +94,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   let upserted = 0;
   const sampleAddresses: string[] = [];
   let done = false;
+  let pageError: string | null = null;
 
   while (Date.now() - startedAt < TIME_BUDGET_MS) {
-    const items = await fetchPage(regionCode, baseDate, pageNo, serviceKey);
+    let items: HistoryItem[];
+    try {
+      items = await fetchPage(regionCode, baseDate, pageNo, serviceKey);
+    } catch (e) {
+      // 이 페이지에서 일시적 오류 — done:true로 착각하지 않도록 done:false + 같은 pageNo로
+      // 반환해 호출자가 이 페이지부터 재시도할 수 있게 한다.
+      pageError = (e as Error).message;
+      console.error('[admin-refresh-license-cache] page fetch failed', regionCode, pageNo, pageError);
+      break;
+    }
+
     if (items.length === 0) { done = true; break; }
 
     fetched += items.length;
@@ -116,12 +131,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       .filter((r): r is NonNullable<typeof r> => r !== null);
 
     if (rows.length > 0) {
-      const { error } = await supabase.from('license_cache').insert(rows);
-      if (!error) {
-        upserted += rows.length;
-        if (sampleAddresses.length < 3) sampleAddresses.push(...rows.slice(0, 3 - sampleAddresses.length).map((r) => r.address ?? '(주소 없음)'));
-      } else {
-        console.error('[admin-refresh-license-cache] insert failed', regionCode, pageNo, error.message);
+      try {
+        const { error } = await supabase.from('license_cache').insert(rows);
+        if (!error) {
+          upserted += rows.length;
+          if (sampleAddresses.length < 3) sampleAddresses.push(...rows.slice(0, 3 - sampleAddresses.length).map((r) => r.address ?? '(주소 없음)'));
+        } else {
+          console.error('[admin-refresh-license-cache] insert failed', regionCode, pageNo, error.message);
+        }
+      } catch (e) {
+        console.error('[admin-refresh-license-cache] insert threw', regionCode, pageNo, e);
       }
     }
 
@@ -137,5 +156,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     fetchedThisCall: fetched,
     upsertedThisCall: upserted,
     sampleAddresses,
+    ...(pageError ? { pageError } : {}),
   });
 }

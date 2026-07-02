@@ -335,11 +335,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         .sort((a, b) => b.localGem - a.localGem)
         .slice(0, 3);
 
-      const hasSecondNaverData = hasTwoPurposes && naverSecondPlaces.length > 0;
+      // 1차 목록에만 추가 — 2차 목록에도 같은 가게를 넣으면 1차·2차 양쪽에 동시 추천되거나
+      // 버즈 분석이 같은 곳을 중복 호출할 수 있다.
       for (const { store } of gemCandidates) {
-        const gemPlace = { name: store.name, category: store.category, address: store.address, lat: store.lat, lng: store.lng, _isPublicGem: true };
-        naverFirstPlaces.push(gemPlace);
-        if (hasSecondNaverData) naverSecondPlaces.push({ ...gemPlace });
+        naverFirstPlaces.push({
+          name: store.name, category: store.category, address: store.address,
+          lat: store.lat, lng: store.lng, _isPublicGem: true,
+        });
       }
       console.log(`[recommend] L0 publicStores=${publicStores.length} gemCandidates=${gemCandidates.length}`);
     } catch (e) {
