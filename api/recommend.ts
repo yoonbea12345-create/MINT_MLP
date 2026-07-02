@@ -1,10 +1,10 @@
 import Anthropic from '@anthropic-ai/sdk';
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { getBubbleScoreCached, getBubbleScoresCacheOnly } from './_lib/blogBuzz';
-import { fetchStoresInRadius, matchStoreToPlace, lookupYearsAlive, computeLocalGem } from './_lib/publicData';
-import { getSupabaseAdmin } from './_lib/supabaseAdmin';
-import { placeKey } from './_lib/placeKey';
-import { computeFinalScores } from './_lib/scoring';
+import { getBubbleScoreCached, getBubbleScoresCacheOnly } from './_lib/blogBuzz.js';
+import { fetchStoresInRadius, matchStoreToPlace, lookupYearsAlive, computeLocalGem } from './_lib/publicData.js';
+import { getSupabaseAdmin } from './_lib/supabaseAdmin.js';
+import { placeKey } from './_lib/placeKey.js';
+import { computeFinalScores } from './_lib/scoring.js';
 
 interface NaverPlace {
   name: string;

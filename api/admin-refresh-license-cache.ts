@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { getSupabaseAdmin } from './_lib/supabaseAdmin';
-import { tmToWgs84 } from './_lib/coords';
+import { getSupabaseAdmin } from './_lib/supabaseAdmin.js';
+import { tmToWgs84 } from './_lib/coords.js';
 
 // 인허가 API(행안부 일반음식점) 배치 적재 — 월 1회 수동 트리거 전용.
 // 요청 예시: curl -X POST -H "x-admin-secret: ..." -H "content-type: application/json" \

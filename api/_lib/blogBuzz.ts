@@ -1,5 +1,5 @@
-import { getSupabaseAdmin } from './supabaseAdmin';
-import { placeKey } from './placeKey';
+import { getSupabaseAdmin } from './supabaseAdmin.js';
+import { placeKey } from './placeKey.js';
 
 export interface BubbleResult {
   bubbleScore: number;
