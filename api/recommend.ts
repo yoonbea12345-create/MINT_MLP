@@ -1,6 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk';
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { getBubbleScoreCached } from './_lib/blogBuzz';
+import { fetchStoresInRadius, matchStoreToPlace, lookupYearsAlive, computeLocalGem } from './_lib/publicData';
 
 interface NaverPlace {
   name: string;
@@ -245,9 +246,9 @@ async function searchKakaoPlaceUrl(
   }
 }
 
-function formatNaverPlaces(places: NaverPlace[]): string {
+function formatNaverPlaces(places: (NaverPlace & { _isPublicGem?: boolean })[]): string {
   return places.map((p, i) =>
-    `${i + 1}. ${p.name} | ${p.category} | ${p.address} | lat:${p.lat.toFixed(4)}, lng:${p.lng.toFixed(4)}`
+    `${i + 1}. ${p._isPublicGem ? '[공공데이터 발굴 후보 — 정보 적음, 업종/연차 기반 보수적 평가, 배제 금지] ' : ''}${p.name} | ${p.category} | ${p.address} | lat:${p.lat.toFixed(4)}, lng:${p.lng.toFixed(4)}`
   ).join('\n');
 }
 
@@ -294,16 +295,51 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       ...((congestionData as { areaName: string }[]).map((c) => c.areaName).filter((a) => a !== primaryArea)),
     ].slice(0, 3);
 
-    const [weather, naverFirstRaw, naverSecondRaw] = await Promise.all([
+    const [weather, naverFirstRaw, naverSecondRaw, publicStores] = await Promise.all([
       fetchWeather(midLat, midLng),
       searchNaverMulti(purpose.first, searchAreas, groupSize, midLat, midLng, occasion, relation, budget),
       hasTwoPurposes && purpose.second
         ? searchNaverMulti(purpose.second, searchAreas, groupSize, midLat, midLng, occasion, relation, budget)
         : Promise.resolve([]),
+      fetchStoresInRadius(midLat, midLng, MIDPOINT_RADIUS_KM * 1000).catch((e) => {
+        console.error('[recommend] L0 public data fetch failed', e);
+        return [];
+      }),
     ]);
     // 기하학적 중간지점 반경 이내 장소만 사용
-    const naverFirstPlaces = filterByRadius(naverFirstRaw, midLat, midLng);
-    const naverSecondPlaces = naverSecondRaw.length ? filterByRadius(naverSecondRaw, midLat, midLng) : [];
+    const naverFirstPlaces: (NaverPlace & { _isPublicGem?: boolean })[] = filterByRadius(naverFirstRaw, midLat, midLng);
+    const naverSecondPlaces: (NaverPlace & { _isPublicGem?: boolean })[] =
+      naverSecondRaw.length ? filterByRadius(naverSecondRaw, midLat, midLng) : [];
+
+    // L0: 네이버에 없는(=매칭 실패) 공공데이터 상가 중 localGem 상위 소수를 후보 풀에 추가.
+    // yearsAlive는 license_cache(사전 배치 적재) 매칭 성공 시에만 채워지며, 실패하면 localGem 0
+    // 처리되어 자연히 상위권에서 제외된다(정보 없음 = 배제, 임의 추정 안 함).
+    try {
+      const allKnownPlaces = [...naverFirstPlaces, ...naverSecondPlaces];
+      const unmatchedStores = publicStores.filter((s) => !matchStoreToPlace(s, allKnownPlaces));
+      const gemCandidates = (
+        await Promise.all(
+          unmatchedStores.slice(0, 30).map(async (store) => {
+            const yearsAlive = await lookupYearsAlive(store);
+            const localGem = computeLocalGem(yearsAlive, 0);
+            return { store, localGem };
+          })
+        )
+      )
+        .filter((g) => g.localGem > 0)
+        .sort((a, b) => b.localGem - a.localGem)
+        .slice(0, 3);
+
+      const hasSecondNaverData = hasTwoPurposes && naverSecondPlaces.length > 0;
+      for (const { store } of gemCandidates) {
+        const gemPlace = { name: store.name, category: store.category, address: store.address, lat: store.lat, lng: store.lng, _isPublicGem: true };
+        naverFirstPlaces.push(gemPlace);
+        if (hasSecondNaverData) naverSecondPlaces.push({ ...gemPlace });
+      }
+      console.log(`[recommend] L0 publicStores=${publicStores.length} gemCandidates=${gemCandidates.length}`);
+    } catch (e) {
+      console.error('[recommend] L0 gem candidate injection failed', e);
+    }
 
     const hasNaverData = naverFirstPlaces.length > 0;
     console.log(`[recommend] naverFirst=${naverFirstPlaces.length} naverSecond=${naverSecondPlaces.length} hasNaverData=${hasNaverData}`);

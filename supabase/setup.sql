@@ -130,3 +130,24 @@ CREATE TABLE IF NOT EXISTS place_buzz_cache (
 );
 
 ALTER TABLE place_buzz_cache ENABLE ROW LEVEL SECURITY;
+
+-- =============================================
+-- L0: 인허가 배치 캐시 (추천 재설계 Phase 2)
+-- api/admin-refresh-license-cache.ts로 월 1회 수동 적재. 서버 전용 — anon 정책 없음.
+-- =============================================
+CREATE TABLE IF NOT EXISTS license_cache (
+  id            BIGSERIAL PRIMARY KEY,
+  region_code   TEXT NOT NULL,        -- 개방자치단체코드 (LOCALDATA 체계, 예: 3220000=강남구)
+  biz_name      TEXT NOT NULL,
+  address       TEXT,
+  lat           DOUBLE PRECISION,     -- WGS84 변환 완료된 값만 저장
+  lng           DOUBLE PRECISION,
+  license_date  DATE,                 -- LCPMT_YMD
+  status_code   TEXT,                 -- SALS_STTS_CD
+  updated_at    TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_license_cache_region ON license_cache(region_code);
+CREATE INDEX IF NOT EXISTS idx_license_cache_latlng ON license_cache(lat, lng);
+
+ALTER TABLE license_cache ENABLE ROW LEVEL SECURITY;
