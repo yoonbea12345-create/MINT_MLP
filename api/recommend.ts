@@ -1,5 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk';
 import type { VercelRequest, VercelResponse } from '@vercel/node';
+import { getBubbleScoreCached } from './_lib/blogBuzz';
 
 interface NaverPlace {
   name: string;
@@ -19,6 +20,11 @@ interface WeatherInfo {
 
 // 중간지점 반경 (1차: 1.5km, 부족하면 3km로 확장)
 const MIDPOINT_RADIUS_KM = 1.5;
+
+// L1(블로그 버즈)·L3(괴리 보정) 재채점을 위해 Claude가 먼저 확정 표시 개수보다
+// 넉넉히 파이널리스트를 뽑게 한 뒤, 재채점 후 최종 표시 개수로 슬라이스한다.
+const FINALIST_COUNT_SINGLE = 12;
+const FINALIST_COUNT_PER_PURPOSE = 6;
 
 function distKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
   const R = 6371;
@@ -370,9 +376,13 @@ ${weatherSection}${weightsSection}
   · 상황(예산·인원·목적)에 진짜로 맞는 선택인가 (프랜차이즈라도 최선이면 만점 가능) (+0~5점)
 rank 1이 반드시 가장 높아야 하며, 장소마다 솔직하고 차별화된 점수를 부여하세요.`;
 
-    const placeSchema = `{
-  "rank": 1,
-  "sourceIndex": 1,
+    // slotRank: 해당 purposeSlot 목록 내에서 Claude가 매긴 선호 순서(1이 최선).
+    // purposeSlot: 1=1차 목적, 2=2차 목적. 최종 표시 3~6곳으로 줄이기 전, 버즈 분석(L1)·
+    // 괴리 보정(L3) 재채점을 위해 넉넉한 파이널리스트를 먼저 받는다.
+    const finalistSchema = (slotRank: number, purposeSlot: number) => `{
+  "slotRank": ${slotRank},
+  "purposeSlot": ${purposeSlot},
+  "sourceIndex": <목록번호>,
   "placeName": "장소명 (목록에서 그대로)",
   "category": "카테고리",
   "description": "한 줄 설명 20자 내외",
@@ -381,50 +391,38 @@ rank 1이 반드시 가장 높아야 하며, 장소마다 솔직하고 차별화
   "address": "주소 (목록에서 그대로)",
   "area": "지역명",
   "congestionLevel": "혼잡도",
-  "fitScore": 85,
+  "fitScore": <0~100>,
   "lat": 0,
   "lng": 0
 }`;
 
-    const placeSchemaWithWalking = placeSchema.replace('"lng": 0', '"lng": 0,\n  "walkingToNext": 10');
-
-    const rankSchema = (rank: number) =>
-      placeSchema.replace('"rank": 1', `"rank": ${rank}`).replace('"sourceIndex": 1', `"sourceIndex": <목록번호>`).replace('"fitScore": 85', '"fitScore": <0~100>');
-
     const prompt = effectiveTwoPurposes
-      ? `당신은 한국 모임 장소 큐레이터입니다. 1차·2차 코스 장소를 추천해주세요.
+      ? `당신은 한국 모임 장소 큐레이터입니다. 1차·2차 코스 장소 후보를 각각 선호 순서대로 ${FINALIST_COUNT_PER_PURPOSE}곳씩 추천해주세요.
 ${naverSection}
 ${commonInfo}
 ${fitScoreGuide}
 
-## 응답 구성 (총 6곳)
-- rank 1: 1차 "${purpose.first}" 최적 (1차 목록에서 선택). walkingToNext에 rank 2까지 도보 분 기재
-- rank 2: 2차 "${purpose.second}" 최적 (2차 목록에서 선택, rank 1과 도보 15분 이내)
-- rank 3, 4: 1차 대안 (1차 목록에서 선택)
-- rank 5, 6: 2차 대안 (2차 목록에서 선택)
+## 응답 구성 (1차 목록에서 ${FINALIST_COUNT_PER_PURPOSE}곳 + 2차 목록에서 ${FINALIST_COUNT_PER_PURPOSE}곳, 총 ${FINALIST_COUNT_PER_PURPOSE * 2}곳)
+- purposeSlot 1(1차 "${purpose.first}") ${FINALIST_COUNT_PER_PURPOSE}곳: slotRank 1이 가장 적합, 내림차순. 같은 슬롯 내 sourceIndex 중복 금지
+- purposeSlot 2(2차 "${purpose.second}") ${FINALIST_COUNT_PER_PURPOSE}곳: slotRank 1이 가장 적합, 내림차순. 같은 슬롯 내 sourceIndex 중복 금지
+- 각 슬롯의 slotRank 1은 서로 도보 15분 이내로 이어질 수 있는 조합을 우선 고려
 
 ## 응답 형식 (JSON만, 다른 텍스트 없이)
 {"places": [
-  ${placeSchemaWithWalking},
-  ${rankSchema(2)},
-  ${rankSchema(3)},
-  ${rankSchema(4)},
-  ${rankSchema(5)},
-  ${rankSchema(6)}
+  ${Array.from({ length: FINALIST_COUNT_PER_PURPOSE }, (_, i) => finalistSchema(i + 1, 1)).join(',\n  ')},
+  ${Array.from({ length: FINALIST_COUNT_PER_PURPOSE }, (_, i) => finalistSchema(i + 1, 2)).join(',\n  ')}
 ]}`
-      : `당신은 한국 모임 장소 큐레이터입니다. "${purpose.first}" 장소 3곳을 추천해주세요.
+      : `당신은 한국 모임 장소 큐레이터입니다. "${purpose.first}" 장소 후보를 선호 순서대로 ${FINALIST_COUNT_SINGLE}곳 추천해주세요.
 ${naverSection}
 ${commonInfo}
 ${fitScoreGuide}
 
-## 응답 구성 (서로 다른 3곳, 모두 1차 목록에서 선택)
-- rank 1: 최적, rank 2·3: 대안 (서로 다른 sourceIndex 사용)
+## 응답 구성 (1차 목록에서 서로 다른 ${FINALIST_COUNT_SINGLE}곳, purposeSlot은 항상 1)
+- slotRank 1이 가장 적합, 내림차순. sourceIndex 중복 금지
 
 ## 응답 형식 (JSON만, 다른 텍스트 없이)
 {"places": [
-  ${placeSchema},
-  ${rankSchema(2)},
-  ${rankSchema(3)}
+  ${Array.from({ length: FINALIST_COUNT_SINGLE }, (_, i) => finalistSchema(i + 1, 1)).join(',\n  ')}
 ]}`;
 
     let message;
@@ -455,15 +453,15 @@ ${fitScoreGuide}
     if (!jsonMatch) return res.status(500).json({ error: 'AI 응답 파싱 실패' });
 
     const parsed = JSON.parse(jsonMatch[0]);
-    const places = Array.isArray(parsed.places) ? parsed.places : [parsed];
+    const finalists = Array.isArray(parsed.places) ? parsed.places : [parsed];
 
-    // 네이버 실존 데이터로 강제 덮어쓰기 (할류시네이션 방지)
+    // 네이버 실존 데이터로 강제 덮어쓰기 (할루시네이션 방지) — purposeSlot 기준으로 목록 선택
     if (hasNaverData) {
       const usedFirst = new Set<number>();
       const usedSecond = new Set<number>();
 
-      for (const place of places) {
-        const isSecond = effectiveTwoPurposes && [2, 5, 6].includes(place.rank);
+      for (const place of finalists) {
+        const isSecond = place.purposeSlot === 2;
         const naverList: NaverPlace[] = isSecond ? naverSecondPlaces : naverFirstPlaces;
         const used = isSecond ? usedSecond : usedFirst;
         if (!naverList.length) continue;
@@ -492,10 +490,57 @@ ${fitScoreGuide}
         place.lng = naver.lng;
         if (naver.category) place.category = naver.category;
 
-        // openingHours는 Naver에 없어서 항상 할류시네이션 → 제거
+        // openingHours는 Naver에 없어서 항상 할루시네이션 → 제거
         delete place.openingHours;
         delete place.sourceIndex;
       }
+    }
+
+    // L1: 파이널리스트 전체에 대해 블로그 버즈 분석 (캐시 우선, 실패 시 개별 0점 폴백)
+    try {
+      await Promise.all(
+        finalists.map(async (place: { placeName: string; address: string; bubbleScore?: number; buzzCount?: number }) => {
+          const buzz = await getBubbleScoreCached(place.placeName, place.address, primaryArea);
+          place.bubbleScore = buzz.bubbleScore;
+          place.buzzCount = buzz.buzzCount;
+        })
+      );
+    } catch (e) {
+      console.error('[recommend] L1 buzz analysis failed', e);
+    }
+
+    // 최종 표시 개수로 슬라이스 (현재는 Claude의 slotRank 순서 그대로 — L3 재정렬은 후속 Phase)
+    const bySlot = (slot: number) =>
+      finalists.filter((p) => p.purposeSlot === slot).sort((a, b) => a.slotRank - b.slotRank);
+
+    let places;
+    if (effectiveTwoPurposes) {
+      const firstSorted = bySlot(1);
+      const secondSorted = bySlot(2);
+      places = [
+        firstSorted[0] && { ...firstSorted[0], rank: 1 },
+        secondSorted[0] && { ...secondSorted[0], rank: 2 },
+        firstSorted[1] && { ...firstSorted[1], rank: 3 },
+        firstSorted[2] && { ...firstSorted[2], rank: 4 },
+        secondSorted[1] && { ...secondSorted[1], rank: 5 },
+        secondSorted[2] && { ...secondSorted[2], rank: 6 },
+      ].filter(Boolean);
+    } else {
+      places = bySlot(1)
+        .slice(0, 3)
+        .map((p, i) => ({ ...p, rank: i + 1 }));
+    }
+
+    const debugBubbleScores = finalists.map((p: { placeName: string; bubbleScore?: number; buzzCount?: number }) => ({
+      placeName: p.placeName,
+      bubbleScore: p.bubbleScore,
+      buzzCount: p.buzzCount,
+    }));
+
+    // 클라이언트 응답에서 내부 전용 필드 제거
+    for (const p of places) {
+      delete p.slotRank;
+      delete p.purposeSlot;
     }
 
     // Kakao 장소 URL 병렬 보강 (place_url 있으면 정식 카카오 페이지 연결)
@@ -521,7 +566,10 @@ ${fitScoreGuide}
       }
     }
 
-    return res.status(200).json({ places, _debug: { naverPlacesCount: naverFirstPlaces.length } });
+    return res.status(200).json({
+      places,
+      _debug: { naverPlacesCount: naverFirstPlaces.length, bubbleScores: debugBubbleScores },
+    });
   } catch (e) {
     return res.status(500).json({ error: (e as Error).message });
   }

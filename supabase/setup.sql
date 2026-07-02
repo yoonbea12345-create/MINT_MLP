@@ -113,3 +113,20 @@ DROP POLICY IF EXISTS "anon read mint_session_members" ON mint_session_members;
 CREATE POLICY "anon read mint_session_members" ON mint_session_members FOR SELECT TO anon USING (true);
 DROP POLICY IF EXISTS "anon insert mint_session_members" ON mint_session_members;
 CREATE POLICY "anon insert mint_session_members" ON mint_session_members FOR INSERT TO anon WITH CHECK (true);
+
+-- =============================================
+-- L1: 블로그 버즈 분석 캐시 (추천 재설계 Phase 1)
+-- 서버(service role)만 접근 — anon 정책 없음
+-- =============================================
+CREATE TABLE IF NOT EXISTS place_buzz_cache (
+  place_key       TEXT PRIMARY KEY,
+  bubble_score    DOUBLE PRECISION NOT NULL,
+  sponsored_ratio DOUBLE PRECISION,
+  burstiness      DOUBLE PRECISION,
+  recent_spike    DOUBLE PRECISION,
+  revisit_ratio   DOUBLE PRECISION,
+  buzz_count      INTEGER,
+  analyzed_at     TIMESTAMPTZ DEFAULT now()
+);
+
+ALTER TABLE place_buzz_cache ENABLE ROW LEVEL SECURITY;
