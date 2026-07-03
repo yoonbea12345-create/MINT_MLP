@@ -346,7 +346,8 @@ export default function Landing() {
             </h2>
             <p className="text-sm text-gray-400 mb-2 leading-relaxed">
               한 명이 총대 메던 시대는 끝.<br />
-              각자 30초씩 입력하면 <strong className="text-gray-600">모두의 중간지점과 취향</strong>을 종합해 자동으로 나옵니다.
+              각자 30초씩 입력하면<br />
+              <strong className="text-gray-600">모두의 중간지점과 취향</strong>을 종합해 자동으로 나옵니다.
             </p>
             <p className="text-xs text-[#2AB5A0] font-bold mb-6">옆으로 넘겨보세요 →</p>
           </div>
