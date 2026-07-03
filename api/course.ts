@@ -144,7 +144,7 @@ ${courseSchema}`;
     let message;
     try {
       message = await client.messages.create({
-        model: 'claude-opus-4-8',
+        model: 'claude-fable-5',
         max_tokens: 1024,
         messages: [{ role: 'user', content: prompt }],
       });
@@ -160,7 +160,10 @@ ${courseSchema}`;
       }
     }
 
-    const text = message.content[0].type === 'text' ? message.content[0].text : '';
+    const text = message.content
+      .filter((b): b is { type: 'text'; text: string } => b.type === 'text')
+      .map((b) => b.text)
+      .join('');
     const jsonMatch = text.match(/\{[\s\S]*\}/);
     if (!jsonMatch) return res.status(500).json({ error: '코스 추천 응답 파싱 실패' });
 
