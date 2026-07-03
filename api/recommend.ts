@@ -489,7 +489,7 @@ ${fitScoreGuide}
     let message;
     try {
       message = await client.messages.create({
-        model: 'claude-fable-5',
+        model: 'claude-opus-4-8',
         max_tokens: 4096,
         messages: [{ role: 'user', content: prompt }],
       });
