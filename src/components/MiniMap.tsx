@@ -1,10 +1,5 @@
 import { useEffect, useRef } from 'react';
-
-declare global {
-  interface Window {
-    kakao: any;
-  }
-}
+import { ensureKakaoMaps } from '../utils/kakaoLoader';
 
 interface KakaoMapInstance {
   setCenter: (latlng: KakaoLatLng) => void;
@@ -29,7 +24,6 @@ export default function MiniMap({ lat, lng, placeName }: Props) {
   const mapInstance = useRef<KakaoMapInstance | null>(null);
   const markerInstance = useRef<KakaoMarker | null>(null);
   const infoWindowInstance = useRef<KakaoInfoWindow | null>(null);
-  const jsKey = import.meta.env.VITE_KAKAO_JS_API_KEY;
 
   function renderMap() {
     if (!mapRef.current || !window.kakao?.maps) return;
@@ -64,25 +58,11 @@ export default function MiniMap({ lat, lng, placeName }: Props) {
   }
 
   useEffect(() => {
-    const init = () => window.kakao.maps.load(renderMap);
-
-    if (window.kakao?.maps) {
-      init();
-      return;
-    }
-
-    // SDK 스크립트 중복 삽입 방지
-    const existing = document.querySelector('script[src*="dapi.kakao.com/v2/maps"]');
-    if (existing) {
-      existing.addEventListener('load', init);
-      return () => existing.removeEventListener('load', init);
-    }
-
-    const script = document.createElement('script');
-    script.src = `//dapi.kakao.com/v2/maps/sdk.js?appkey=${jsKey}&autoload=false`;
-    script.async = true;
-    script.onload = init;
-    document.head.appendChild(script);
+    let active = true;
+    ensureKakaoMaps()
+      .then(() => { if (active) renderMap(); })
+      .catch(() => { /* SDK 로드 실패 시 지도 없이 링크만 노출 */ });
+    return () => { active = false; };
   }, [lat, lng, placeName]);
 
   return (

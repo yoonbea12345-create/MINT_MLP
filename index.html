@@ -38,8 +38,8 @@
     <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-TST2XCDT"
     height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     <div id="root"></div>
-    <script src="https://t1.kakaocdn.net/kakaojs/2.7.4/kakao.min.js" crossorigin="anonymous"></script>
-    <script type="text/javascript" src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=633de41eba4b85734a961345c0f55a7e&libraries=services"></script>
+    <!-- 카카오 공유 SDK (defer — 파싱 비차단). 지도 SDK는 kakaoLoader.ts에서 필요 시 동적 로드 -->
+    <script src="https://t1.kakaocdn.net/kakaojs/2.7.4/kakao.min.js" crossorigin="anonymous" defer></script>
     <script type="module" src="/src/main.tsx"></script>
     <script>
       if ('serviceWorker' in navigator) {

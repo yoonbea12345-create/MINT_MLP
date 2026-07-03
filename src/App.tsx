@@ -1,9 +1,11 @@
-import { Component, type ReactNode } from 'react';
-import Home from './pages/Home';
-import Landing from './pages/Landing';
-import SharedResult from './pages/SharedResult';
-import Admin from './pages/Admin';
-import MemberInput from './pages/MemberInput';
+import { Component, lazy, Suspense, type ReactNode } from 'react';
+
+// 페이지별 코드 스플리팅 — 랜딩만 보는 방문자가 Home/Admin 번들까지 받지 않도록
+const Home = lazy(() => import('./pages/Home'));
+const Landing = lazy(() => import('./pages/Landing'));
+const SharedResult = lazy(() => import('./pages/SharedResult'));
+const Admin = lazy(() => import('./pages/Admin'));
+const MemberInput = lazy(() => import('./pages/MemberInput'));
 
 class ErrorBoundary extends Component<{ children: ReactNode }, { error: Error | null }> {
   state = { error: null };
@@ -25,6 +27,14 @@ class ErrorBoundary extends Component<{ children: ReactNode }, { error: Error | 
   }
 }
 
+function PageLoading() {
+  return (
+    <div className="min-h-screen bg-[#F5FBF8] flex items-center justify-center">
+      <div className="w-10 h-10 border-4 border-[#3CDBC0] border-t-transparent rounded-full animate-spin-slow" />
+    </div>
+  );
+}
+
 function Router() {
   const path = window.location.pathname;
   if (path === '/admin') return <Admin />;
@@ -37,7 +47,9 @@ function Router() {
 export default function App() {
   return (
     <ErrorBoundary>
-      <Router />
+      <Suspense fallback={<PageLoading />}>
+        <Router />
+      </Suspense>
     </ErrorBoundary>
   );
 }

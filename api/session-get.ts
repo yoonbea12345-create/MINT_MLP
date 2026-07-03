@@ -51,7 +51,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         .order('submitted_at', { ascending: true }));
     }
 
-    if (mErr) return res.status(500).json({ error: mErr.message });
+    if (mErr) {
+      console.error('[session-get] members fetch failed', mErr);
+      return res.status(500).json({ error: '세션 정보를 불러오지 못했어요.' });
+    }
 
     const parsedMembers = (members ?? []).map((m: Record<string, unknown>) => ({
       ...m,
@@ -66,6 +69,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       members: parsedMembers,
     });
   } catch (e) {
-    return res.status(500).json({ error: (e as Error).message });
+    console.error('[session-get] failed', e);
+    return res.status(500).json({ error: '세션 정보를 불러오지 못했어요.' });
   }
 }

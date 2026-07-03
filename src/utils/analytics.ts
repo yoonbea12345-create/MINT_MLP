@@ -36,19 +36,4 @@ export function trackSessionDuration(seconds: number): void {
   supabase.from('events').insert({ type: 'session_duration', duration_seconds: seconds }).then(() => {});
 }
 
-export async function getAnalytics() {
-  const { data, error } = await supabase.from('events').select('type, duration_seconds');
-  if (error) console.error('[analytics] events fetch error:', error);
-  if (!data) return { landingViews: 0, ctaClicks: 0, reservationAttempts: 0, kakaoShares: 0, avgStaySeconds: null as number | null };
-  const sessions = data.filter((e) => e.type === 'session_duration' && e.duration_seconds != null);
-  const avgStaySeconds: number | null = sessions.length > 0
-    ? Math.round(sessions.reduce((sum: number, s: any) => sum + (s.duration_seconds as number), 0) / sessions.length)
-    : null;
-  return {
-    landingViews: data.filter((e) => e.type === 'landing_view').length,
-    ctaClicks: data.filter((e) => e.type === 'cta_click').length,
-    reservationAttempts: data.filter((e) => e.type === 'reservation_attempt').length,
-    kakaoShares: data.filter((e) => e.type === 'kakao_share').length,
-    avgStaySeconds,
-  };
-}
+// 분석 지표 조회는 /api/admin-data(서버)로 이전 — anon select 제거

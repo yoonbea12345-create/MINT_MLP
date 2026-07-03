@@ -1,7 +1,32 @@
-import { useEffect, useState } from 'react';
-import { supabase } from '../utils/supabase';
-import { getAnalytics, isTrackingPaused, setTrackingPaused } from '../utils/analytics';
+import { useState } from 'react';
+import { isTrackingPaused, setTrackingPaused } from '../utils/analytics';
 import type { ReservationRecord } from './Reserve';
+
+// 어드민 — 모든 데이터 접근은 /api/admin-data(서버 비밀번호 검증 + service role) 경유.
+// 클라이언트 하드코딩 비밀번호와 anon 키 직접 select는 보안 문제로 제거됨.
+
+interface AdminAnalytics {
+  landingViews: number;
+  ctaClicks: number;
+  reservationAttempts: number;
+  kakaoShares: number;
+  avgStaySeconds: number | null;
+}
+
+const EMPTY_ANALYTICS: AdminAnalytics = {
+  landingViews: 0, ctaClicks: 0, reservationAttempts: 0, kakaoShares: 0, avgStaySeconds: null,
+};
+
+async function callAdmin(password: string, action?: string, id?: string) {
+  const res = await fetch('/api/admin-data', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ password, action, id }),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || `요청 실패 (${res.status})`);
+  return data;
+}
 
 function formatDuration(seconds: number): string {
   if (seconds < 60) return `${seconds}초`;
@@ -19,38 +44,16 @@ function formatDate(iso: string) {
   return `${mm}/${dd} ${hh}:${min}`;
 }
 
-async function fetchReservations(): Promise<{ records: ReservationRecord[]; error: string | null }> {
-  const { data, error } = await supabase
-    .from('reservations')
-    .select('*')
-    .order('created_at', { ascending: false });
-  if (error) {
-    console.error('[Admin] reservations fetch error:', error);
-    return { records: [], error: error.message };
-  }
-  if (!data) return { records: [], error: null };
-  return {
-    records: data.map((r) => ({
-      id: r.id,
-      placeName: r.place_name,
-      address: r.address,
-      guestName: r.guest_name,
-      people: r.people,
-      arrivalTime: r.arrival_time,
-      createdAt: r.created_at,
-    })),
-    error: null,
-  };
-}
-
-function PasswordGate({ onUnlock }: { onUnlock: () => void }) {
+function PasswordGate({ onUnlock, verifying, error }: {
+  onUnlock: (password: string) => void;
+  verifying: boolean;
+  error: string | null;
+}) {
   const [input, setInput] = useState('');
-  const [error, setError] = useState(false);
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (input === '1229') { onUnlock(); }
-    else { setError(true); setInput(''); }
+    if (input.trim()) onUnlock(input.trim());
   }
 
   return (
@@ -62,14 +65,18 @@ function PasswordGate({ onUnlock }: { onUnlock: () => void }) {
         <input
           type="password"
           value={input}
-          onChange={(e) => { setInput(e.target.value); setError(false); }}
+          onChange={(e) => setInput(e.target.value)}
           placeholder="비밀번호"
           autoFocus
           className={`w-full px-4 py-3 rounded-xl border-2 text-center text-lg tracking-widest outline-none transition-all ${error ? 'border-red-300 bg-red-50' : 'border-gray-200 focus:border-[#36CFA0]'}`}
         />
-        {error && <p className="text-xs text-red-400 mt-2">비밀번호가 틀렸어요</p>}
-        <button type="submit" className="w-full mt-4 bg-[#36CFA0] text-white font-black py-3 rounded-xl hover:bg-[#2AB58C] transition-colors">
-          입장
+        {error && <p className="text-xs text-red-400 mt-2">{error}</p>}
+        <button
+          type="submit"
+          disabled={verifying}
+          className="w-full mt-4 bg-[#36CFA0] text-white font-black py-3 rounded-xl hover:bg-[#2AB58C] transition-colors disabled:bg-gray-200 disabled:text-gray-400"
+        >
+          {verifying ? '확인 중...' : '입장'}
         </button>
       </form>
     </div>
@@ -77,63 +84,76 @@ function PasswordGate({ onUnlock }: { onUnlock: () => void }) {
 }
 
 export default function Admin() {
-  const [unlocked, setUnlocked] = useState(false);
+  const [password, setPassword] = useState<string | null>(null);
+  const [gateError, setGateError] = useState<string | null>(null);
+  const [verifying, setVerifying] = useState(false);
   const [records, setRecords] = useState<ReservationRecord[]>([]);
-  const [analytics, setAnalytics] = useState({ landingViews: 0, ctaClicks: 0, reservationAttempts: 0, kakaoShares: 0, avgStaySeconds: null as number | null });
-  const [loading, setLoading] = useState(true);
-  const [paused, setPaused] = useState(false);
+  const [analytics, setAnalytics] = useState<AdminAnalytics>(EMPTY_ANALYTICS);
+  const [loading, setLoading] = useState(false);
+  const [paused, setPaused] = useState(() => isTrackingPaused());
   const [dbError, setDbError] = useState<string | null>(null);
-
-  useEffect(() => {
-    setPaused(isTrackingPaused());
-  }, []);
 
   const conversionRate = analytics.landingViews === 0
     ? '0.0'
     : ((analytics.ctaClicks / analytics.landingViews) * 100).toFixed(1);
 
-  async function loadData() {
+  async function loadData(pw: string) {
     setLoading(true);
     setDbError(null);
     try {
-      const [analyticsResult, reservationsResult] = await Promise.all([
-        getAnalytics(),
-        fetchReservations(),
-      ]);
-      setAnalytics(analyticsResult);
-      if (reservationsResult.error) {
-        setDbError(reservationsResult.error);
-      } else {
-        setRecords(reservationsResult.records);
-      }
-    } catch (e: any) {
-      console.error('[Admin] 데이터 로드 실패:', e);
-      setDbError(e?.message ?? '알 수 없는 오류');
+      const data = await callAdmin(pw);
+      setAnalytics(data.analytics ?? EMPTY_ANALYTICS);
+      setRecords(Array.isArray(data.reservations) ? data.reservations : []);
+    } catch (e) {
+      setDbError((e as Error).message);
     } finally {
       setLoading(false);
     }
   }
 
-  useEffect(() => {
-    if (!unlocked) return;
-    loadData();
-  }, [unlocked]);
+  async function handleUnlock(pw: string) {
+    setVerifying(true);
+    setGateError(null);
+    try {
+      const data = await callAdmin(pw);
+      setPassword(pw);
+      setAnalytics(data.analytics ?? EMPTY_ANALYTICS);
+      setRecords(Array.isArray(data.reservations) ? data.reservations : []);
+    } catch (e) {
+      setGateError((e as Error).message);
+    } finally {
+      setVerifying(false);
+    }
+  }
 
   async function handleDelete(id: string) {
-    await supabase.from('reservations').delete().eq('id', id);
-    setRecords((prev) => prev.filter((r) => r.id !== id));
+    if (!password) return;
+    try {
+      await callAdmin(password, 'delete_reservation', id);
+      setRecords((prev) => prev.filter((r) => r.id !== id));
+    } catch (e) {
+      setDbError((e as Error).message);
+    }
   }
 
   async function handleClear() {
-    if (!confirm('전체 예약 내역을 삭제할까요?')) return;
-    await supabase.from('reservations').delete().not('id', 'is', null);
-    setRecords([]);
+    if (!password || !confirm('전체 예약 내역을 삭제할까요?')) return;
+    try {
+      await callAdmin(password, 'clear_reservations');
+      setRecords([]);
+    } catch (e) {
+      setDbError((e as Error).message);
+    }
   }
 
   async function handleClearAnalytics() {
-    if (!confirm('분석 데이터(랜딩 조회, CTA 클릭 등)를 초기화할까요?')) return;
-    await supabase.from('events').delete().not('id', 'is', null);
-    setAnalytics({ landingViews: 0, ctaClicks: 0, reservationAttempts: 0, kakaoShares: 0, avgStaySeconds: null });
+    if (!password || !confirm('분석 데이터(랜딩 조회, CTA 클릭 등)를 초기화할까요?')) return;
+    try {
+      await callAdmin(password, 'clear_events');
+      setAnalytics(EMPTY_ANALYTICS);
+    } catch (e) {
+      setDbError((e as Error).message);
+    }
   }
 
   function handleTogglePause() {
@@ -142,7 +162,7 @@ export default function Admin() {
     setPaused(next);
   }
 
-  if (!unlocked) return <PasswordGate onUnlock={() => setUnlocked(true)} />;
+  if (!password) return <PasswordGate onUnlock={handleUnlock} verifying={verifying} error={gateError} />;
 
   if (loading) {
     return (
@@ -164,7 +184,7 @@ export default function Admin() {
           </div>
           <div className="flex items-center gap-2">
             <button
-              onClick={loadData}
+              onClick={() => loadData(password)}
               className="text-xs bg-white border border-gray-200 text-gray-500 px-2.5 py-1 rounded-full hover:border-[#36CFA0] hover:text-[#36CFA0] transition-colors"
             >
               새로고침
@@ -183,14 +203,11 @@ export default function Admin() {
           </div>
         </div>
 
-        {/* DB 에러 표시 */}
+        {/* 오류 표시 */}
         {dbError && (
           <div className="mb-4 bg-red-50 border border-red-200 rounded-2xl p-4">
-            <div className="text-sm font-bold text-red-600 mb-1">Supabase 연결 오류</div>
-            <div className="text-xs text-red-500 font-mono break-all">{dbError}</div>
-            <div className="text-xs text-red-400 mt-2">
-              Supabase 대시보드에서 테이블이 존재하는지, RLS 정책이 허용되어 있는지 확인해 주세요.
-            </div>
+            <div className="text-sm font-bold text-red-600 mb-1">데이터 오류</div>
+            <div className="text-xs text-red-500 break-all">{dbError}</div>
           </div>
         )}
 
@@ -267,7 +284,7 @@ export default function Admin() {
                 {analytics.avgStaySeconds != null ? formatDuration(analytics.avgStaySeconds) : '—'}
               </div>
               <div className="text-xs text-gray-300 mt-1">
-                {analytics.avgStaySeconds != null ? '앱 진입 → 결과 확인까지' : 'Supabase SQL 마이그레이션 필요 (analytics.ts 주석 참고)'}
+                {analytics.avgStaySeconds != null ? '앱 진입 → 결과 확인까지' : '아직 기록이 없어요'}
               </div>
             </div>
           </div>

@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { trackEvent } from '../utils/analytics';
-import { supabase } from '../utils/supabase';
 
 export interface ReservationRecord {
   id: string;
@@ -33,30 +32,21 @@ export default function Reserve({ placeName, address, openingHours, onBack }: Pr
       return;
     }
 
-    // 데이터 저장 (admin에서 확인용)
-    const record: ReservationRecord = {
-      id: Date.now().toString(),
-      placeName,
-      address,
-      guestName: name.trim(),
-      people: people.trim(),
-      arrivalTime: '-',
-      createdAt: new Date().toISOString(),
-    };
-    supabase.from('reservations').insert({
-      id: record.id,
-      place_name: record.placeName,
-      address: record.address,
-      guest_name: record.guestName,
-      people: record.people,
-      arrival_time: record.arrivalTime,
-      created_at: record.createdAt,
-    }).then(() => {});
+    // 수요 기록 (서버 경유 — admin에서 확인용)
+    fetch('/api/reserve', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        placeName,
+        address,
+        guestName: name.trim(),
+        people: people.trim(),
+      }),
+    }).catch(() => {});
 
     // 트래킹
     trackEvent('reservation_attempt');
 
-    // 사용자에게는 예약 불가 메시지
     setStatus('unavailable');
   }
 
@@ -73,6 +63,13 @@ export default function Reserve({ placeName, address, openingHours, onBack }: Pr
             ←
           </button>
           <h1 className="text-lg font-black text-gray-800">예약 요청하기</h1>
+        </div>
+
+        {/* 정직한 안내 — 아직 예약 연동 전, 수요 조사 단계 */}
+        <div className="bg-[#E8F8F5] border border-[#3CDBC0]/30 rounded-2xl px-4 py-3 mb-4 -mt-2">
+          <p className="text-xs text-[#2AB5A0] leading-relaxed">
+            🌱 매장 예약 연동을 준비 중이에요. 남겨주신 요청은 연동 우선순위에 반영됩니다.
+          </p>
         </div>
 
         {/* 장소 정보 */}
@@ -124,20 +121,31 @@ export default function Reserve({ placeName, address, openingHours, onBack }: Pr
               onClick={handleSubmit}
               className="w-full bg-[#36CFA0] text-white font-black text-base py-4 rounded-2xl shadow-lg shadow-teal-200 active:scale-95 transition-all hover:bg-[#2AB58C]"
             >
-              예약 확인하기
+              예약 요청 남기기
             </button>
           </>
         ) : (
-          /* 예약 불가 메시지 */
-          <div className="bg-red-50 border border-red-200 rounded-2xl p-8 text-center">
-            <div className="text-4xl mb-3">😔</div>
-            <div className="text-lg font-black text-red-600 mb-2">죄송합니다.</div>
-            <div className="text-sm text-red-400 leading-relaxed">
-              현재 예약이 불가능한 매장입니다.
+          /* 접수 완료 — 연동 전이라 직접 예약 안내 */
+          <div className="bg-white border-2 border-[#3CDBC0]/30 rounded-2xl p-8 text-center">
+            <div className="text-4xl mb-3">🙏</div>
+            <div className="text-lg font-black text-gray-800 mb-2">요청이 접수됐어요!</div>
+            <div className="text-sm text-gray-500 leading-relaxed">
+              아직 매장 예약 연동을 준비 중이라<br />
+              바로 예약해드리지는 못해요.<br />
+              지금은 카카오맵에서 매장 정보를 확인해<br />
+              직접 예약해주세요.
             </div>
+            <a
+              href={`https://map.kakao.com/link/search/${encodeURIComponent(placeName)}`}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-block mt-5 px-6 py-3 bg-[#FEE500] text-gray-900 font-black text-sm rounded-2xl active:scale-95 transition-transform"
+            >
+              카카오맵에서 확인하기
+            </a>
             <button
               onClick={onBack}
-              className="mt-6 text-sm text-gray-400 underline"
+              className="block mx-auto mt-4 text-sm text-gray-400 underline"
             >
               돌아가기
             </button>

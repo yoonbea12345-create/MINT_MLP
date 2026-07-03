@@ -22,7 +22,7 @@ export interface PlaceRecommendation {
   vibeTags: string[];
   address: string;
   area: string;
-  congestionLevel: string;
+  congestionLevel?: string;
   openingHours?: string;
   kakaoPlaceId?: string;
   kakaoPlaceUrl?: string;
@@ -31,22 +31,6 @@ export interface PlaceRecommendation {
   nearbySpots?: string[];
   walkingToNext?: number;
   fitScore?: number;
-}
-
-export interface CoursePlace {
-  placeName: string;
-  category: string;
-  description: string;
-  vibeTags: string[];
-  address: string;
-  walkingMinutes: number;
-  lat?: number;
-  lng?: number;
-}
-
-export interface CourseRecommendation {
-  places: CoursePlace[];
-  totalMinutes: number;
 }
 
 export async function getAIRecommendation(
@@ -69,19 +53,4 @@ export async function getAIRecommendation(
   const places = Array.isArray(data) ? data : (data.places ?? [data]);
   if (data._debug) console.log('[recommend] debug', data._debug);
   return places as PlaceRecommendation[];
-}
-
-export async function getCourseRecommendation(
-  input: UserInput,
-  firstPlace: PlaceRecommendation
-): Promise<CourseRecommendation> {
-  const res = await fetch('/api/course', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ input, firstPlace }),
-  });
-  if (!res.ok) throw new Error('코스 추천 요청 실패');
-  const data = await res.json();
-  if (data.error) throw new Error(data.error);
-  return data as CourseRecommendation;
 }

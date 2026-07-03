@@ -1,3 +1,5 @@
+import { ensureKakaoMaps } from '../utils/kakaoLoader';
+
 export interface KakaoPlace {
   id: string;
   place_name: string;
@@ -16,42 +18,37 @@ declare global {
 
 const cache = new Map<string, KakaoPlace[]>();
 
-export function searchKakaoKeyword(
+export async function searchKakaoKeyword(
   keyword: string,
   options?: { x?: string; y?: string; radius?: number }
 ): Promise<KakaoPlace[]> {
   const cacheKey = keyword + JSON.stringify(options ?? {});
-  if (cache.has(cacheKey)) return Promise.resolve(cache.get(cacheKey)!);
+  if (cache.has(cacheKey)) return cache.get(cacheKey)!;
+
+  await ensureKakaoMaps();
 
   return new Promise((resolve, reject) => {
-    const trySearch = () => {
-      if (!window.kakao || !window.kakao.maps || !window.kakao.maps.services) {
-        setTimeout(trySearch, 300);
-        return;
-      }
-      const ps = new window.kakao.maps.services.Places();
-      const opts: Record<string, unknown> = { size: 5 };
-      if (options?.x) opts.x = Number(options.x);
-      if (options?.y) opts.y = Number(options.y);
-      if (options?.radius) opts.radius = options.radius;
-      ps.keywordSearch(
-        keyword,
-        (results: KakaoPlace[], status: string) => {
-          const { OK, ZERO_RESULT } = window.kakao.maps.services.Status;
-          if (status === OK) {
-            cache.set(cacheKey, results);
-            resolve(results);
-          } else if (status === ZERO_RESULT) {
-            cache.set(cacheKey, []);
-            resolve([]);
-          } else {
-            reject(new Error('카카오 장소 검색 실패'));
-          }
-        },
-        opts
-      );
-    };
-    trySearch();
+    const ps = new window.kakao.maps.services.Places();
+    const opts: Record<string, unknown> = { size: 5 };
+    if (options?.x) opts.x = Number(options.x);
+    if (options?.y) opts.y = Number(options.y);
+    if (options?.radius) opts.radius = options.radius;
+    ps.keywordSearch(
+      keyword,
+      (results: KakaoPlace[], status: string) => {
+        const { OK, ZERO_RESULT } = window.kakao.maps.services.Status;
+        if (status === OK) {
+          cache.set(cacheKey, results);
+          resolve(results);
+        } else if (status === ZERO_RESULT) {
+          cache.set(cacheKey, []);
+          resolve([]);
+        } else {
+          reject(new Error('카카오 장소 검색 실패'));
+        }
+      },
+      opts
+    );
   });
 }
 

@@ -52,7 +52,7 @@ function parseOpenStatus(openingHours?: string): { label: string; isOpen: boolea
   return { label: isOpen ? '영업중' : nowMin < openMin ? '영업 전' : '영업 종료', isOpen };
 }
 
-function congestionInfo(level: string): { dot: string; label: string } {
+function congestionInfo(level?: string): { dot: string; label: string } {
   if (!level) return { dot: 'text-white/50', label: '-' };
   if (level.includes('여유') || level.includes('원활')) return { dot: 'text-green-300', label: '여유' };
   if (level.includes('보통')) return { dot: 'text-yellow-300', label: '보통' };
@@ -154,10 +154,12 @@ function PlaceCard({ place, extraResults = [], gradient, shadowColor }: CardProp
           <span className="text-xs font-black bg-white/30 text-white px-3 py-0.5 rounded-full border border-white/30">
             {place.category}
           </span>
-          <div className="flex items-center gap-1">
-            <span className={`${cong.dot} text-xs leading-none`}>●</span>
-            <span className="text-xs text-white/80">{cong.label}</span>
-          </div>
+          {place.congestionLevel && (
+            <div className="flex items-center gap-1">
+              <span className={`${cong.dot} text-xs leading-none`}>●</span>
+              <span className="text-xs text-white/80">{cong.label}</span>
+            </div>
+          )}
         </div>
 
         {/* 장소명 */}
@@ -238,8 +240,12 @@ function PlaceCard({ place, extraResults = [], gradient, shadowColor }: CardProp
                       {p.fitScore}점
                     </span>
                   )}
-                  <div className={`w-1.5 h-1.5 rounded-full ${congestionDotClass(p.congestionLevel as CongestionLevel)}`} />
-                  <span className="text-xs text-white/60">{p.congestionLevel}</span>
+                  {p.congestionLevel && (
+                    <>
+                      <div className={`w-1.5 h-1.5 rounded-full ${congestionDotClass(p.congestionLevel as CongestionLevel)}`} />
+                      <span className="text-xs text-white/60">{p.congestionLevel}</span>
+                    </>
+                  )}
                 </div>
               </div>
               <p className="text-xs text-white/70 mb-1.5 leading-relaxed">{p.description}</p>
@@ -399,10 +405,12 @@ export default function ResultCard({
                     <span className="text-xs font-black bg-white/20 text-white px-3 py-0.5 rounded-full border border-white/20">
                       {secondResult.category}
                     </span>
-                    <div className="flex items-center gap-1">
-                      <span className={`${cong.dot} text-xs leading-none`}>●</span>
-                      <span className="text-xs text-white/80">{cong.label}</span>
-                    </div>
+                    {secondResult.congestionLevel && (
+                      <div className="flex items-center gap-1">
+                        <span className={`${cong.dot} text-xs leading-none`}>●</span>
+                        <span className="text-xs text-white/80">{cong.label}</span>
+                      </div>
+                    )}
                   </div>
                 );
               })()}

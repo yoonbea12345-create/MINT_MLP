@@ -1,5 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk';
 import type { VercelRequest, VercelResponse } from '@vercel/node';
+import { clientIp, checkRateLimit, validateRecommendBody } from './_lib/guard.js';
 import { getBubbleScoreCached, getBubbleScoresCacheOnly } from './_lib/blogBuzz.js';
 import { fetchStoresInRadius, matchStoreToPlace, lookupYearsAlive, computeLocalGem } from './_lib/publicData.js';
 import { getSupabaseAdmin } from './_lib/supabaseAdmin.js';
@@ -259,6 +260,26 @@ function formatNaverPlaces(places: (NaverPlace & { _isPublicGem?: boolean; _buzz
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') return res.status(405).end();
+
+  // 입력 검증 — 임의 페이로드로 인한 예외/프롬프트 오염 차단
+  const invalidMsg = validateRecommendBody(req.body);
+  if (invalidMsg) return res.status(400).json({ error: invalidMsg });
+
+  // 레이트리밋 — IP당 분당 5회, 전체 일일 상한(기본 500회, env로 조정)
+  const gate = await checkRateLimit(
+    getSupabaseAdmin(),
+    'recommend',
+    clientIp(req),
+    5,
+    Number(process.env.RECOMMEND_DAILY_CAP ?? 500),
+  );
+  if (!gate.allowed) {
+    return res.status(429).json({
+      error: gate.reason === 'daily'
+        ? '오늘 추천 요청이 몰려서 잠시 쉬어가고 있어요. 내일 다시 만나요!'
+        : '요청이 너무 잦아요. 잠시 후 다시 시도해주세요.',
+    });
+  }
 
   try {
     const { input, midpoint, congestionData } = req.body;
@@ -649,6 +670,15 @@ ${fitScoreGuide}
       );
     }
 
+    // 혼잡도 정직화: 서울 실시간 데이터가 실제로 있을 때만 노출, 없으면 필드 제거
+    // (기존에는 Claude가 지어낸 혼잡도가 그대로 나갔다 — 실측 아닌 값은 보여주지 않는다)
+    const realCongestion = (congestionData as { areaName: string; level: string }[])
+      .find((c) => c.level && c.level !== '알 수 없음')?.level ?? null;
+    for (const p of places) {
+      if (realCongestion) p.congestionLevel = realCongestion;
+      else delete p.congestionLevel;
+    }
+
     // 1차·2차 도보 시간 haversine으로 보정 (rank 1 → rank 2)
     if (effectiveTwoPurposes) {
       const rank1 = places.find((p: { rank: number }) => p.rank === 1);
@@ -705,9 +735,13 @@ ${fitScoreGuide}
 
     return res.status(200).json({
       places,
-      _debug: { naverPlacesCount: naverFirstPlaces.length, bubbleScores: debugBubbleScores },
+      // 내부 스코어링은 디버그 플래그 켰을 때만 노출
+      ...(process.env.EXPOSE_DEBUG === '1'
+        ? { _debug: { naverPlacesCount: naverFirstPlaces.length, bubbleScores: debugBubbleScores } }
+        : {}),
     });
   } catch (e) {
-    return res.status(500).json({ error: (e as Error).message });
+    console.error('[recommend] failed', e);
+    return res.status(500).json({ error: '추천을 만드는 중 문제가 생겼어요. 잠시 후 다시 시도해주세요.' });
   }
 }

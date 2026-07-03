@@ -82,6 +82,7 @@ export default function Landing() {
   const { canInstall, triggerInstall, isIOS, showIOSGuide, setShowIOSGuide } = useInstallPrompt();
   const [comboIdx, setComboIdx] = useState(0);
   const [visitCount, setVisitCount] = useState(0);
+  const [showPrivacy, setShowPrivacy] = useState(false);
 
   // 소셜 프루프 카운터 (localStorage 캐시로 깜빡임 방지)
   useEffect(() => {
@@ -650,8 +651,72 @@ export default function Landing() {
 
       {/* FOOTER */}
       <footer className="bg-white border-t border-gray-100 py-6 text-center">
-        <p className="text-xs text-gray-400">© 2026 MINT. All rights reserved.</p>
+        <div className="flex items-center justify-center gap-3">
+          <button
+            onClick={() => setShowPrivacy(true)}
+            className="text-xs text-gray-400 underline hover:text-gray-600 transition-colors"
+          >
+            개인정보처리방침
+          </button>
+          <span className="text-gray-200 text-xs">·</span>
+          <p className="text-xs text-gray-400">© 2026 MINT. All rights reserved.</p>
+        </div>
       </footer>
+
+      {/* 개인정보처리방침 모달 */}
+      {showPrivacy && (
+        <div
+          className="fixed inset-0 z-50 bg-black/50 flex items-end sm:items-center justify-center px-0 sm:px-4"
+          onClick={() => setShowPrivacy(false)}
+        >
+          <div
+            className="bg-white rounded-t-3xl sm:rounded-3xl w-full max-w-lg max-h-[80vh] overflow-y-auto px-6 pt-6 pb-8"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-5">
+              <h3 className="text-lg font-black text-gray-800">개인정보처리방침</h3>
+              <button onClick={() => setShowPrivacy(false)} className="text-gray-400 hover:text-gray-700 text-xl px-2">✕</button>
+            </div>
+            <div className="space-y-5 text-sm text-gray-600 leading-relaxed">
+              <div>
+                <p className="text-xs font-black text-gray-800 mb-1.5 uppercase tracking-wider">수집하는 정보</p>
+                <p>
+                  장소 추천을 위해 출발지(지역명·좌표), 모임 조건(인원·목적·분위기·예산)을 입력받습니다.
+                  그룹 모드에서는 참여자가 입력한 이름과 출발지가, 예약 요청 시에는 이름과 인원수가 저장됩니다.
+                  회원가입이 없으므로 계정 정보는 수집하지 않습니다.
+                </p>
+              </div>
+              <div>
+                <p className="text-xs font-black text-gray-800 mb-1.5 uppercase tracking-wider">이용 목적</p>
+                <p>
+                  입력된 정보는 장소 추천 생성과 서비스 개선을 위한 통계(방문·클릭 수 집계)에만 사용됩니다.
+                  마케팅이나 제3자 제공 목적으로 사용하지 않습니다.
+                </p>
+              </div>
+              <div>
+                <p className="text-xs font-black text-gray-800 mb-1.5 uppercase tracking-wider">AI 처리</p>
+                <p>
+                  추천 생성 시 모임 조건이 Anthropic API(Claude)로 전송되며, Anthropic의
+                  개인정보처리방침을 따릅니다. 이름 등 식별 정보는 AI에 전송되지 않습니다.
+                </p>
+              </div>
+              <div>
+                <p className="text-xs font-black text-gray-800 mb-1.5 uppercase tracking-wider">보관 및 파기</p>
+                <p>
+                  데이터는 Supabase(클라우드 DB)에 저장되며, 삭제를 원하시면 문의 채널로 요청해주세요.
+                  그룹 세션 데이터는 모임 종료 후 별도 활용 없이 보관 기간 경과 시 삭제됩니다.
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={() => setShowPrivacy(false)}
+              className="w-full mt-6 py-3.5 rounded-2xl bg-[#3CDBC0] text-white font-black text-sm active:scale-95 transition-all"
+            >
+              확인
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* iOS 홈 화면 추가 가이드 모달 */}
       {showIOSGuide && (

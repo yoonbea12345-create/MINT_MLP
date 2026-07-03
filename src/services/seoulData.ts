@@ -1,5 +1,3 @@
-const API_KEY = import.meta.env.VITE_SEOUL_DATA_API_KEY;
-
 export type CongestionLevel = '여유' | '보통' | '약간 붐빔' | '붐빔' | '알 수 없음';
 
 export interface AreaCongestion {
@@ -8,34 +6,22 @@ export interface AreaCongestion {
   message: string;
 }
 
-export async function getCongestion(areaName: string): Promise<AreaCongestion> {
-  try {
-    const encoded = encodeURIComponent(areaName);
-    const res = await fetch(
-      `/api/seoul/${API_KEY}/json/citydata_ppltn/1/1/${encoded}`
-    );
-    if (!res.ok) throw new Error('서울 데이터 API 오류');
-    const data = await res.json();
-    const ppltn = data?.SeoulRtd?.row?.[0];
-    if (!ppltn) throw new Error('데이터 없음');
-
-    const level = ppltn.AREA_CONGEST_LVL as CongestionLevel;
-    const message = ppltn.AREA_CONGEST_MSG ?? '';
-    return { areaName, level, message };
-  } catch {
-    return { areaName, level: '알 수 없음', message: '' };
-  }
-}
-
+// 서버리스(/api/congestion)를 통해 조회 — 키 노출 없음, 프로덕션에서도 동작
 export async function getMultiAreaCongestion(
   areaNames: string[]
 ): Promise<AreaCongestion[]> {
-  const results = await Promise.allSettled(areaNames.map(getCongestion));
-  return results.map((r, i) =>
-    r.status === 'fulfilled'
-      ? r.value
-      : { areaName: areaNames[i], level: '알 수 없음' as CongestionLevel, message: '' }
-  );
+  const unknown = (areaName: string): AreaCongestion => ({ areaName, level: '알 수 없음', message: '' });
+  if (areaNames.length === 0) return [];
+  try {
+    const res = await fetch(`/api/congestion?areas=${encodeURIComponent(areaNames.join(','))}`);
+    if (!res.ok) return areaNames.map(unknown);
+    const data = await res.json() as { areas?: AreaCongestion[] };
+    if (!Array.isArray(data.areas)) return areaNames.map(unknown);
+    // 요청 순서 보존 + 누락분 폴백
+    return areaNames.map((name) => data.areas!.find((a) => a.areaName === name) ?? unknown(name));
+  } catch {
+    return areaNames.map(unknown);
+  }
 }
 
 export function congestionColor(level: CongestionLevel): string {

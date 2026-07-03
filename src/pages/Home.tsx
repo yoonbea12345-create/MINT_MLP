@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import StepProgress from '../components/StepProgress';
 import LocationInput from '../components/LocationInput';
 import type { LocationEntry } from '../components/LocationInput';
@@ -19,59 +19,21 @@ import { getMultiAreaCongestion } from '../services/seoulData';
 import { getAIRecommendation } from '../services/ai';
 import type { PlaceRecommendation, UserInput } from '../services/ai';
 import { trackSessionDuration, trackEvent } from '../utils/analytics';
+import { aggregatePurpose, aggregateVibe } from '../utils/groupAggregate';
+import type { GroupMember } from '../utils/groupAggregate';
+import LoadingScreen from '../components/home/LoadingScreen';
+import GroupSetup from '../components/home/GroupSetup';
+import GroupWaiting from '../components/home/GroupWaiting';
 
 type Step = 0 | 1 | 2 | 3;
 type View = 'steps' | 'result' | 'reserve';
 type AppMode = 'mode-select' | 'solo' | 'group-setup' | 'group-waiting' | 'group-ready'; // 'mode-select' = step 0 of flow
-
-interface GroupMember {
-  member_name: string;
-  location_name: string;
-  location_lat: number;
-  location_lng: number;
-  purpose_first?: string | null;
-  purpose_second?: string | null;
-  vibe_atmosphere: string | null;
-  vibe_budget: string | null;
-  vibe_keywords?: string[];
-}
 
 interface TravelResult {
   label: string;
   formatted: string;
   source?: string;
   error?: boolean;
-}
-
-function aggregatePurpose(members: GroupMember[]): PurposeValue | null {
-  const fc: Record<string, number> = {};
-  const sc: Record<string, number> = {};
-  members.forEach((m) => {
-    if (m.purpose_first) fc[m.purpose_first] = (fc[m.purpose_first] || 0) + 1;
-    if (m.purpose_second) sc[m.purpose_second] = (sc[m.purpose_second] || 0) + 1;
-  });
-  const topFirst = Object.entries(fc).sort((a, b) => b[1] - a[1])[0]?.[0] ?? null;
-  const topSecond = Object.entries(sc).sort((a, b) => b[1] - a[1])[0]?.[0] ?? '없음';
-  if (!topFirst) return null;
-  const toRaw = (v: string | null): '밥' | '술' | '카페' | '기타' | null =>
-    ['밥', '술', '카페'].includes(v ?? '') ? (v as '밥' | '술' | '카페') : v ? '기타' : null;
-  return {
-    first: topFirst,
-    firstRaw: toRaw(topFirst),
-    second: topSecond,
-    secondRaw: topSecond === '없음' ? '없음' : toRaw(topSecond),
-    relation: null,
-    occasion: null,
-  };
-}
-
-function aggregateVibe(members: GroupMember[]): VibeState {
-  const counts: Record<string, number> = {};
-  members.forEach((m) => {
-    if (m.vibe_atmosphere) counts[m.vibe_atmosphere] = (counts[m.vibe_atmosphere] || 0) + 1;
-  });
-  const topAtm = Object.entries(counts).sort((a, b) => b[1] - a[1])[0]?.[0] ?? null;
-  return topAtm ? { 분위기: { first: topAtm, second: null } } : {};
 }
 
 const LOADING_MESSAGES = [
@@ -81,6 +43,9 @@ const LOADING_MESSAGES = [
   '💰 가격대 & 영업시간 체크 중...',
   '✨ 오늘의 코스 완성 직전!',
 ];
+
+// 새로고침해도 마지막 추천 결과가 증발하지 않도록 sessionStorage에 보관
+const RESULT_STORAGE_KEY = 'mint_last_result_v1';
 
 export default function Home() {
   const [appMode, setAppMode] = useState<AppMode>('mode-select');
@@ -121,11 +86,41 @@ export default function Home() {
   const [compromiseMessage, setCompromiseMessage] = useState<string | null>(null);
   const [showCompromiseToast, setShowCompromiseToast] = useState(false);
 
+  const travelAbortRef = useRef<AbortController | null>(null);
+
   useEffect(() => {
     if (!sessionStorage.getItem('mintSessionStart')) {
       sessionStorage.setItem('mintSessionStart', Date.now().toString());
     }
   }, []);
+
+  // 마지막 추천 결과 복원 (새로고침 시 ~100원짜리 추천이 증발하지 않게)
+  useEffect(() => {
+    try {
+      const raw = sessionStorage.getItem(RESULT_STORAGE_KEY);
+      if (!raw) return;
+      const saved = JSON.parse(raw);
+      if (!Array.isArray(saved.result) || saved.result.length === 0) return;
+      setResult(saved.result);
+      if (saved.purpose) setPurpose(saved.purpose);
+      if (saved.midpointData) setMidpointData(saved.midpointData);
+      if (saved.treasurer) setTreasurer(saved.treasurer);
+      if (saved.meetingLocation) setMeetingLocation(saved.meetingLocation);
+      if (saved.resultTravelTimes) setResultTravelTimes(saved.resultTravelTimes);
+      setView('result');
+    } catch { /* 손상된 캐시는 무시 */ }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // 결과 화면 상태가 확정될 때마다 스냅샷 저장 (setState 커밋 이후라 stale closure 없음)
+  useEffect(() => {
+    if (view !== 'result' || !result || result.length === 0) return;
+    try {
+      sessionStorage.setItem(RESULT_STORAGE_KEY, JSON.stringify({
+        result, purpose, midpointData, treasurer, meetingLocation, resultTravelTimes,
+      }));
+    } catch { /* 저장 실패는 치명적이지 않음 */ }
+  }, [view, result, purpose, midpointData, treasurer, meetingLocation, resultTravelTimes]);
 
 
   useEffect(() => {
@@ -145,6 +140,7 @@ export default function Home() {
     let active = true;
 
     async function poll() {
+      if (document.hidden) return; // 백그라운드 탭에서는 폴링 중지
       try {
         const res = await fetch(`/api/session-get?id=${encodeURIComponent(sessionId!)}`);
         if (!res.ok) return;
@@ -159,9 +155,12 @@ export default function Home() {
 
     poll();
     const interval = setInterval(poll, 3000);
+    const onVisible = () => { if (!document.hidden) poll(); };
+    document.addEventListener('visibilitychange', onVisible);
     return () => {
       active = false;
       clearInterval(interval);
+      document.removeEventListener('visibilitychange', onVisible);
     };
   }, [appMode, sessionId]);
 
@@ -344,10 +343,11 @@ export default function Home() {
 
       setResult(recommendation);
 
+      let pickedTreasurer: string | null = null;
       const namedLocs = locations.filter((l) => l.name);
       if (namedLocs.length > 0) {
-        const picked = namedLocs[Math.floor(Math.random() * namedLocs.length)];
-        setTreasurer(picked.name);
+        pickedTreasurer = namedLocs[Math.floor(Math.random() * namedLocs.length)].name;
+        setTreasurer(pickedTreasurer);
       }
       setView('result');
 
@@ -361,6 +361,10 @@ export default function Home() {
         const secondDest = secondPlace?.lat && secondPlace.lat !== 0
           ? { lat: secondPlace.lat, lng: secondPlace.lng! }
           : undefined;
+        // 재추천 직후 이전 응답이 늦게 도착해 옛 장소의 소요시간이 표시되는 레이스 방지
+        travelAbortRef.current?.abort();
+        const controller = new AbortController();
+        travelAbortRef.current = controller;
         fetch('/api/travel-time', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -368,10 +372,13 @@ export default function Home() {
             origins: validLocs.map((l) => ({ lat: l.lat!, lng: l.lng!, label: l.name })),
             destinations: { first: firstDest, ...(secondDest ? { second: secondDest } : {}) },
           }),
+          signal: controller.signal,
         })
           .then((r) => r.json())
           .then((data) => setResultTravelTimes(data))
-          .catch(() => setResultTravelTimes(null));
+          .catch((e) => {
+            if ((e as Error).name !== 'AbortError') setResultTravelTimes(null);
+          });
       } else {
         setResultTravelTimes(null);
       }
@@ -557,40 +564,7 @@ export default function Home() {
 
   // 로딩
   if (loading) {
-    const r = 52;
-    const circ = 2 * Math.PI * r;
-    const offset = circ - (loadingProgress / 100) * circ;
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-[#F5FBF8] px-4 gap-6">
-        <p className="text-[#3CDBC0] font-black text-2xl tracking-widest">MINT</p>
-
-        {/* 원형 프로그레스 링 */}
-        <div className="relative w-36 h-36">
-          <svg className="w-full h-full -rotate-90" viewBox="0 0 120 120">
-            <circle cx="60" cy="60" r={r} fill="none" stroke="#E8F8F5" strokeWidth="10" />
-            <circle
-              cx="60" cy="60" r={r}
-              fill="none"
-              stroke="#3CDBC0"
-              strokeWidth="10"
-              strokeLinecap="round"
-              strokeDasharray={circ}
-              strokeDashoffset={offset}
-              className="transition-all duration-300 ease-out"
-            />
-          </svg>
-          <div className="absolute inset-0 flex items-center justify-center">
-            <span className="text-2xl font-black text-[#2AB5A0]">{Math.round(loadingProgress)}%</span>
-          </div>
-        </div>
-
-        {/* 메시지 */}
-        <div className="text-center">
-          <p className="text-base font-bold text-[#2AB5A0]">{LOADING_MESSAGES[loadingMsg]}</p>
-          <p className="text-xs text-gray-400 mt-1">AI가 서울을 탐색하고 있어요</p>
-        </div>
-      </div>
-    );
+    return <LoadingScreen progress={loadingProgress} message={LOADING_MESSAGES[loadingMsg]} />;
   }
 
   // 예약 페이지
@@ -622,6 +596,7 @@ export default function Home() {
           <div className="flex items-center justify-between mb-2">
             <button
               onClick={() => {
+                try { sessionStorage.removeItem(RESULT_STORAGE_KEY); } catch { /* ignore */ }
                 setResult(null);
                 setView('steps');
                 setStep(0);
@@ -782,141 +757,27 @@ export default function Home() {
 
               {/* Group setup: 인원수 + 코스 + 링크 생성 */}
               {appMode === 'group-setup' && (
-                <div className="flex flex-col gap-4">
-                  <div>
-                    <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-2.5">참여 인원수 (호스트 포함)</p>
-                    <div className="grid grid-cols-3 gap-2">
-                      {[2, 3, 4, 5, 6].map((n) => (
-                        <button
-                          key={n}
-                          onClick={() => setExpectedCount(n)}
-                          className={`py-3 rounded-xl font-black text-sm transition-all active:scale-95 border-2 ${
-                            expectedCount === n
-                              ? 'bg-[#3CDBC0] text-white border-[#3CDBC0] shadow-lg shadow-[#3CDBC0]/30'
-                              : 'bg-white text-gray-600 border-gray-200 hover:border-[#3CDBC0]/50'
-                          }`}
-                        >
-                          {n === 6 ? '6명+' : `${n}명`}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                  <div>
-                    <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-2.5">코스 선택</p>
-                    <div className="grid grid-cols-2 gap-2">
-                      <button
-                        onClick={() => setGroupHasSecond(false)}
-                        className={`py-3 rounded-xl font-black text-sm transition-all active:scale-95 border-2 flex flex-col items-center gap-1 ${
-                          !groupHasSecond
-                            ? 'bg-[#3CDBC0] text-white border-[#3CDBC0] shadow-lg shadow-[#3CDBC0]/30'
-                            : 'bg-white text-gray-600 border-gray-200 hover:border-[#3CDBC0]/50'
-                        }`}
-                      >
-                        <span className="text-xl">🍽️</span>
-                        <span>1차만</span>
-                      </button>
-                      <button
-                        onClick={() => setGroupHasSecond(true)}
-                        className={`py-3 rounded-xl font-black text-sm transition-all active:scale-95 border-2 flex flex-col items-center gap-1 ${
-                          groupHasSecond
-                            ? 'bg-[#3CDBC0] text-white border-[#3CDBC0] shadow-lg shadow-[#3CDBC0]/30'
-                            : 'bg-white text-gray-600 border-gray-200 hover:border-[#3CDBC0]/50'
-                        }`}
-                      >
-                        <span className="text-xl">🍻</span>
-                        <span>1차+2차</span>
-                      </button>
-                    </div>
-                  </div>
-                  {groupError && (
-                    <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-600 text-center">
-                      {groupError}
-                    </div>
-                  )}
-                  <button
-                    onClick={handleCreateSession}
-                    disabled={creatingSession}
-                    className={`w-full py-4 rounded-2xl font-black text-base transition-all active:scale-95 ${
-                      creatingSession
-                        ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                        : 'bg-[#3CDBC0] text-white shadow-lg shadow-[#3CDBC0]/30 hover:bg-[#2AB5A0]'
-                    }`}
-                  >
-                    {creatingSession ? '생성 중...' : '링크 생성하기 →'}
-                  </button>
-                </div>
+                <GroupSetup
+                  expectedCount={expectedCount}
+                  onExpectedCount={setExpectedCount}
+                  hasSecond={groupHasSecond}
+                  onHasSecond={setGroupHasSecond}
+                  error={groupError}
+                  creating={creatingSession}
+                  onCreate={handleCreateSession}
+                />
               )}
 
               {/* Group waiting/ready: 링크 공유 + 멤버 슬롯 */}
-              {(appMode === 'group-waiting' || appMode === 'group-ready') && (() => {
-                const shareLink = sessionId ? `${window.location.origin}/join?id=${sessionId}` : '';
-                const allVoted = groupMembers.length >= expectedCount && groupMembers.length > 0;
-                return (
-                  <div className="flex flex-col gap-3">
-                    {/* 공유 링크 */}
-                    <div className="bg-white shadow-sm rounded-2xl p-4">
-                      <p className="text-xs text-gray-400 mb-2">공유 링크</p>
-                      <div className="flex items-center gap-2">
-                        <p className="flex-1 text-sm text-gray-700 truncate">{shareLink}</p>
-                        <button
-                          onClick={handleCopyLink}
-                          className="flex-shrink-0 px-4 py-2 rounded-xl bg-[#3CDBC0] text-white text-sm font-bold transition-all active:scale-95 hover:bg-[#2AB5A0]"
-                        >
-                          {copied ? '복사됨!' : '복사'}
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* 나도 참여하기 */}
-                    <button
-                      onClick={() => { window.location.href = shareLink; }}
-                      className="w-full py-3 rounded-2xl font-black text-sm transition-all active:scale-95 bg-[#E8F8F5] text-[#2AB5A0] border-2 border-[#3CDBC0]/40 hover:bg-[#d4f3ee]"
-                    >
-                      나도 참여하기 →
-                    </button>
-
-                    {/* 진행률 + 슬롯 */}
-                    <div className="bg-white shadow-sm rounded-2xl p-4">
-                      <div className="flex items-center justify-between mb-3">
-                        <p className="text-xs text-gray-400">입력 현황</p>
-                        <p className="text-lg font-black text-[#2AB5A0]">
-                          {groupMembers.length}
-                          <span className="text-gray-300 font-bold"> / {expectedCount}</span>
-                        </p>
-                      </div>
-                      <div className="flex flex-col gap-2">
-                        {Array.from({ length: expectedCount }).map((_, i) => {
-                          const member = groupMembers[i];
-                          return (
-                            <div
-                              key={i}
-                              className={`flex items-center gap-3 px-4 py-3 rounded-2xl transition-all ${
-                                member ? 'bg-[#E8F8F5]' : 'bg-gray-50 border border-dashed border-gray-200'
-                              }`}
-                            >
-                              <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-black flex-shrink-0 ${
-                                member ? 'bg-[#3CDBC0] text-white' : 'bg-gray-200 text-gray-400'
-                              }`}>
-                                {member ? '✓' : i + 1}
-                              </div>
-                              <span className={`text-sm font-bold ${member ? 'text-[#2AB5A0]' : 'text-gray-300'}`}>
-                                {member ? member.member_name : '대기 중...'}
-                              </span>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-
-                    {allVoted && (
-                      <div className="p-4 bg-[#E8F8F5] border border-[#3CDBC0]/40 rounded-2xl text-center">
-                        <p className="text-base font-black text-[#2AB5A0]">🎉 전원 완료!</p>
-                        <p className="text-xs text-[#2AB5A0]/70 mt-0.5">모두의 취향이 모였어요. 아래 다음 버튼을 눌러주세요!</p>
-                      </div>
-                    )}
-                  </div>
-                );
-              })()}
+              {(appMode === 'group-waiting' || appMode === 'group-ready') && (
+                <GroupWaiting
+                  shareLink={sessionId ? `${window.location.origin}/join?id=${sessionId}` : ''}
+                  copied={copied}
+                  onCopy={handleCopyLink}
+                  members={groupMembers}
+                  expectedCount={expectedCount}
+                />
+              )}
             </div>
           )}
 

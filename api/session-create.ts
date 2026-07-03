@@ -41,12 +41,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             .insert({ id, expected_count: expected, status: 'waiting' });
           if (!e2) return res.status(200).json({ id });
         }
-        return res.status(500).json({ error: error.message });
+        console.error('[session-create] insert failed', error);
+        return res.status(500).json({ error: '링크 생성에 실패했어요. 잠시 후 다시 시도해주세요.' });
       }
     }
 
     return res.status(409).json({ error: '세션 ID 생성에 실패했어요. 다시 시도해주세요.' });
   } catch (e) {
-    return res.status(500).json({ error: (e as Error).message });
+    console.error('[session-create] failed', e);
+    return res.status(500).json({ error: '링크 생성에 실패했어요. 잠시 후 다시 시도해주세요.' });
   }
 }

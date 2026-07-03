@@ -1,14 +1,29 @@
 {
   "outputDirectory": "dist/web",
   "functions": {
-    "api/recommend.ts": { "maxDuration": 60 },
-    "api/travel-time.ts": { "maxDuration": 30 },
-    "api/session-create.ts": { "maxDuration": 10 },
-    "api/session-join.ts": { "maxDuration": 10 },
-    "api/session-get.ts": { "maxDuration": 10 },
-    "api/admin-refresh-license-cache.ts": { "maxDuration": 60 }
+    "api/recommend.ts": {
+      "maxDuration": 60
+    },
+    "api/travel-time.ts": {
+      "maxDuration": 30
+    },
+    "api/session-create.ts": {
+      "maxDuration": 10
+    },
+    "api/session-join.ts": {
+      "maxDuration": 10
+    },
+    "api/session-get.ts": {
+      "maxDuration": 10
+    },
+    "api/admin-refresh-license-cache.ts": {
+      "maxDuration": 60
+    }
   },
   "rewrites": [
-    { "source": "/(.*)", "destination": "/index.html" }
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
   ]
 }

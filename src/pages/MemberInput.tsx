@@ -91,6 +91,7 @@ export default function MemberInput() {
     let active = true;
 
     async function poll() {
+      if (document.hidden) return; // 백그라운드 탭에서는 폴링 중지
       try {
         const res = await fetch(`/api/session-get?id=${encodeURIComponent(sessionId!)}`);
         if (!res.ok) return;
@@ -103,7 +104,9 @@ export default function MemberInput() {
 
     poll();
     const interval = setInterval(poll, 3000);
-    return () => { active = false; clearInterval(interval); };
+    const onVisible = () => { if (!document.hidden) poll(); };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => { active = false; clearInterval(interval); document.removeEventListener('visibilitychange', onVisible); };
   }, [phase, sessionId]);
 
   function handleLocChange(value: string) {

@@ -52,10 +52,12 @@ export default function SharedResult() {
             <span className="text-xs font-semibold opacity-80 bg-white/20 px-2.5 py-1 rounded-full">
               {result.category}
             </span>
-            <div className="flex items-center gap-1.5">
-              <div className={`w-2 h-2 rounded-full ${congestionDotClass(result.congestionLevel as Parameters<typeof congestionDotClass>[0])}`} />
-              <span className="text-xs opacity-90">{result.congestionLevel}</span>
-            </div>
+            {result.congestionLevel && (
+              <div className="flex items-center gap-1.5">
+                <div className={`w-2 h-2 rounded-full ${congestionDotClass(result.congestionLevel as Parameters<typeof congestionDotClass>[0])}`} />
+                <span className="text-xs opacity-90">{result.congestionLevel}</span>
+              </div>
+            )}
           </div>
 
           <h2 className="text-2xl font-black mt-3 mb-1 leading-tight">
