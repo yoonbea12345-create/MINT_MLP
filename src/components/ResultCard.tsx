@@ -18,6 +18,7 @@ interface TravelTimeData {
 interface Props {
   results: PlaceRecommendation[];
   travelTimes: TravelTimeData | null;
+  showTravelTime?: boolean;
   midpointAreaName?: string;
   purpose?: { first: string; second: string | null };
   treasurer: string | null;
@@ -261,6 +262,7 @@ function PlaceCard({ place, extraResults = [], gradient, shadowColor }: CardProp
 export default function ResultCard({
   results,
   travelTimes,
+  showTravelTime = true,
   midpointAreaName,
   purpose,
   treasurer,
@@ -300,8 +302,8 @@ export default function ResultCard({
   return (
     <div className="flex flex-col gap-2 animate-fade-in-up">
 
-      {/* 상단 요약 바 */}
-      {midpointAreaName && (
+      {/* 상단 요약 바 — 자동 중간지점 모드에서만 소요시간 표시 */}
+      {midpointAreaName && showTravelTime && (
         <div className="bg-white rounded-2xl border border-gray-100 p-3 shadow-sm">
           <div className="flex items-center justify-between mb-1.5">
             {/* 왼쪽: 목적지 토글 */}

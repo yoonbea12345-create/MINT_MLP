@@ -351,7 +351,8 @@ export default function Home() {
       }
       setView('result');
 
-      if (validLocs.length >= 2) {
+      // 자동 중간지점 모드에서만 소요시간 조회 (임의 지역은 UI도 안 뜨므로 호출 생략)
+      if (meetingLocation?.type === 'auto' && validLocs.length >= 2) {
         const firstPlace = recommendation[0];
         const secondPlace = recommendation[1];
         const firstDest = firstPlace?.lat && firstPlace.lat !== 0
@@ -648,6 +649,7 @@ export default function Home() {
           <ResultCard
             results={result}
             travelTimes={resultTravelTimes}
+            showTravelTime={meetingLocation?.type === 'auto'}
             midpointAreaName={midpointData?.areaName}
             purpose={purpose?.first ? { first: purpose.first, second: purpose.second ?? null } : undefined}
             treasurer={treasurer}
