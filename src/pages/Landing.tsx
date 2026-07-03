@@ -433,6 +433,60 @@ export default function Landing() {
         </section>
 
         {/* ══════════════════════════════════════
+            REAL PICK — 바이럴 거르고 찐맛집만
+        ══════════════════════════════════════ */}
+        <section className="px-6 py-14 fade-section">
+          <div className="rounded-3xl overflow-hidden p-6 result-gradient shadow-xl shadow-teal-200">
+            <p className="text-xs font-bold tracking-widest text-white/70 mb-3">REAL PICK</p>
+            <h2 className="text-2xl font-black text-white leading-tight mb-3">
+              바이럴은 거르고,<br />찐맛집만 담았어요
+            </h2>
+            <p className="text-sm text-white/80 mb-6 leading-relaxed">
+              협찬으로 뜬 가게와 진짜 사랑받는 가게.<br />
+              MINT는 데이터로 구분합니다.
+            </p>
+
+            <div className="flex flex-col gap-2.5">
+              {[
+                {
+                  e: '🫧',
+                  t: '후기 거품 감지',
+                  d: '어느 날 갑자기 후기가 우르르 몰린 가게, 협찬 냄새 나죠? 그런 거품은 점수를 깎고, 꾸준히 후기가 쌓인 가게만 올려요.',
+                },
+                {
+                  e: '🏅',
+                  t: '오래 버틴 가게 우대',
+                  d: '정부 인허가 데이터로 개업 연차를 확인해요. 유행 따라 생겼다 사라지는 곳 말고, 몇 년째 한자리를 지킨 가게에 가산점.',
+                },
+                {
+                  e: '📍',
+                  t: 'AI가 지어낸 가게 0곳',
+                  d: '그럴듯한 이름만 지어내는 AI 추천과 달라요. 네이버에 실제 등록된 전국 79만 곳과 대조해 실존 장소만 보여줘요.',
+                },
+                {
+                  e: '🚦',
+                  t: '지금 가도 되는지까지',
+                  d: '아무리 맛집이어도 웨이팅 2시간이면 꽝. 실시간 혼잡도와 오늘 날씨까지 보고 "지금" 좋은 곳을 골라요.',
+                },
+              ].map(({ e, t, d }) => (
+                <div key={t} className="bg-white/15 rounded-2xl p-4 flex items-start gap-3">
+                  <span className="text-2xl flex-shrink-0">{e}</span>
+                  <div>
+                    <p className="text-sm font-black text-white mb-1">{t}</p>
+                    <p className="text-xs text-white/80 leading-relaxed">{d}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <p className="text-center text-sm font-bold text-white mt-6">
+              MINT는 광고를 팔지 않아요.<br />
+              <span className="text-white/80 font-medium text-xs">그래서 추천에 광고비가 안 통합니다.</span>
+            </p>
+          </div>
+        </section>
+
+        {/* ══════════════════════════════════════
             USE CASES — 이모지 타일 2×2
         ══════════════════════════════════════ */}
         <section className="px-6 py-14 fade-section">
