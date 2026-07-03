@@ -1,15 +1,17 @@
 -- ═══════════════════════════════════════════════════════════════
--- MINT 보안 강화 SQL — Supabase 대시보드 > SQL Editor에서 실행
--- (2026-07 MVP 보안 점검: anon 키로 개인정보 열람 가능하던 문제 차단)
+-- MINT 보안 강화 SQL v2 — Supabase 대시보드 > SQL Editor에서 실행
 --
--- 실행 후 동작 방식:
---  · 서버리스 API(service role)는 RLS를 우회하므로 기존 기능 그대로 동작
---  · 브라우저(anon 키)는 events/client_errors "insert만" 가능, 조회는 전부 차단
+-- v1 문제: 기존 허용 정책의 "이름"을 추측해서 삭제했는데 실제 이름이 달라
+--          예약자 명단이 여전히 anon 키로 열람 가능했음 (실측 확인).
+-- v2 해결: 대상 테이블의 모든 정책을 이름과 무관하게 동적으로 전부 삭제한 뒤
+--          필요한 최소 정책(이벤트/에러로그 insert)만 재생성.
+--
+-- 실행 후: 서버리스 API(service role)는 RLS를 우회하므로 기능 그대로 동작.
+--          브라우저(anon 키)는 events/client_errors insert만 가능, 나머지 전부 차단.
 -- ═══════════════════════════════════════════════════════════════
 
--- ── 1. 신규 테이블 ─────────────────────────────────────────────
+-- ── 1. 신규 테이블 (없으면 생성) ───────────────────────────────
 
--- 레이트리밋 기록 (api/_lib/guard.ts)
 create table if not exists api_hits (
   id bigint generated always as identity primary key,
   ip text not null,
@@ -19,7 +21,6 @@ create table if not exists api_hits (
 create index if not exists api_hits_endpoint_ip_ts on api_hits (endpoint, ip, ts desc);
 create index if not exists api_hits_endpoint_ts on api_hits (endpoint, ts desc);
 
--- 클라이언트 에러 로그 (src/utils/errorLog.ts)
 create table if not exists client_errors (
   id bigint generated always as identity primary key,
   message text,
@@ -29,42 +30,58 @@ create table if not exists client_errors (
   created_at timestamptz not null default now()
 );
 
--- ── 2. RLS 활성화 ──────────────────────────────────────────────
--- RLS가 켜지고 anon용 정책이 없으면 anon 접근은 전부 차단된다.
--- service role(서버리스 API)은 RLS를 우회한다.
+-- ── 2. 대상 테이블의 기존 정책 전부 삭제 + RLS 활성화 ─────────
+-- (정책 이름이 무엇이든 전부 제거 — 이름 추측 없이 동적 처리)
 
-alter table if exists reservations         enable row level security;
-alter table if exists events               enable row level security;
-alter table if exists mint_sessions        enable row level security;
-alter table if exists mint_session_members enable row level security;
-alter table if exists recommendation_log   enable row level security;
-alter table if exists place_buzz_cache     enable row level security;
-alter table if exists license_cache        enable row level security;
-alter table if exists api_hits             enable row level security;
-alter table if exists client_errors        enable row level security;
+do $$
+declare
+  t text;
+  pol record;
+  targets text[] := array[
+    'reservations', 'events', 'mint_sessions', 'mint_session_members',
+    'recommendation_log', 'place_buzz_cache', 'license_cache',
+    'api_hits', 'client_errors'
+  ];
+begin
+  foreach t in array targets loop
+    -- 테이블이 존재할 때만 처리
+    if exists (select 1 from pg_tables where schemaname = 'public' and tablename = t) then
+      -- 이 테이블의 모든 정책 삭제
+      for pol in
+        select policyname from pg_policies
+        where schemaname = 'public' and tablename = t
+      loop
+        execute format('drop policy %I on public.%I', pol.policyname, t);
+      end loop;
+      -- RLS 켜기 (+ 강제)
+      execute format('alter table public.%I enable row level security', t);
+    end if;
+  end loop;
+end $$;
 
--- ── 3. 기존의 느슨한 정책 제거 ─────────────────────────────────
--- (프로젝트 초기에 만들었을 수 있는 허용 정책들 — 이름이 다르면
---  대시보드 > Authentication > Policies에서 anon 대상 정책을 전부 삭제)
-drop policy if exists "Enable read access for all users"   on reservations;
-drop policy if exists "Enable insert for all users"        on reservations;
-drop policy if exists "Enable delete for all users"        on reservations;
-drop policy if exists "Enable read access for all users"   on events;
-drop policy if exists "Enable insert for all users"        on events;
-drop policy if exists "Enable delete for all users"        on events;
+-- ── 3. anon에게 허용할 최소 권한만 재생성 ──────────────────────
 
--- ── 4. anon에게 허용할 최소 권한 ───────────────────────────────
--- 이벤트 트래킹: 브라우저에서 insert만 (조회·삭제 불가)
-drop policy if exists events_anon_insert on events;
-create policy events_anon_insert on events
+-- 이벤트 트래킹: 브라우저에서 insert만 (조회·수정·삭제 불가)
+create policy events_anon_insert on public.events
   for insert to anon with check (true);
 
 -- 클라이언트 에러 로그: insert만
-drop policy if exists client_errors_anon_insert on client_errors;
-create policy client_errors_anon_insert on client_errors
+create policy client_errors_anon_insert on public.client_errors
   for insert to anon with check (true);
 
--- ── 5. 오래된 api_hits 자동 정리(선택) ────────────────────────
--- pg_cron 확장이 활성화된 경우에만 동작. 없으면 이 블록은 건너뛰어도 됨.
--- select cron.schedule('purge-api-hits', '0 4 * * *',
---   $$delete from api_hits where ts < now() - interval '2 days'$$);
+-- ── 4. 검증 쿼리 (실행 후 결과 확인용) ────────────────────────
+-- 아래 select 결과에서 대상 테이블들의 rowsecurity가 모두 true여야 하고,
+-- 정책은 events/client_errors의 insert 2개만 보여야 정상.
+
+select tablename, rowsecurity
+from pg_tables
+where schemaname = 'public'
+  and tablename in ('reservations','events','mint_sessions','mint_session_members',
+                    'recommendation_log','place_buzz_cache','license_cache',
+                    'api_hits','client_errors')
+order by tablename;
+
+select tablename, policyname, cmd, roles
+from pg_policies
+where schemaname = 'public'
+order by tablename, policyname;
