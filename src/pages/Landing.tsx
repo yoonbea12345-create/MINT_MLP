@@ -81,6 +81,24 @@ export default function Landing() {
   useEffect(() => { trackEvent('landing_view'); }, []);
   const { canInstall, triggerInstall, isIOS, showIOSGuide, setShowIOSGuide } = useInstallPrompt();
   const [comboIdx, setComboIdx] = useState(0);
+  const [visitCount, setVisitCount] = useState(0);
+
+  // 소셜 프루프 카운터 (localStorage 캐시로 깜빡임 방지)
+  useEffect(() => {
+    try {
+      const cached = localStorage.getItem('mint_visit_count');
+      if (cached) setVisitCount(Number(cached));
+    } catch { /* ignore */ }
+    fetch('/api/count')
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.count > 0) {
+          setVisitCount(d.count);
+          try { localStorage.setItem('mint_visit_count', String(d.count)); } catch { /* ignore */ }
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   // 스크롤 페이드업
   useEffect(() => {
@@ -176,7 +194,7 @@ export default function Landing() {
             </div>
           </div>
 
-          <div className="flex flex-col gap-3 w-full max-w-xs mb-8 mx-auto">
+          <div className="flex flex-col gap-3 w-full max-w-xs mb-3 mx-auto">
             <button
               onClick={goToApp}
               className="w-full bg-gradient-to-r from-[#3CDBC0] to-[#2AB5A0] text-white font-black text-lg py-4 rounded-2xl cta-glow-mint active:scale-95 transition-all"
@@ -185,6 +203,13 @@ export default function Landing() {
             </button>
             {installButton}
           </div>
+
+          {visitCount >= 50 && (
+            <p className="text-xs text-gray-400 mb-8">
+              지금까지 <strong className="text-[#2AB5A0]">{visitCount.toLocaleString()}번</strong>의 "어디 가지?" 고민이 MINT를 찾아왔어요
+            </p>
+          )}
+          {visitCount < 50 && <div className="mb-5" />}
 
           <div className="flex justify-center gap-8 items-end text-center">
             <div>
@@ -261,7 +286,7 @@ export default function Landing() {
             네이버 검증 실존 장소 · 적합도 점수 · 실시간 혼잡도<br />1차→2차 도보 동선까지 한 화면에
           </p>
 
-          <PhoneMockup src="/image/landing/result.png" alt="MINT 추천 결과 — 1차 이자카야, 2차 와인바 코스" width="w-64" />
+          <PhoneMockup src="/image/landing/result.webp" alt="MINT 추천 결과 — 1차 이자카야, 2차 와인바 코스" width="w-64" />
 
           <div className="grid grid-cols-3 gap-2 mt-8">
             {[
@@ -295,7 +320,7 @@ export default function Landing() {
               <span className="inline-block bg-[#3CDBC0] text-white text-xs font-bold px-3 py-1 rounded-full mb-3">STEP 1</span>
               <h3 className="text-lg font-black text-gray-800 mb-1">어떤 모임인지 골라요</h3>
               <p className="text-sm text-gray-400 mb-5">인원수, 1차·2차 목적(밥/술/카페)까지 터치 몇 번이면 끝</p>
-              <PhoneMockup src="/image/landing/purpose.png" alt="모임 목적 선택" />
+              <PhoneMockup src="/image/landing/purpose.webp" alt="모임 목적 선택" />
             </div>
             <div className="w-0.5 h-8 bg-gradient-to-b from-[#3CDBC0] to-transparent my-2" />
 
@@ -307,8 +332,8 @@ export default function Landing() {
                 "여자친구와 100일 데이트"처럼 직접 써도 돼요
               </p>
               <div className="flex gap-3 justify-center">
-                <PhoneMockup src="/image/landing/relation.png" alt="관계·특별한 날 선택" width="w-44" />
-                <PhoneMockup src="/image/landing/region.png" alt="지역 선택" width="w-44" />
+                <PhoneMockup src="/image/landing/relation.webp" alt="관계·특별한 날 선택" width="w-44" />
+                <PhoneMockup src="/image/landing/region.webp" alt="지역 선택" width="w-44" />
               </div>
             </div>
             <div className="w-0.5 h-8 bg-gradient-to-b from-[#3CDBC0] to-transparent my-2" />
@@ -317,7 +342,7 @@ export default function Landing() {
               <span className="inline-block bg-[#3CDBC0] text-white text-xs font-bold px-3 py-1 rounded-full mb-3">STEP 3</span>
               <h3 className="text-lg font-black text-gray-800 mb-1">원하는 분위기를 고르면</h3>
               <p className="text-sm text-gray-400 mb-5">시끌벅적? 아늑한? 인스타감성?<br />1차·2차 분위기를 따로 고를 수 있어요</p>
-              <PhoneMockup src="/image/landing/vibe.png" alt="분위기 선택" />
+              <PhoneMockup src="/image/landing/vibe.webp" alt="분위기 선택" />
             </div>
             <div className="w-0.5 h-8 bg-gradient-to-b from-[#3CDBC0] to-transparent my-2" />
 
@@ -328,7 +353,7 @@ export default function Landing() {
                 혼잡도 · 날씨 · 블로그 버즈까지 반영한 최종 1곳.<br />
                 마음에 안 들면 이유를 골라 다시 추천받으세요
               </p>
-              <PhoneMockup src="/image/landing/result.png" alt="AI 추천 결과" />
+              <PhoneMockup src="/image/landing/result.webp" alt="AI 추천 결과" />
             </div>
           </div>
         </section>
@@ -352,11 +377,11 @@ export default function Landing() {
 
           <div className="flex gap-4 overflow-x-auto snap-x snap-mandatory scrollbar-hide px-6 pb-2">
             {[
-              { n: '1', title: '링크 만들기', desc: '인원수·코스만 고르면 3초 완성', img: '/image/landing/group-create.png' },
-              { n: '2', title: '단톡방에 공유', desc: '입력 현황이 실시간으로 보여요', img: '/image/landing/group-share.png' },
-              { n: '3', title: '각자 이름·출발지', desc: '멤버는 회원가입 없이 링크만 열면 끝', img: '/image/landing/join-start.png' },
-              { n: '4', title: '취향은 몰래', desc: '눈치 안 보고 각자 원하는 분위기 선택', img: '/image/landing/join-vibe.png' },
-              { n: '5', title: '모이면 자동 추천', desc: '전원 제출 → 종합해서 딱 1곳', img: '/image/landing/join-done.png' },
+              { n: '1', title: '링크 만들기', desc: '인원수·코스만 고르면 3초 완성', img: '/image/landing/group-create.webp' },
+              { n: '2', title: '단톡방에 공유', desc: '입력 현황이 실시간으로 보여요', img: '/image/landing/group-share.webp' },
+              { n: '3', title: '각자 이름·출발지', desc: '멤버는 회원가입 없이 링크만 열면 끝', img: '/image/landing/join-start.webp' },
+              { n: '4', title: '취향은 몰래', desc: '눈치 안 보고 각자 원하는 분위기 선택', img: '/image/landing/join-vibe.webp' },
+              { n: '5', title: '모이면 자동 추천', desc: '전원 제출 → 종합해서 딱 1곳', img: '/image/landing/join-done.webp' },
             ].map(({ n, title, desc, img }) => (
               <div key={n} className="snap-center flex-shrink-0 w-60">
                 <div className="flex items-center gap-2 mb-3">
@@ -590,6 +615,11 @@ export default function Landing() {
             </button>
             {installButton}
           </div>
+          {visitCount >= 50 && (
+            <p className="text-xs text-gray-400 mb-6">
+              지금까지 <strong className="text-[#2AB5A0]">{visitCount.toLocaleString()}번</strong>의 "어디 가지?" 고민이 MINT를 찾아왔어요
+            </p>
+          )}
           <div className="flex justify-center gap-4 flex-wrap">
             <div className="flex items-center gap-1 text-xs text-gray-400">
               <svg className="w-3.5 h-3.5 text-[#3CDBC0]" viewBox="0 0 24 24" fill="currentColor">
