@@ -51,11 +51,11 @@ function goToApp() {
 
 // ── 히어로: 앱 입력 조합 로테이션 (조건 → 결과의 마법을 미리 보여주기) ──
 const COMBOS = [
-  { chips: ['🍻 술', '시끌벅적', '성수'], result: '감성 이자카야' },
-  { chips: ['🍜 밥', '조용하게', '강남역'], result: '프라이빗룸 한식당' },
-  { chips: ['☕ 카페', '인스타감성', '홍대'], result: '루프탑 브런치 카페' },
-  { chips: ['💕 100일 데이트', '아늑한', '한남동'], result: '분위기 좋은 와인바' },
-  { chips: ['🏢 회식', '단체룸', '중간지점'], result: '넓은 고깃집' },
+  { chips: ['🍻 술', '시끌벅적', '성수'], result: '아키야마 성수본점' },
+  { chips: ['🍜 밥', '검증된 곳', '선릉'], result: '농민백암순대 본점' },
+  { chips: ['☕ 카페', '인스타감성', '연남'], result: '카페 레이어드 연남점' },
+  { chips: ['💕 100일 데이트', '야경맛집', '성수'], result: '성수옥상' },
+  { chips: ['🏢 회식', '단체 가능', '용산'], result: '몽탄' },
 ];
 
 function PhoneMockup({ src, alt, width = 'w-56' }: { src: string; alt: string; width?: string }) {
