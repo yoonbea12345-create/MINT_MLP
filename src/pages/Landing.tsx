@@ -345,9 +345,9 @@ export default function Landing() {
               다같이 정할 땐<br /><span className="text-[#3CDBC0]">링크 하나면 돼요</span>
             </h2>
             <p className="text-sm text-gray-400 mb-2 leading-relaxed">
-              <span className="block">한 명이 총대 메던 시대는 끝.</span>
-              <span className="block pl-5">각자 30초씩 입력하면</span>
-              <span className="block pl-10"><strong className="text-gray-600">모두의 중간지점과 취향</strong>을 종합해 자동으로 나옵니다.</span>
+              <span className="block">이제 한 명이 총대 멜 필요 없이</span>
+              <span className="block pl-5">각자 30초씩만 입력하면</span>
+              <span className="block pl-10"><strong className="text-gray-600">모두의 중간지점과 취향</strong>이 종합돼 나옵니다</span>
             </p>
             <p className="text-xs text-[#2AB5A0] font-bold mb-6">옆으로 넘겨보세요 →</p>
           </div>
