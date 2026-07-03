@@ -105,6 +105,12 @@ body {
 
 /* ══════════ 랜딩페이지 전용 유틸 ══════════ */
 
+/* 한국어 어절 단위 줄바꿈 — 어절 중간에서 끊기지 않게 */
+.landing-root {
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+
 /* 스크롤 페이드업 (IntersectionObserver) */
 .fade-section {
   opacity: 0;

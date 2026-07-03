@@ -117,7 +117,7 @@ export default function Landing() {
   );
 
   return (
-    <div className="min-h-screen bg-[#F0FDF9]">
+    <div className="landing-root min-h-screen bg-[#F0FDF9]">
 
       {/* ── NAV ── */}
       <nav className="sticky top-0 z-50 bg-[#F0FDF9]/90 backdrop-blur border-b border-teal-100">
@@ -375,7 +375,8 @@ export default function Landing() {
             <div className="bg-teal-50 border border-teal-100 rounded-2xl p-4 text-center">
               <p className="text-sm text-gray-600 leading-relaxed">
                 "난 아무데나 괜찮아"가 진짜였는지,<br />
-                <strong className="text-[#2AB5A0]">몰래 고른 취향이 결과에 전부 반영</strong>됩니다. 눈치 게임 없이, 공평하게.
+                <strong className="text-[#2AB5A0]">몰래 고른 취향이 전부 반영</strong>됩니다.<br />
+                눈치 게임 없이, 공평하게.
               </p>
             </div>
           </div>
