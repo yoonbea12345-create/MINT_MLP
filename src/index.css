@@ -1,5 +1,4 @@
 @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css');
-@import url('https://fonts.googleapis.com/css2?family=Black+Han+Sans&display=swap');
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -106,32 +105,6 @@ body {
 
 /* ══════════ 랜딩페이지 전용 유틸 ══════════ */
 
-.font-display { font-family: 'Black Han Sans', 'Pretendard', sans-serif; }
-
-/* Black Han Sans 좌측 베어링 보정 (중앙 정렬 제외) */
-h1.font-display:not(.text-center),
-h2.font-display:not(.text-center) {
-  margin-left: -3px;
-}
-
-.section-label {
-  font-size: 0.65rem;
-  font-weight: 700;
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
-  line-height: 1;
-}
-
-.step-badge {
-  display: inline-block;
-  font-size: 0.65rem;
-  font-weight: 700;
-  letter-spacing: 0.1em;
-  padding: 0.2rem 0.7rem;
-  border-radius: 9999px;
-  margin-bottom: 0.5rem;
-}
-
 /* 스크롤 페이드업 (IntersectionObserver) */
 .fade-section {
   opacity: 0;
@@ -161,4 +134,13 @@ h2.font-display:not(.text-center) {
 
 .cta-glow-mint {
   box-shadow: 0 10px 32px rgba(42,181,160,0.35);
+}
+
+/* 가로 스냅 스크롤 (그룹 모드 갤러리) */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
 }
