@@ -160,9 +160,21 @@ export default function Landing() {
               </div>
               <div className="flex items-center justify-center gap-2 text-sm">
                 <span className="text-gray-300">↓</span>
-                <span className="font-black text-gray-800">{combo.result}</span>
+                <a
+                  href={`https://map.kakao.com/link/search/${encodeURIComponent(combo.result)}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  onClick={() => trackEvent('landing_demo_place_click')}
+                  className="flex items-center gap-1 font-black text-gray-800 underline decoration-[#3CDBC0] decoration-2 underline-offset-4 active:scale-95 transition-transform"
+                >
+                  <svg className="w-3.5 h-3.5 text-[#3CDBC0] flex-shrink-0" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+                  </svg>
+                  {combo.result}
+                </a>
                 <span className="bg-[#3CDBC0] text-white text-[10px] font-black px-2 py-0.5 rounded-full">적합도 90+</span>
               </div>
+              <p className="text-[10px] text-gray-300 mt-1.5">장소를 누르면 카카오맵에서 확인할 수 있어요</p>
             </div>
           </div>
 
@@ -336,7 +348,7 @@ export default function Landing() {
               한 명이 총대 메던 시대는 끝.<br />
               각자 30초씩 입력하면 <strong className="text-gray-600">모두의 중간지점과 취향</strong>을 종합해 자동으로 나옵니다.
             </p>
-            <p className="text-xs text-[#2AB5A0] font-bold mb-6">← 옆으로 넘겨보세요</p>
+            <p className="text-xs text-[#2AB5A0] font-bold mb-6">옆으로 넘겨보세요 →</p>
           </div>
 
           <div className="flex gap-4 overflow-x-auto snap-x snap-mandatory scrollbar-hide px-6 pb-2">
