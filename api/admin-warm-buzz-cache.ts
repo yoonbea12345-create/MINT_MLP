@@ -15,6 +15,14 @@ const TIME_BUDGET_MS = 50_000; // Vercel maxDuration(60s) 안에서 여유
 const PLACES_PER_QUERY = 8;    // 지역·키워드당 상위 몇 곳 분석
 const KEYWORDS = ['맛집', '술집', '카페']; // 밥/술/카페 대표
 
+// cron 자동 실행 대상 — 자주 검색되는 인기 지역(50초 예산 내 도는 규모).
+// cron은 body를 못 넣으므로 코드에 목록을 둔다. 앞쪽일수록 우선(시간 부족 시 뒤쪽 스킵).
+const POPULAR_REGIONS = [
+  '강남역', '성수동', '홍대', '연남동', '이태원', '건대입구',
+  '신촌', '잠실', '여의도', '종로', '명동', '한남동',
+  '합정', '성수', '망원동', '을지로', '삼성역', '가로수길',
+];
+
 interface NaverItem { name: string; address: string }
 
 async function searchNaver(query: string, clientId: string, clientSecret: string): Promise<NaverItem[]> {
@@ -35,26 +43,33 @@ async function searchNaver(query: string, clientId: string, clientSecret: string
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  if (req.method !== 'POST') return res.status(405).end();
+  let regions: string[];
 
-  const adminSecret = process.env.ADMIN_REFRESH_SECRET;
-  if (!adminSecret || req.headers['x-admin-secret'] !== adminSecret) {
-    return res.status(401).json({ error: '인증 실패' });
+  if (req.method === 'GET') {
+    // Vercel Cron 자동 실행 — Authorization: Bearer $CRON_SECRET 로 인증
+    const cronSecret = process.env.CRON_SECRET;
+    if (!cronSecret || req.headers.authorization !== `Bearer ${cronSecret}`) {
+      return res.status(401).json({ error: '인증 실패' });
+    }
+    regions = POPULAR_REGIONS;
+  } else if (req.method === 'POST') {
+    // 수동 실행 — x-admin-secret 로 인증, body로 지역 지정
+    const adminSecret = process.env.ADMIN_REFRESH_SECRET;
+    if (!adminSecret || req.headers['x-admin-secret'] !== adminSecret) {
+      return res.status(401).json({ error: '인증 실패' });
+    }
+    const body = (req.body ?? {}) as { region?: string; regions?: string[] };
+    regions = Array.isArray(body.regions) ? body.regions : body.region ? [body.region] : [];
+    if (regions.length === 0) {
+      return res.status(400).json({ error: 'region 또는 regions가 필요해요 (예: {"region":"성수동"}).' });
+    }
+  } else {
+    return res.status(405).end();
   }
 
   const clientId = process.env.NAVER_CLIENT_ID;
   const clientSecret = process.env.NAVER_CLIENT_SECRET;
   if (!clientId || !clientSecret) return res.status(500).json({ error: 'NAVER 키 미설정' });
-
-  const body = (req.body ?? {}) as { region?: string; regions?: string[] };
-  const regions = Array.isArray(body.regions)
-    ? body.regions
-    : body.region
-    ? [body.region]
-    : [];
-  if (regions.length === 0) {
-    return res.status(400).json({ error: 'region 또는 regions가 필요해요 (예: {"region":"성수동"}).' });
-  }
 
   const startedAt = Date.now();
   let analyzed = 0;

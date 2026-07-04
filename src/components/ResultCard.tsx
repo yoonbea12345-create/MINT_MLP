@@ -125,17 +125,28 @@ function AltsSection({ alts, accentColor = '#3CDBC0' }: { alts: PlaceRecommendat
   );
 }
 
+// 점수 구간별 근거 한 줄 — "왜 이 점수인지" 체감
+function fitScoreReason(score: number): string {
+  if (score >= 90) return '취향에 딱 맞아요';
+  if (score >= 80) return '조건과 잘 맞아요';
+  if (score >= 70) return '무난하게 맞아요';
+  return '차선책이에요';
+}
+
 function FitScoreBar({ score, className = '' }: { score?: number; className?: string }) {
   if (score == null) return null;
   const pct = Math.min(100, Math.max(0, score));
   const color = pct >= 80 ? 'bg-white' : pct >= 60 ? 'bg-white/75' : 'bg-white/50';
   return (
-    <div className={`flex items-center gap-2 ${className}`}>
-      <span className="text-[10px] text-white/60 font-bold shrink-0">적합도</span>
-      <div className="flex-1 h-1.5 bg-white/20 rounded-full overflow-hidden">
-        <div className={`h-full rounded-full transition-all ${color}`} style={{ width: `${pct}%` }} />
+    <div className={className}>
+      <div className="flex items-center gap-2">
+        <span className="text-[10px] text-white/60 font-bold shrink-0">적합도</span>
+        <div className="flex-1 h-1.5 bg-white/20 rounded-full overflow-hidden">
+          <div className={`h-full rounded-full transition-all ${color}`} style={{ width: `${pct}%` }} />
+        </div>
+        <span className="text-xs font-black text-white shrink-0">{score}점</span>
       </div>
-      <span className="text-xs font-black text-white shrink-0">{score}점</span>
+      <p className="text-[10px] text-white/70 text-right mt-0.5">{fitScoreReason(pct)}</p>
     </div>
   );
 }
@@ -360,17 +371,23 @@ export default function ResultCard({
           ) : activeTimes.length === 0 ? (
             <p className="text-xs text-gray-400">소요시간을 가져올 수 없어요</p>
           ) : (
-            <div className="flex flex-wrap gap-x-3 gap-y-1">
-              {activeTimes.map((t, i) => (
-                <div key={i} className="flex items-center gap-1 text-xs">
-                  <span className="text-gray-500 truncate max-w-[80px]">{t.label}</span>
-                  <span className="text-gray-400">→ 약</span>
-                  <span className={`font-black ${t.error ? 'text-gray-400' : 'text-[#3CDBC0]'}`}>
-                    {t.formatted}
-                  </span>
-                </div>
-              ))}
-            </div>
+            <>
+              <div className="flex flex-wrap gap-x-3 gap-y-1">
+                {activeTimes.map((t, i) => (
+                  <div key={i} className="flex items-center gap-1 text-xs">
+                    <span className="text-gray-500 truncate max-w-[80px]">{t.label}</span>
+                    <span className="text-gray-400">→ 약</span>
+                    <span className={`font-black ${t.error ? 'text-gray-400' : 'text-[#3CDBC0]'}`}>
+                      {t.formatted}
+                    </span>
+                  </div>
+                ))}
+              </div>
+              {/* 실측 경로가 아닌 추정치면 정직하게 표기 */}
+              {activeTimes.some((t) => t.source === 'estimate') && (
+                <p className="text-[10px] text-gray-300 mt-1.5">* 직선거리 기반 예상치예요</p>
+              )}
+            </>
           )}
         </div>
       )}

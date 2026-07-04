@@ -51,35 +51,55 @@ function estimateDrivingMin(km: number): number {
   return        Math.round(44 + (km - 25) * 1.2);
 }
 
+// ODsay 대중교통 경로 — 출발→도착 총 소요(분). 실패/에러 시 null.
+async function odsayTransitMin(origin: Origin, dest: Destination, key: string): Promise<number | null> {
+  try {
+    const url = `https://api.odsay.com/v1/api/searchPubTransPathT?SX=${origin.lng}&SY=${origin.lat}&EX=${dest.lng}&EY=${dest.lat}&apiKey=${encodeURIComponent(key)}`;
+    const resp = await fetch(url);
+    if (!resp.ok) return null;
+    const data = await resp.json() as {
+      error?: unknown;
+      result?: { path?: { info?: { totalTime?: number } }[] };
+    };
+    if (data.error) return null;
+    const totalTime = data.result?.path?.[0]?.info?.totalTime;
+    return typeof totalTime === 'number' && totalTime > 0 ? totalTime : null;
+  } catch {
+    return null;
+  }
+}
+
+// 카카오모빌리티 자차 경로 — 총 소요(분). 실패 시 null.
+async function kakaoDrivingMin(origin: Origin, dest: Destination, key: string): Promise<number | null> {
+  try {
+    const url = `https://apis-navi.kakaomobility.com/v1/directions?origin=${origin.lng},${origin.lat}&destination=${dest.lng},${dest.lat}&priority=RECOMMEND`;
+    const resp = await fetch(url, { headers: { Authorization: `KakaoAK ${key}` } });
+    if (!resp.ok) return null;
+    const data = await resp.json();
+    const sec: number | undefined = data.routes?.[0]?.summary?.duration;
+    return typeof sec === 'number' && sec > 0 ? Math.round(sec / 60) : null;
+  } catch {
+    return null;
+  }
+}
+
 async function calcTimes(
   origins: Origin[],
   dest: Destination,
   mode: 'transit' | 'driving',
-  apiKey: string | undefined,
+  kakaoKey: string | undefined,
 ): Promise<TravelResult[]> {
+  const odsayKey = process.env.ODSAY_API_KEY;
   return Promise.all(
     origins.map(async (origin) => {
-      if (apiKey) {
-        try {
-          let url: string;
-          if (mode === 'transit') {
-            url = `https://apis-navi.kakaomobility.com/v1/transit/route?origin=${origin.lng},${origin.lat}&destination=${dest.lng},${dest.lat}`;
-          } else {
-            url = `https://apis-navi.kakaomobility.com/v1/directions?origin=${origin.lng},${origin.lat}&destination=${dest.lng},${dest.lat}&priority=RECOMMEND`;
-          }
-          const resp = await fetch(url, { headers: { Authorization: `KakaoAK ${apiKey}` } });
-          if (resp.ok) {
-            const data = await resp.json();
-            const duration: number | undefined =
-              mode === 'transit'
-                ? data.routes?.[0]?.summary?.duration
-                : data.routes?.[0]?.summary?.duration;
-            if (duration) {
-              return { label: origin.label, formatted: formatDuration(Math.round(duration / 60)), source: mode };
-            }
-          }
-        } catch {}
+      // 대중교통 = ODsay 실측 / 자차 = 카카오 실측
+      const realMin = mode === 'transit'
+        ? (odsayKey ? await odsayTransitMin(origin, dest, odsayKey) : null)
+        : (kakaoKey ? await kakaoDrivingMin(origin, dest, kakaoKey) : null);
+      if (realMin != null) {
+        return { label: origin.label, formatted: formatDuration(realMin), source: mode };
       }
+      // 폴백: 직선거리 기반 추정
       const km = haversineKm(origin.lat, origin.lng, dest.lat, dest.lng);
       const m = mode === 'transit' ? estimateTransitMin(km) : estimateDrivingMin(km);
       return { label: origin.label, formatted: formatDuration(m), source: 'estimate' };

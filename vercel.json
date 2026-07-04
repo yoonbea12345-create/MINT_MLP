@@ -28,5 +28,11 @@
       "source": "/(.*)",
       "destination": "/index.html"
     }
+  ],
+  "crons": [
+    {
+      "path": "/api/admin-warm-buzz-cache",
+      "schedule": "0 18 * * *"
+    }
   ]
 }
