@@ -140,7 +140,7 @@ export default function Landing() {
 
       {/* ── NAV ── */}
       <nav className="sticky top-0 z-50 bg-[#F0FDF9]/90 backdrop-blur border-b border-teal-100">
-        <div className="max-w-lg lg:max-w-6xl mx-auto px-5 lg:px-8 py-3 flex items-center justify-between">
+        <div className="max-w-lg lg:max-w-7xl mx-auto px-5 lg:px-8 py-3 flex items-center justify-between">
           <span className="text-xl lg:text-2xl font-black text-[#3CDBC0] tracking-tight">MINT</span>
           <button
             onClick={goToApp}
@@ -155,8 +155,8 @@ export default function Landing() {
           HERO — 조건 조합이 결과로 바뀌는 마법
           모바일: 세로 중앙 / PC: 좌 카피·CTA + 우 데모·결과 2단
       ══════════════════════════════════════ */}
-      <section className="px-6 pt-12 pb-12 lg:pt-24 lg:pb-24">
-        <div className="max-w-lg lg:max-w-6xl mx-auto lg:grid lg:grid-cols-2 lg:gap-16 lg:items-center">
+      <section className="px-6 pt-12 pb-12 lg:pt-20 lg:pb-24">
+        <div className="max-w-lg lg:max-w-7xl mx-auto lg:grid lg:grid-cols-2 lg:gap-24 lg:items-center">
           {/* 좌: 카피 + CTA + 통계 */}
           <div className="text-center lg:text-left">
             <div className="inline-flex items-center gap-1.5 bg-teal-50 border border-teal-200 text-[#2AB5A0] text-xs font-bold px-4 py-1.5 rounded-full mb-6">
@@ -267,7 +267,7 @@ export default function Landing() {
           PC: 좌 텍스트·통계 + 우 카톡목업 2단
       ══════════════════════════════════════ */}
       <section className="bg-white border-y border-gray-100 fade-section">
-        <div className="max-w-lg lg:max-w-6xl mx-auto px-6 py-14 lg:py-24 lg:grid lg:grid-cols-2 lg:gap-16 lg:items-center">
+        <div className="max-w-lg lg:max-w-7xl mx-auto px-6 py-14 lg:py-24 lg:grid lg:grid-cols-2 lg:gap-16 lg:items-center">
           <div>
             <p className="text-xs font-bold tracking-widest text-[#3CDBC0] mb-3">PROBLEM</p>
             <h2 className="text-2xl lg:text-4xl font-black text-gray-800 leading-tight mb-3">
@@ -325,7 +325,7 @@ export default function Landing() {
           PC: 좌 폰목업 + 우 텍스트·3피처 2단
       ══════════════════════════════════════ */}
       <section className="fade-section">
-        <div className="max-w-lg lg:max-w-6xl mx-auto px-6 py-14 lg:py-24 text-center lg:text-left lg:grid lg:grid-cols-2 lg:gap-16 lg:items-center">
+        <div className="max-w-lg lg:max-w-7xl mx-auto px-6 py-14 lg:py-24 text-center lg:text-left lg:grid lg:grid-cols-2 lg:gap-16 lg:items-center">
           <div className="lg:order-2">
             <p className="text-xs font-bold tracking-widest text-[#3CDBC0] mb-3">RESULT</p>
             <h2 className="text-2xl lg:text-4xl font-black text-gray-800 leading-tight mb-3">
@@ -358,7 +358,7 @@ export default function Landing() {
           HOW IT WORKS — 스텝 (모바일 세로 / PC 4열 그리드)
       ══════════════════════════════════════ */}
       <section className="bg-white border-y border-gray-100 fade-section">
-        <div className="max-w-lg lg:max-w-6xl mx-auto px-6 py-14 lg:py-24">
+        <div className="max-w-lg lg:max-w-7xl mx-auto px-6 py-14 lg:py-24">
           <div className="lg:text-center">
             <p className="text-xs font-bold tracking-widest text-[#3CDBC0] mb-3">HOW IT WORKS</p>
             <h2 className="text-2xl lg:text-4xl font-black text-gray-800 leading-tight mb-3">
@@ -372,10 +372,10 @@ export default function Landing() {
           {/* 모바일: 세로 스택 + 연결선 / PC: 4열 그리드 */}
           <div className="flex flex-col items-center gap-0 lg:grid lg:grid-cols-4 lg:gap-6 lg:items-start">
             {[
-              { badge: 'STEP 1', title: '어떤 모임인지 골라요', desc: '인원수, 1차·2차 목적(밥/술/카페)까지 터치 몇 번이면 끝', img: '/image/landing/purpose.webp', highlight: false },
-              { badge: 'STEP 2', title: '누구와, 어디서', desc: '기념일·소개팅 같은 특별한 날도, 중간지점 계산도 알아서 처리해요', img: '/image/landing/relation.webp', highlight: false },
-              { badge: 'STEP 3', title: '원하는 분위기를 고르면', desc: '시끌벅적? 아늑한? 인스타감성? 1차·2차 분위기를 따로 고를 수 있어요', img: '/image/landing/vibe.webp', highlight: false },
-              { badge: '✨ RESULT', title: 'AI가 딱 하나 골라줍니다', desc: '혼잡도·날씨·블로그 버즈까지 반영한 최종 1곳. 마음에 안 들면 다시 추천받으세요', img: '/image/landing/result.webp', highlight: true },
+              { badge: 'STEP 1', title: '어떤 모임인지 골라요', desc: <>인원수, 1차·2차 목적(밥/술/카페)까지<br />터치 몇 번이면 끝</>, img: '/image/landing/purpose.webp', highlight: false },
+              { badge: 'STEP 2', title: '누구와, 어디서', desc: <>기념일·소개팅 같은 특별한 날도,<br />중간지점 계산도 알아서 처리해요</>, img: '/image/landing/relation.webp', highlight: false },
+              { badge: 'STEP 3', title: '원하는 분위기를 고르면', desc: <>시끌벅적? 아늑한? 인스타감성?<br />1차·2차 분위기를 따로 고를 수 있어요</>, img: '/image/landing/vibe.webp', highlight: false },
+              { badge: '✨ RESULT', title: 'AI가 딱 하나 골라줍니다', desc: <>혼잡도·날씨·블로그 버즈까지 반영한 최종 1곳.<br />마음에 안 들면 다시 추천받으세요</>, img: '/image/landing/result.webp', highlight: true },
             ].map(({ badge, title, desc, img, highlight }, i) => (
               <div key={badge} className="contents lg:block">
                 {i > 0 && (
@@ -399,7 +399,7 @@ export default function Landing() {
           GROUP MODE — 모바일 가로 스와이프 / PC 5열 그리드
       ══════════════════════════════════════ */}
       <section className="py-14 lg:py-24 fade-section overflow-hidden">
-        <div className="max-w-lg lg:max-w-6xl mx-auto px-6 lg:text-center">
+        <div className="max-w-lg lg:max-w-7xl mx-auto px-6 lg:text-center">
           <p className="text-xs font-bold tracking-widest text-[#3CDBC0] mb-3">GROUP MODE</p>
           <h2 className="text-2xl lg:text-4xl font-black text-gray-800 leading-tight mb-3">
             다같이 정할 땐 <span className="text-[#3CDBC0]">링크 하나면 돼요</span>
@@ -413,7 +413,7 @@ export default function Landing() {
         </div>
 
         {/* 모바일: 가로 스와이프 / PC: 5열 그리드 */}
-        <div className="max-w-6xl mx-auto flex gap-4 overflow-x-auto snap-x snap-mandatory scrollbar-hide px-6 pb-2 lg:grid lg:grid-cols-5 lg:gap-5 lg:overflow-visible lg:mt-10">
+        <div className="max-w-7xl mx-auto flex gap-4 overflow-x-auto snap-x snap-mandatory scrollbar-hide px-6 pb-2 lg:grid lg:grid-cols-5 lg:gap-5 lg:overflow-visible lg:mt-10">
           {[
             { n: '1', title: '링크 만들기', desc: '인원수·코스만 고르면 3초 완성', img: '/image/landing/group-create.webp' },
             { n: '2', title: '단톡방에 공유', desc: '입력 현황이 실시간으로 보여요', img: '/image/landing/group-share.webp' },
@@ -559,7 +559,7 @@ export default function Landing() {
           USE CASES — 이모지 타일 (모바일 2×2 / PC 4열)
       ══════════════════════════════════════ */}
       <section className="fade-section">
-        <div className="max-w-lg lg:max-w-6xl mx-auto px-6 py-14 lg:py-24">
+        <div className="max-w-lg lg:max-w-7xl mx-auto px-6 py-14 lg:py-24">
           <p className="text-xs font-bold tracking-widest text-[#3CDBC0] mb-3 text-center">FOR EVERY 모임</p>
           <h2 className="text-2xl lg:text-4xl font-black text-gray-800 leading-tight mb-8 lg:mb-14 text-center">
             지금 잡혀 있는 <span className="lg:text-[#3CDBC0]">바로 그 약속부터</span>
