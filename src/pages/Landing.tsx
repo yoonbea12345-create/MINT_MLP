@@ -140,308 +140,347 @@ export default function Landing() {
 
       {/* ── NAV ── */}
       <nav className="sticky top-0 z-50 bg-[#F0FDF9]/90 backdrop-blur border-b border-teal-100">
-        <div className="max-w-lg mx-auto px-5 py-3 flex items-center justify-between">
-          <span className="text-xl font-black text-[#3CDBC0] tracking-tight">MINT</span>
+        <div className="max-w-lg lg:max-w-6xl mx-auto px-5 lg:px-8 py-3 flex items-center justify-between">
+          <span className="text-xl lg:text-2xl font-black text-[#3CDBC0] tracking-tight">MINT</span>
           <button
             onClick={goToApp}
-            className="bg-[#3CDBC0] text-white text-sm font-bold px-5 py-2 rounded-full transition-all active:scale-95 hover:bg-[#2AB5A0]"
+            className="bg-[#3CDBC0] text-white text-sm font-bold px-5 lg:px-6 lg:py-2.5 py-2 rounded-full transition-all active:scale-95 hover:bg-[#2AB5A0]"
           >
             시작하기 →
           </button>
         </div>
       </nav>
 
-      <div className="max-w-lg mx-auto">
-
-        {/* ══════════════════════════════════════
-            HERO — 조건 조합이 결과로 바뀌는 마법
-        ══════════════════════════════════════ */}
-        <section className="text-center px-6 pt-12 pb-12">
-          <div className="inline-flex items-center gap-1.5 bg-teal-50 border border-teal-200 text-[#2AB5A0] text-xs font-bold px-4 py-1.5 rounded-full mb-6">
-            ✦ AI 만남 장소 큐레이션
-          </div>
-          <h1 className="text-4xl font-black text-gray-800 leading-tight mb-3">
-            약속은 잡았는데<br />
-            <span className="text-[#3CDBC0]">어디 가지?</span>
-          </h1>
-          <p className="text-gray-500 text-base leading-relaxed mb-7">
-            검색하지 마세요. 고르기만 하세요.<br />
-            <strong className="text-gray-700">30초 만에 딱 1곳</strong>, 이 모임에 맞는 장소가 나옵니다.
-          </p>
-
-          {/* 조건 → 결과 로테이션 데모 */}
-          <div className="bg-white border border-teal-100 rounded-3xl p-4 shadow-sm mb-7 min-h-[104px] flex flex-col justify-center">
-            <div key={comboIdx} className="animate-fade-in">
-              <div className="flex items-center justify-center gap-1.5 flex-wrap mb-2.5">
-                {combo.chips.map((c) => (
-                  <span key={c} className="bg-[#E8F8F5] text-[#2AB5A0] text-xs font-bold px-3 py-1.5 rounded-full">{c}</span>
-                ))}
-              </div>
-              <div className="flex items-center justify-center gap-2 text-sm">
-                <a
-                  href={`https://map.kakao.com/link/search/${encodeURIComponent(combo.result)}`}
-                  target="_blank"
-                  rel="noreferrer"
-                  onClick={() => trackEvent('landing_demo_place_click')}
-                  className="flex items-center gap-1 font-black text-gray-800 underline decoration-[#3CDBC0] decoration-2 underline-offset-4 active:scale-95 transition-transform"
-                >
-                  <svg className="w-3.5 h-3.5 text-[#3CDBC0] flex-shrink-0" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
-                  </svg>
-                  {combo.result}
-                </a>
-                <span className="bg-[#3CDBC0] text-white text-[10px] font-black px-2 py-0.5 rounded-full">적합도 90+</span>
-              </div>
+      {/* ══════════════════════════════════════
+          HERO — 조건 조합이 결과로 바뀌는 마법
+          모바일: 세로 중앙 / PC: 좌 카피·CTA + 우 데모·결과 2단
+      ══════════════════════════════════════ */}
+      <section className="px-6 pt-12 pb-12 lg:pt-24 lg:pb-24">
+        <div className="max-w-lg lg:max-w-6xl mx-auto lg:grid lg:grid-cols-2 lg:gap-16 lg:items-center">
+          {/* 좌: 카피 + CTA + 통계 */}
+          <div className="text-center lg:text-left">
+            <div className="inline-flex items-center gap-1.5 bg-teal-50 border border-teal-200 text-[#2AB5A0] text-xs font-bold px-4 py-1.5 rounded-full mb-6">
+              ✦ AI 만남 장소 큐레이션
             </div>
-          </div>
-
-          <div className="flex flex-col gap-3 w-full max-w-xs mb-3 mx-auto">
-            <button
-              onClick={goToApp}
-              className="w-full bg-gradient-to-r from-[#3CDBC0] to-[#2AB5A0] text-white font-black text-lg py-4 rounded-2xl cta-glow-mint active:scale-95 transition-all"
-            >
-              지금 바로 추천받기
-            </button>
-            {installButton}
-          </div>
-
-          {visitCount >= 50 && (
-            <p className="text-xs text-gray-400 mb-8">
-              지금까지 <strong className="text-[#2AB5A0]">{visitCount.toLocaleString()}번</strong>의 "어디 가지?" 고민이 MINT를 찾아왔어요
+            <h1 className="text-4xl lg:text-6xl font-black text-gray-800 leading-tight mb-3">
+              약속은 잡았는데<br />
+              <span className="text-[#3CDBC0]">어디 가지?</span>
+            </h1>
+            <p className="text-gray-500 text-base lg:text-lg leading-relaxed mb-7">
+              검색하지 마세요. 고르기만 하세요.<br />
+              <strong className="text-gray-700">30초 만에 딱 1곳</strong>, 이 모임에 맞는 장소가 나옵니다.
             </p>
-          )}
-          {visitCount < 50 && <div className="mb-5" />}
 
-          <div className="flex justify-center gap-8 items-end text-center">
-            <div>
-              <div className="text-2xl font-black text-[#3CDBC0] whitespace-nowrap">30초</div>
-              <div className="text-xs text-gray-400 mt-0.5">추천까지 걸리는 시간</div>
+            {/* 조건 → 결과 로테이션 데모 (모바일은 여기, PC는 우측 컬럼에 크게) */}
+            <div className="lg:hidden bg-white border border-teal-100 rounded-3xl p-4 shadow-sm mb-7 min-h-[104px] flex flex-col justify-center">
+              <div key={comboIdx} className="animate-fade-in">
+                <div className="flex items-center justify-center gap-1.5 flex-wrap mb-2.5">
+                  {combo.chips.map((c) => (
+                    <span key={c} className="bg-[#E8F8F5] text-[#2AB5A0] text-xs font-bold px-3 py-1.5 rounded-full">{c}</span>
+                  ))}
+                </div>
+                <div className="flex items-center justify-center gap-2 text-sm">
+                  <a
+                    href={`https://map.kakao.com/link/search/${encodeURIComponent(combo.result)}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    onClick={() => trackEvent('landing_demo_place_click')}
+                    className="flex items-center gap-1 font-black text-gray-800 underline decoration-[#3CDBC0] decoration-2 underline-offset-4 active:scale-95 transition-transform"
+                  >
+                    <svg className="w-3.5 h-3.5 text-[#3CDBC0] flex-shrink-0" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+                    </svg>
+                    {combo.result}
+                  </a>
+                  <span className="bg-[#3CDBC0] text-white text-[10px] font-black px-2 py-0.5 rounded-full">적합도 90+</span>
+                </div>
+              </div>
             </div>
-            <div>
-              <div className="text-2xl font-black text-[#3CDBC0] whitespace-nowrap">딱 1곳</div>
-              <div className="text-xs text-gray-400 mt-0.5">선택 피로 제로</div>
+
+            <div className="flex flex-col gap-3 w-full max-w-xs mb-3 mx-auto lg:mx-0">
+              <button
+                onClick={goToApp}
+                className="w-full bg-gradient-to-r from-[#3CDBC0] to-[#2AB5A0] text-white font-black text-lg py-4 rounded-2xl cta-glow-mint active:scale-95 transition-all"
+              >
+                지금 바로 추천받기
+              </button>
+              {installButton}
             </div>
-            <div>
-              <div className="text-2xl font-black text-[#3CDBC0] whitespace-nowrap">79만 곳</div>
-              <div className="text-xs text-gray-400 mt-0.5">전국 실존 장소 검증</div>
+
+            {visitCount >= 50 && (
+              <p className="text-xs text-gray-400 mb-8">
+                지금까지 <strong className="text-[#2AB5A0]">{visitCount.toLocaleString()}번</strong>의 "어디 가지?" 고민이 MINT를 찾아왔어요
+              </p>
+            )}
+            {visitCount < 50 && <div className="mb-5" />}
+
+            <div className="flex justify-center lg:justify-start gap-8 items-end text-center">
+              <div>
+                <div className="text-2xl lg:text-3xl font-black text-[#3CDBC0] whitespace-nowrap">30초</div>
+                <div className="text-xs text-gray-400 mt-0.5">추천까지 걸리는 시간</div>
+              </div>
+              <div>
+                <div className="text-2xl lg:text-3xl font-black text-[#3CDBC0] whitespace-nowrap">딱 1곳</div>
+                <div className="text-xs text-gray-400 mt-0.5">선택 피로 제로</div>
+              </div>
+              <div>
+                <div className="text-2xl lg:text-3xl font-black text-[#3CDBC0] whitespace-nowrap">79만 곳</div>
+                <div className="text-xs text-gray-400 mt-0.5">전국 실존 장소 검증</div>
+              </div>
             </div>
           </div>
-        </section>
 
-        {/* ══════════════════════════════════════
-            PROBLEM — 카카오톡 실랑이
-        ══════════════════════════════════════ */}
-        <section className="bg-white px-6 py-14 border-y border-gray-100 fade-section">
-          <p className="text-xs font-bold tracking-widest text-[#3CDBC0] mb-3">PROBLEM</p>
-          <h2 className="text-2xl font-black text-gray-800 leading-tight mb-3">
-            매번 반복되는 이 대화,<br />익숙하지 않나요?
-          </h2>
-          <p className="text-sm text-gray-400 mb-6 leading-relaxed">
-            장소 하나 정하는 데 30분. 결국 아무도 안 정해서 맨날 같은 곳.
-          </p>
-
-          <div className="rounded-2xl overflow-hidden shadow-md">
-            <div className="bg-[#3B576E] px-4 py-3 flex items-center gap-2">
-              <span className="text-white text-lg">‹</span>
-              <span className="text-white text-sm font-bold flex-1 text-center">화생공 24(4)</span>
-              <span className="bg-white/20 text-white text-xs px-2 py-0.5 rounded-full">4</span>
+          {/* 우 (PC 전용): 큰 데모 카드 + 결과 폰목업 */}
+          <div className="hidden lg:flex lg:flex-col lg:items-center lg:gap-6">
+            <div className="w-full max-w-md bg-white border border-teal-100 rounded-3xl p-6 shadow-lg shadow-teal-100">
+              <p className="text-xs font-bold tracking-widest text-[#3CDBC0] mb-4 text-center">조건만 고르면 이렇게</p>
+              <div key={`lg-${comboIdx}`} className="animate-fade-in">
+                <div className="flex items-center justify-center gap-2 flex-wrap mb-4">
+                  {combo.chips.map((c) => (
+                    <span key={c} className="bg-[#E8F8F5] text-[#2AB5A0] text-sm font-bold px-4 py-2 rounded-full">{c}</span>
+                  ))}
+                </div>
+                <div className="flex items-center justify-center gap-2 text-base">
+                  <a
+                    href={`https://map.kakao.com/link/search/${encodeURIComponent(combo.result)}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    onClick={() => trackEvent('landing_demo_place_click')}
+                    className="flex items-center gap-1.5 font-black text-gray-800 underline decoration-[#3CDBC0] decoration-2 underline-offset-4 hover:text-[#2AB5A0] transition-colors"
+                  >
+                    <svg className="w-4 h-4 text-[#3CDBC0] flex-shrink-0" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+                    </svg>
+                    {combo.result}
+                  </a>
+                  <span className="bg-[#3CDBC0] text-white text-xs font-black px-2.5 py-1 rounded-full">적합도 90+</span>
+                </div>
+              </div>
             </div>
-            <div className="bg-[#B2C7D9] p-4 flex flex-col gap-3">
-              {[
-                { emoji: '😎', name: '민준', msg: '이번주 토요일 다들 되지? 어디서 볼까', time: '오후 2:31' },
-                { emoji: '🙂', name: '서연', msg: 'ㅇㅇ 난 아무데나~', time: '오후 2:33' },
-                { emoji: '😊', name: '지훈', msg: '나도 다 좋은데.. 어디가 좋으려나', time: '오후 2:35' },
-                { emoji: '🤔', name: '수빈', msg: '맛집 아는 사람? 나는 모르겠는데', time: '오후 2:38' },
-              ].map((m) => (
-                <div key={m.name} className="flex items-end gap-2">
-                  <div className="w-8 h-8 rounded-xl bg-gray-300 flex items-center justify-center text-base flex-shrink-0">{m.emoji}</div>
-                  <div>
-                    <div className="text-xs text-gray-600 mb-1">{m.name}</div>
-                    <div className="bg-white rounded-2xl px-3 py-2 text-sm text-gray-800 shadow-sm">{m.msg}</div>
+            <PhoneMockup src="/image/landing/result.webp" alt="MINT 추천 결과 예시" width="w-56" />
+          </div>
+        </div>
+      </section>
+
+      {/* ══════════════════════════════════════
+          PROBLEM — 카카오톡 실랑이
+          PC: 좌 텍스트·통계 + 우 카톡목업 2단
+      ══════════════════════════════════════ */}
+      <section className="bg-white border-y border-gray-100 fade-section">
+        <div className="max-w-lg lg:max-w-6xl mx-auto px-6 py-14 lg:py-24 lg:grid lg:grid-cols-2 lg:gap-16 lg:items-center">
+          <div>
+            <p className="text-xs font-bold tracking-widest text-[#3CDBC0] mb-3">PROBLEM</p>
+            <h2 className="text-2xl lg:text-4xl font-black text-gray-800 leading-tight mb-3">
+              매번 반복되는 이 대화,<br />익숙하지 않나요?
+            </h2>
+            <p className="text-sm lg:text-base text-gray-400 mb-6 leading-relaxed">
+              장소 하나 정하는 데 30분. 결국 아무도 안 정해서 맨날 같은 곳.
+            </p>
+            <div className="hidden lg:block bg-teal-50 border border-teal-100 rounded-2xl p-6 text-center max-w-sm">
+              <div className="text-5xl font-black text-[#3CDBC0]">평균 32분</div>
+              <div className="text-sm text-gray-400 mt-1">한국인이 모임 장소 정하는 데 쓰는 시간</div>
+            </div>
+          </div>
+
+          <div className="mt-6 lg:mt-0 lg:max-w-sm lg:mx-auto lg:w-full">
+            <div className="rounded-2xl overflow-hidden shadow-md">
+              <div className="bg-[#3B576E] px-4 py-3 flex items-center gap-2">
+                <span className="text-white text-lg">‹</span>
+                <span className="text-white text-sm font-bold flex-1 text-center">화생공 24(4)</span>
+                <span className="bg-white/20 text-white text-xs px-2 py-0.5 rounded-full">4</span>
+              </div>
+              <div className="bg-[#B2C7D9] p-4 flex flex-col gap-3">
+                {[
+                  { emoji: '😎', name: '민준', msg: '이번주 토요일 다들 되지? 어디서 볼까', time: '오후 2:31' },
+                  { emoji: '🙂', name: '서연', msg: 'ㅇㅇ 난 아무데나~', time: '오후 2:33' },
+                  { emoji: '😊', name: '지훈', msg: '나도 다 좋은데.. 어디가 좋으려나', time: '오후 2:35' },
+                  { emoji: '🤔', name: '수빈', msg: '맛집 아는 사람? 나는 모르겠는데', time: '오후 2:38' },
+                ].map((m) => (
+                  <div key={m.name} className="flex items-end gap-2">
+                    <div className="w-8 h-8 rounded-xl bg-gray-300 flex items-center justify-center text-base flex-shrink-0">{m.emoji}</div>
+                    <div>
+                      <div className="text-xs text-gray-600 mb-1">{m.name}</div>
+                      <div className="bg-white rounded-2xl px-3 py-2 text-sm text-gray-800 shadow-sm">{m.msg}</div>
+                    </div>
+                    <div className="text-xs text-gray-500 mb-1">{m.time}</div>
                   </div>
-                  <div className="text-xs text-gray-500 mb-1">{m.time}</div>
+                ))}
+                <div className="flex items-end gap-2 flex-row-reverse">
+                  <div className="bg-[#FEE500] rounded-2xl px-3 py-2 text-sm text-gray-800 shadow-sm">ㅋㅋ 누가 정해줘...</div>
+                  <div className="text-xs text-gray-500 mb-1">오후 2:45</div>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-6 lg:hidden bg-teal-50 border border-teal-100 rounded-2xl p-5 text-center">
+              <div className="text-4xl font-black text-[#3CDBC0]">평균 32분</div>
+              <div className="text-sm text-gray-400 mt-1">한국인이 모임 장소 정하는 데 쓰는 시간</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ══════════════════════════════════════
+          RESULT PREVIEW — 결과부터 보여주기
+          PC: 좌 폰목업 + 우 텍스트·3피처 2단
+      ══════════════════════════════════════ */}
+      <section className="fade-section">
+        <div className="max-w-lg lg:max-w-6xl mx-auto px-6 py-14 lg:py-24 text-center lg:text-left lg:grid lg:grid-cols-2 lg:gap-16 lg:items-center">
+          <div className="lg:order-2">
+            <p className="text-xs font-bold tracking-widest text-[#3CDBC0] mb-3">RESULT</p>
+            <h2 className="text-2xl lg:text-4xl font-black text-gray-800 leading-tight mb-3">
+              조건만 골랐을 뿐인데,<br />이런 결과가 나와요
+            </h2>
+            <p className="text-sm lg:text-base text-gray-400 mb-8 leading-relaxed">
+              네이버 검증 실존 장소 · 적합도 점수 · 실시간 혼잡도<br />1차→2차 도보 동선까지 한 화면에
+            </p>
+            <div className="grid grid-cols-3 gap-2 lg:gap-3">
+              {[
+                { e: '🎯', t: '적합도 점수', d: '조건과 얼마나 맞는지 한눈에' },
+                { e: '🚦', t: '실시간 혼잡도', d: '지금 웨이팅인지 미리 확인' },
+                { e: '🚶', t: '2차 코스 연결', d: '도보 시간까지 계산된 동선' },
+              ].map(({ e, t, d }) => (
+                <div key={t} className="bg-white border border-gray-100 rounded-2xl p-3 lg:p-4">
+                  <div className="text-xl lg:text-2xl mb-1">{e}</div>
+                  <p className="text-xs lg:text-sm font-bold text-gray-800 mb-0.5">{t}</p>
+                  <p className="text-[10px] lg:text-xs text-gray-400 leading-relaxed">{d}</p>
                 </div>
               ))}
-              <div className="flex items-end gap-2 flex-row-reverse">
-                <div className="bg-[#FEE500] rounded-2xl px-3 py-2 text-sm text-gray-800 shadow-sm">ㅋㅋ 누가 정해줘...</div>
-                <div className="text-xs text-gray-500 mb-1">오후 2:45</div>
-              </div>
             </div>
           </div>
-
-          <div className="mt-6 bg-teal-50 border border-teal-100 rounded-2xl p-5 text-center">
-            <div className="text-4xl font-black text-[#3CDBC0]">평균 32분</div>
-            <div className="text-sm text-gray-400 mt-1">한국인이 모임 장소 정하는 데 쓰는 시간</div>
+          <div className="mt-8 lg:mt-0 lg:order-1">
+            <PhoneMockup src="/image/landing/result.webp" alt="MINT 추천 결과 — 1차 이자카야, 2차 와인바 코스" width="w-64" />
           </div>
-        </section>
+        </div>
+      </section>
 
-        {/* ══════════════════════════════════════
-            RESULT PREVIEW — 결과부터 보여주기
-        ══════════════════════════════════════ */}
-        <section className="px-6 py-14 text-center fade-section">
-          <p className="text-xs font-bold tracking-widest text-[#3CDBC0] mb-3">RESULT</p>
-          <h2 className="text-2xl font-black text-gray-800 leading-tight mb-3">
-            조건만 골랐을 뿐인데,<br />이런 결과가 나와요
-          </h2>
-          <p className="text-sm text-gray-400 mb-8 leading-relaxed">
-            네이버 검증 실존 장소 · 적합도 점수 · 실시간 혼잡도<br />1차→2차 도보 동선까지 한 화면에
-          </p>
-
-          <PhoneMockup src="/image/landing/result.webp" alt="MINT 추천 결과 — 1차 이자카야, 2차 와인바 코스" width="w-64" />
-
-          <div className="grid grid-cols-3 gap-2 mt-8">
-            {[
-              { e: '🎯', t: '적합도 점수', d: '조건과 얼마나 맞는지 한눈에' },
-              { e: '🚦', t: '실시간 혼잡도', d: '지금 웨이팅인지 미리 확인' },
-              { e: '🚶', t: '2차 코스 연결', d: '도보 시간까지 계산된 동선' },
-            ].map(({ e, t, d }) => (
-              <div key={t} className="bg-white border border-gray-100 rounded-2xl p-3">
-                <div className="text-xl mb-1">{e}</div>
-                <p className="text-xs font-bold text-gray-800 mb-0.5">{t}</p>
-                <p className="text-[10px] text-gray-400 leading-relaxed">{d}</p>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        {/* ══════════════════════════════════════
-            HOW IT WORKS — 3스텝 (혼자 정하기)
-        ══════════════════════════════════════ */}
-        <section className="bg-white px-6 py-14 border-y border-gray-100 fade-section">
-          <p className="text-xs font-bold tracking-widest text-[#3CDBC0] mb-3">HOW IT WORKS</p>
-          <h2 className="text-2xl font-black text-gray-800 leading-tight mb-3">
-            고르기만 하면<br />끝나는 3스텝
-          </h2>
-          <p className="text-sm text-gray-400 mb-10 leading-relaxed">
-            검색어를 몰라도 돼요. 전부 선택지로 준비되어 있으니까요.
-          </p>
-
-          <div className="flex flex-col items-center gap-0">
-            <div className="text-center w-full">
-              <span className="inline-block bg-[#3CDBC0] text-white text-xs font-bold px-3 py-1 rounded-full mb-3">STEP 1</span>
-              <h3 className="text-lg font-black text-gray-800 mb-1">어떤 모임인지 골라요</h3>
-              <p className="text-sm text-gray-400 mb-5">인원수, 1차·2차 목적(밥/술/카페)까지 터치 몇 번이면 끝</p>
-              <PhoneMockup src="/image/landing/purpose.webp" alt="모임 목적 선택" />
-            </div>
-            <div className="w-0.5 h-8 bg-gradient-to-b from-[#3CDBC0] to-transparent my-2" />
-
-            <div className="text-center w-full">
-              <span className="inline-block bg-[#3CDBC0] text-white text-xs font-bold px-3 py-1 rounded-full mb-3">STEP 2</span>
-              <h3 className="text-lg font-black text-gray-800 mb-1">누구와, 어디서 만나는지</h3>
-              <p className="text-sm text-gray-400 mb-5">
-                기념일·소개팅 같은 특별한 날도, 중간지점 계산도 알아서.<br />
-                "여자친구와 100일 데이트"처럼 직접 써도 돼요
-              </p>
-              <div className="flex gap-3 justify-center">
-                <PhoneMockup src="/image/landing/relation.webp" alt="관계·특별한 날 선택" width="w-44" />
-                <PhoneMockup src="/image/landing/region.webp" alt="지역 선택" width="w-44" />
-              </div>
-            </div>
-            <div className="w-0.5 h-8 bg-gradient-to-b from-[#3CDBC0] to-transparent my-2" />
-
-            <div className="text-center w-full">
-              <span className="inline-block bg-[#3CDBC0] text-white text-xs font-bold px-3 py-1 rounded-full mb-3">STEP 3</span>
-              <h3 className="text-lg font-black text-gray-800 mb-1">원하는 분위기를 고르면</h3>
-              <p className="text-sm text-gray-400 mb-5">시끌벅적? 아늑한? 인스타감성?<br />1차·2차 분위기를 따로 고를 수 있어요</p>
-              <PhoneMockup src="/image/landing/vibe.webp" alt="분위기 선택" />
-            </div>
-            <div className="w-0.5 h-8 bg-gradient-to-b from-[#3CDBC0] to-transparent my-2" />
-
-            <div className="text-center w-full">
-              <span className="inline-block bg-white border-2 border-[#3CDBC0] text-[#2AB5A0] text-xs font-black px-3 py-1 rounded-full mb-3">✨ RESULT</span>
-              <h3 className="text-lg font-black text-gray-800 mb-1">AI가 딱 하나 골라줍니다</h3>
-              <p className="text-sm text-gray-400 mb-5">
-                혼잡도 · 날씨 · 블로그 버즈까지 반영한 최종 1곳.<br />
-                마음에 안 들면 이유를 골라 다시 추천받으세요
-              </p>
-              <PhoneMockup src="/image/landing/result.webp" alt="AI 추천 결과" />
-            </div>
-          </div>
-        </section>
-
-        {/* ══════════════════════════════════════
-            GROUP MODE — 가로 스와이프 갤러리
-        ══════════════════════════════════════ */}
-        <section className="py-14 fade-section overflow-hidden">
-          <div className="px-6">
-            <p className="text-xs font-bold tracking-widest text-[#3CDBC0] mb-3">GROUP MODE</p>
-            <h2 className="text-2xl font-black text-gray-800 leading-tight mb-3">
-              다같이 정할 땐<br /><span className="text-[#3CDBC0]">링크 하나면 돼요</span>
+      {/* ══════════════════════════════════════
+          HOW IT WORKS — 스텝 (모바일 세로 / PC 4열 그리드)
+      ══════════════════════════════════════ */}
+      <section className="bg-white border-y border-gray-100 fade-section">
+        <div className="max-w-lg lg:max-w-6xl mx-auto px-6 py-14 lg:py-24">
+          <div className="lg:text-center">
+            <p className="text-xs font-bold tracking-widest text-[#3CDBC0] mb-3">HOW IT WORKS</p>
+            <h2 className="text-2xl lg:text-4xl font-black text-gray-800 leading-tight mb-3">
+              고르기만 하면 <span className="lg:text-[#3CDBC0]">끝나는 3스텝</span>
             </h2>
-            <p className="text-sm text-gray-400 mb-2 leading-relaxed">
-              <span className="block">총대 멜 필요 없이</span>
-              <span className="block">각자 30초씩만 입력하면</span>
-              <span className="block"><strong className="text-gray-600">모두의 중간지점과 취향</strong>이 종합돼 나옵니다</span>
+            <p className="text-sm lg:text-base text-gray-400 mb-10 lg:mb-16 leading-relaxed">
+              검색어를 몰라도 돼요. 전부 선택지로 준비되어 있으니까요.
             </p>
-            <p className="text-xs text-[#2AB5A0] font-bold mb-6">옆으로 넘겨보세요 →</p>
           </div>
 
-          <div className="flex gap-4 overflow-x-auto snap-x snap-mandatory scrollbar-hide px-6 pb-2">
+          {/* 모바일: 세로 스택 + 연결선 / PC: 4열 그리드 */}
+          <div className="flex flex-col items-center gap-0 lg:grid lg:grid-cols-4 lg:gap-6 lg:items-start">
             {[
-              { n: '1', title: '링크 만들기', desc: '인원수·코스만 고르면 3초 완성', img: '/image/landing/group-create.webp' },
-              { n: '2', title: '단톡방에 공유', desc: '입력 현황이 실시간으로 보여요', img: '/image/landing/group-share.webp' },
-              { n: '3', title: '각자 이름·출발지', desc: '멤버는 회원가입 없이 링크만 열면 끝', img: '/image/landing/join-start.webp' },
-              { n: '4', title: '취향은 몰래', desc: '눈치 안 보고 각자 원하는 분위기 선택', img: '/image/landing/join-vibe.webp' },
-              { n: '5', title: '모이면 자동 추천', desc: '전원 제출 → 종합해서 딱 1곳', img: '/image/landing/join-done.webp' },
-            ].map(({ n, title, desc, img }) => (
-              <div key={n} className="snap-center flex-shrink-0 w-60">
-                <div className="flex items-center gap-2 mb-3">
-                  <span className="w-6 h-6 rounded-full bg-[#3CDBC0] text-white text-xs font-black flex items-center justify-center flex-shrink-0">{n}</span>
-                  <span className="text-sm font-black text-gray-800">{title}</span>
+              { badge: 'STEP 1', title: '어떤 모임인지 골라요', desc: '인원수, 1차·2차 목적(밥/술/카페)까지 터치 몇 번이면 끝', img: '/image/landing/purpose.webp', highlight: false },
+              { badge: 'STEP 2', title: '누구와, 어디서', desc: '기념일·소개팅 같은 특별한 날도, 중간지점 계산도 알아서 처리해요', img: '/image/landing/relation.webp', highlight: false },
+              { badge: 'STEP 3', title: '원하는 분위기를 고르면', desc: '시끌벅적? 아늑한? 인스타감성? 1차·2차 분위기를 따로 고를 수 있어요', img: '/image/landing/vibe.webp', highlight: false },
+              { badge: '✨ RESULT', title: 'AI가 딱 하나 골라줍니다', desc: '혼잡도·날씨·블로그 버즈까지 반영한 최종 1곳. 마음에 안 들면 다시 추천받으세요', img: '/image/landing/result.webp', highlight: true },
+            ].map(({ badge, title, desc, img, highlight }, i) => (
+              <div key={badge} className="contents lg:block">
+                {i > 0 && (
+                  <div className="w-0.5 h-8 bg-gradient-to-b from-[#3CDBC0] to-transparent my-2 lg:hidden" />
+                )}
+                <div className="text-center w-full">
+                  <span className={`inline-block text-xs font-black px-3 py-1 rounded-full mb-3 ${
+                    highlight ? 'bg-white border-2 border-[#3CDBC0] text-[#2AB5A0]' : 'bg-[#3CDBC0] text-white font-bold'
+                  }`}>{badge}</span>
+                  <h3 className="text-lg font-black text-gray-800 mb-1">{title}</h3>
+                  <p className="text-sm text-gray-400 mb-5 lg:min-h-[60px]">{desc}</p>
+                  <PhoneMockup src={img} alt={`${badge} ${title}`} width="w-56 lg:w-full" />
                 </div>
-                <PhoneMockup src={img} alt={`그룹 모드 ${title}`} width="w-full" />
-                <p className="text-xs text-gray-400 mt-3 text-center leading-relaxed">{desc}</p>
               </div>
             ))}
           </div>
+        </div>
+      </section>
 
-          <div className="px-6 mt-6">
-            <div className="bg-teal-50 border border-teal-100 rounded-2xl p-4 text-center">
-              <p className="text-sm text-gray-600 leading-relaxed">
-                "난 아무데나 괜찮아"가 진짜였는지,<br />
-                <strong className="text-[#2AB5A0]">몰래 고른 취향이 전부 반영</strong>됩니다.<br />
-                눈치 게임 없이, 공평하게.
-              </p>
-            </div>
-          </div>
-        </section>
-
-        {/* ══════════════════════════════════════
-            WHY MINT — 비교
-        ══════════════════════════════════════ */}
-        <section className="bg-white px-6 py-14 border-y border-gray-100 fade-section">
-          <p className="text-xs font-bold tracking-widest text-[#3CDBC0] mb-3">WHY MINT?</p>
-          <h2 className="text-2xl font-black text-gray-800 leading-tight mb-3">
-            네이버 지도와<br />뭐가 다를까?
+      {/* ══════════════════════════════════════
+          GROUP MODE — 모바일 가로 스와이프 / PC 5열 그리드
+      ══════════════════════════════════════ */}
+      <section className="py-14 lg:py-24 fade-section overflow-hidden">
+        <div className="max-w-lg lg:max-w-6xl mx-auto px-6 lg:text-center">
+          <p className="text-xs font-bold tracking-widest text-[#3CDBC0] mb-3">GROUP MODE</p>
+          <h2 className="text-2xl lg:text-4xl font-black text-gray-800 leading-tight mb-3">
+            다같이 정할 땐 <span className="text-[#3CDBC0]">링크 하나면 돼요</span>
           </h2>
-          <p className="text-sm text-gray-400 mb-6 leading-relaxed">
-            지도 앱은 <strong className="text-gray-600">검색어가 있는 사람</strong>을 위한 도구.<br />
-            MINT는 <strong className="text-gray-600">뭘 검색할지 모르는 사람</strong>을 위한 서비스입니다.
+          <p className="text-sm lg:text-base text-gray-400 mb-2 leading-relaxed">
+            <span className="block lg:inline">총대 멜 필요 없이 </span>
+            <span className="block lg:inline">각자 30초씩만 입력하면 </span>
+            <span className="block lg:inline"><strong className="text-gray-600">모두의 중간지점과 취향</strong>이 종합돼 나옵니다</span>
           </p>
-          <div className="flex flex-col gap-4">
-            <div className="rounded-2xl border border-gray-200 p-5">
+          <p className="text-xs text-[#2AB5A0] font-bold mb-6 lg:hidden">옆으로 넘겨보세요 →</p>
+        </div>
+
+        {/* 모바일: 가로 스와이프 / PC: 5열 그리드 */}
+        <div className="max-w-6xl mx-auto flex gap-4 overflow-x-auto snap-x snap-mandatory scrollbar-hide px-6 pb-2 lg:grid lg:grid-cols-5 lg:gap-5 lg:overflow-visible lg:mt-10">
+          {[
+            { n: '1', title: '링크 만들기', desc: '인원수·코스만 고르면 3초 완성', img: '/image/landing/group-create.webp' },
+            { n: '2', title: '단톡방에 공유', desc: '입력 현황이 실시간으로 보여요', img: '/image/landing/group-share.webp' },
+            { n: '3', title: '각자 이름·출발지', desc: '멤버는 회원가입 없이 링크만 열면 끝', img: '/image/landing/join-start.webp' },
+            { n: '4', title: '취향은 몰래', desc: '눈치 안 보고 각자 원하는 분위기 선택', img: '/image/landing/join-vibe.webp' },
+            { n: '5', title: '모이면 자동 추천', desc: '전원 제출 → 종합해서 딱 1곳', img: '/image/landing/join-done.webp' },
+          ].map(({ n, title, desc, img }) => (
+            <div key={n} className="snap-center flex-shrink-0 w-60 lg:w-full">
+              <div className="flex items-center gap-2 mb-3 lg:justify-center">
+                <span className="w-6 h-6 rounded-full bg-[#3CDBC0] text-white text-xs font-black flex items-center justify-center flex-shrink-0">{n}</span>
+                <span className="text-sm font-black text-gray-800">{title}</span>
+              </div>
+              <PhoneMockup src={img} alt={`그룹 모드 ${title}`} width="w-full" />
+              <p className="text-xs text-gray-400 mt-3 text-center leading-relaxed">{desc}</p>
+            </div>
+          ))}
+        </div>
+
+        <div className="max-w-lg lg:max-w-2xl mx-auto px-6 mt-6 lg:mt-10">
+          <div className="bg-teal-50 border border-teal-100 rounded-2xl p-4 lg:p-6 text-center">
+            <p className="text-sm lg:text-base text-gray-600 leading-relaxed">
+              "난 아무데나 괜찮아"가 진짜였는지,<br />
+              <strong className="text-[#2AB5A0]">몰래 고른 취향이 전부 반영</strong>됩니다. 눈치 게임 없이, 공평하게.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {/* ══════════════════════════════════════
+          WHY MINT — 비교 (모바일 세로 / PC 나란히)
+      ══════════════════════════════════════ */}
+      <section className="bg-white border-y border-gray-100 fade-section">
+        <div className="max-w-lg lg:max-w-5xl mx-auto px-6 py-14 lg:py-24">
+          <div className="lg:text-center">
+            <p className="text-xs font-bold tracking-widest text-[#3CDBC0] mb-3">WHY MINT?</p>
+            <h2 className="text-2xl lg:text-4xl font-black text-gray-800 leading-tight mb-3">
+              네이버 지도와 뭐가 다를까?
+            </h2>
+            <p className="text-sm lg:text-base text-gray-400 mb-6 lg:mb-12 leading-relaxed">
+              지도 앱은 <strong className="text-gray-600">검색어가 있는 사람</strong>을 위한 도구.<br />
+              MINT는 <strong className="text-gray-600">뭘 검색할지 모르는 사람</strong>을 위한 서비스입니다.
+            </p>
+          </div>
+          <div className="flex flex-col lg:flex-row gap-4 lg:gap-6">
+            <div className="lg:flex-1 rounded-2xl border border-gray-200 p-5 lg:p-7">
               <div className="flex items-center gap-2 mb-4">
                 <svg className="w-6 h-6 text-gray-400" viewBox="0 0 24 24" fill="currentColor">
                   <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
                 </svg>
                 <span className="font-black text-gray-400">기존 지도 앱</span>
               </div>
-              <ul className="flex flex-col gap-2">
+              <ul className="flex flex-col gap-2 lg:gap-3">
                 {['검색어를 알아야 검색 가능', '결과 수십 개 → 또 고민', '중간 지점? 내가 계산해야 함', '광고성 상위 노출 — 진짜 맛집인지 모름'].map((t) => (
-                  <li key={t} className="flex items-start gap-2 text-sm text-gray-400">
+                  <li key={t} className="flex items-start gap-2 text-sm lg:text-base text-gray-400">
                     <span className="text-gray-300 mt-0.5">✕</span>{t}
                   </li>
                 ))}
               </ul>
             </div>
-            <div className="rounded-2xl border-2 border-[#3CDBC0] bg-teal-50 p-5">
+            <div className="lg:flex-1 rounded-2xl border-2 border-[#3CDBC0] bg-teal-50 p-5 lg:p-7">
               <div className="flex items-center gap-2 mb-4">
                 <div className="w-6 h-6 rounded-md bg-[#3CDBC0] flex items-center justify-center flex-shrink-0">
                   <span className="text-white text-[10px] font-black leading-none">M</span>
                 </div>
                 <span className="font-black text-[#2AB5A0]">MINT</span>
               </div>
-              <ul className="flex flex-col gap-2">
+              <ul className="flex flex-col gap-2 lg:gap-3">
                 {[
                   '검색어 없이 조건만 선택하면 끝',
                   'AI가 딱 1곳만 추천 — 선택 피로 제로',
@@ -449,30 +488,33 @@ export default function Landing() {
                   '전국 79만 실존 장소 · 혼잡도 · 날씨 · 버즈 반영',
                   '카카오톡 한 번이면 공유 완료',
                 ].map((t) => (
-                  <li key={t} className="flex items-start gap-2 text-sm text-gray-800">
+                  <li key={t} className="flex items-start gap-2 text-sm lg:text-base text-gray-800">
                     <span className="text-[#2AB5A0] font-bold mt-0.5">✓</span>{t}
                   </li>
                 ))}
               </ul>
             </div>
           </div>
-        </section>
+        </div>
+      </section>
 
-        {/* ══════════════════════════════════════
-            REAL PICK — 바이럴 거르고 찐맛집만
-        ══════════════════════════════════════ */}
-        <section className="px-6 py-14 fade-section">
-          <div className="rounded-3xl overflow-hidden p-6 result-gradient shadow-xl shadow-teal-200">
-            <p className="text-xs font-bold tracking-widest text-white/70 mb-3">REAL PICK</p>
-            <h2 className="text-2xl font-black text-white leading-tight mb-3">
-              바이럴은 거르고,<br /><span className="text-yellow-200">찐맛집</span>만 담았어요
-            </h2>
-            <p className="text-sm text-white/80 mb-6 leading-relaxed">
-              협찬으로 뜬 가게와 진짜 사랑받는 가게.<br />
-              MINT는 <strong className="text-yellow-200">데이터로 구분</strong>합니다.
-            </p>
+      {/* ══════════════════════════════════════
+          REAL PICK — 바이럴 거르고 찐맛집만 (PC 2×2)
+      ══════════════════════════════════════ */}
+      <section className="fade-section">
+        <div className="max-w-lg lg:max-w-5xl mx-auto px-6 py-14 lg:py-24">
+          <div className="rounded-3xl overflow-hidden p-6 lg:p-12 result-gradient shadow-xl shadow-teal-200">
+            <div className="lg:text-center">
+              <p className="text-xs font-bold tracking-widest text-white/70 mb-3">REAL PICK</p>
+              <h2 className="text-2xl lg:text-4xl font-black text-white leading-tight mb-3">
+                바이럴은 거르고, <span className="text-yellow-200">찐맛집</span>만 담았어요
+              </h2>
+              <p className="text-sm lg:text-base text-white/80 mb-6 lg:mb-10 leading-relaxed">
+                협찬으로 뜬 가게와 진짜 사랑받는 가게. MINT는 <strong className="text-yellow-200">데이터로 구분</strong>합니다.
+              </p>
+            </div>
 
-            <div className="flex flex-col gap-2.5">
+            <div className="flex flex-col gap-2.5 lg:grid lg:grid-cols-2 lg:gap-4">
               {[
                 {
                   e: '🫧',
@@ -495,32 +537,34 @@ export default function Landing() {
                   d: <>아무리 맛집이어도 웨이팅 2시간이면 꽝. <strong className="text-yellow-200">실시간 혼잡도와 오늘 날씨</strong>까지 보고 "지금" 좋은 곳을 골라요.</>,
                 },
               ].map(({ e, t, d }) => (
-                <div key={t} className="bg-white/15 rounded-2xl p-4 flex items-start gap-3">
+                <div key={t} className="bg-white/15 rounded-2xl p-4 lg:p-5 flex items-start gap-3">
                   <span className="text-2xl flex-shrink-0">{e}</span>
                   <div>
-                    <p className="text-sm font-black text-white mb-1">{t}</p>
-                    <p className="text-xs text-white/80 leading-relaxed">{d}</p>
+                    <p className="text-sm lg:text-base font-black text-white mb-1">{t}</p>
+                    <p className="text-xs lg:text-sm text-white/80 leading-relaxed">{d}</p>
                   </div>
                 </div>
               ))}
             </div>
 
-            <p className="text-center text-sm font-bold text-white mt-6">
-              MINT는 광고를 팔지 않아요.<br />
-              <span className="text-xs font-medium text-white/80">그래서 추천에 <strong className="text-yellow-200 font-bold">광고비가 안 통합니다</strong>.</span>
+            <p className="text-center text-sm lg:text-base font-bold text-white mt-6 lg:mt-10">
+              MINT는 광고를 팔지 않아요.<br className="lg:hidden" />
+              <span className="text-xs lg:text-sm font-medium text-white/80"> 그래서 추천에 <strong className="text-yellow-200 font-bold">광고비가 안 통합니다</strong>.</span>
             </p>
           </div>
-        </section>
+        </div>
+      </section>
 
-        {/* ══════════════════════════════════════
-            USE CASES — 이모지 타일 2×2
-        ══════════════════════════════════════ */}
-        <section className="px-6 py-14 fade-section">
+      {/* ══════════════════════════════════════
+          USE CASES — 이모지 타일 (모바일 2×2 / PC 4열)
+      ══════════════════════════════════════ */}
+      <section className="fade-section">
+        <div className="max-w-lg lg:max-w-6xl mx-auto px-6 py-14 lg:py-24">
           <p className="text-xs font-bold tracking-widest text-[#3CDBC0] mb-3 text-center">FOR EVERY 모임</p>
-          <h2 className="text-2xl font-black text-gray-800 leading-tight mb-8 text-center">
-            지금 잡혀 있는<br />바로 그 약속부터
+          <h2 className="text-2xl lg:text-4xl font-black text-gray-800 leading-tight mb-8 lg:mb-14 text-center">
+            지금 잡혀 있는 <span className="lg:text-[#3CDBC0]">바로 그 약속부터</span>
           </h2>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-5">
             {[
               { e: '🍻', t: '친구 모임', d: '"아무데나"의 늪 탈출, 2차까지 한 번에' },
               { e: '💕', t: '연인 데이트', d: '기념일 · 100일 · 분위기 좋은 코스' },
@@ -528,48 +572,51 @@ export default function Landing() {
               { e: '👨‍👩‍👧', t: '가족 모임', d: '넓은 공간 · 주차 · 부모님 취향까지' },
             ].map(({ e, t, d }) => (
               <button key={t} onClick={goToApp}
-                className="vibe-card bg-white border border-gray-100 rounded-2xl p-5 text-center shadow-sm hover:border-[#3CDBC0] hover:shadow-md">
-                <div className="text-3xl mb-2">{e}</div>
-                <p className="text-sm font-black text-gray-800 mb-1">{t}</p>
-                <p className="text-[11px] text-gray-400 leading-relaxed">{d}</p>
+                className="vibe-card bg-white border border-gray-100 rounded-2xl p-5 lg:p-8 text-center shadow-sm hover:border-[#3CDBC0] hover:shadow-md">
+                <div className="text-3xl lg:text-5xl mb-2 lg:mb-4">{e}</div>
+                <p className="text-sm lg:text-lg font-black text-gray-800 mb-1">{t}</p>
+                <p className="text-[11px] lg:text-sm text-gray-400 leading-relaxed">{d}</p>
               </button>
             ))}
           </div>
-        </section>
+        </div>
+      </section>
 
-        {/* ══════════════════════════════════════
-            SHARE — 카톡 공유 플로우
-        ══════════════════════════════════════ */}
-        <section className="bg-white px-6 py-14 border-y border-gray-100 fade-section">
+      {/* ══════════════════════════════════════
+          SHARE — 카톡 공유 플로우
+      ══════════════════════════════════════ */}
+      <section className="bg-white border-y border-gray-100 fade-section">
+        <div className="max-w-lg lg:max-w-3xl mx-auto px-6 py-14 lg:py-24 lg:text-center">
           <p className="text-xs font-bold tracking-widest text-[#3CDBC0] mb-3">SHARE</p>
-          <h2 className="text-2xl font-black text-gray-800 leading-tight mb-3">
-            추천 받자마자<br />
-            <span className="text-[#3CDBC0]">카카오톡으로 공유</span>
+          <h2 className="text-2xl lg:text-4xl font-black text-gray-800 leading-tight mb-3">
+            추천 받자마자 <span className="text-[#3CDBC0]">카카오톡으로 공유</span>
           </h2>
-          <p className="text-sm text-gray-400 mb-6 leading-relaxed">
+          <p className="text-sm lg:text-base text-gray-400 mb-6 lg:mb-10 leading-relaxed">
             결과 나오면 버튼 하나로 단톡방에 공유.<br />'여기 어때?' 한 줄이면 약속 끝.
           </p>
           <div className="flex items-center justify-center gap-2 flex-nowrap">
-            <span className="bg-teal-50 border border-teal-200 text-[#2AB5A0] text-sm font-bold px-4 py-2 rounded-full whitespace-nowrap">🍃 조건 선택</span>
+            <span className="bg-teal-50 border border-teal-200 text-[#2AB5A0] text-sm lg:text-base font-bold px-4 lg:px-5 py-2 lg:py-2.5 rounded-full whitespace-nowrap">🍃 조건 선택</span>
             <span className="text-[#3CDBC0] font-bold flex-shrink-0">→</span>
-            <span className="bg-teal-50 border border-teal-200 text-[#2AB5A0] text-sm font-bold px-4 py-2 rounded-full whitespace-nowrap">✨ AI 추천</span>
+            <span className="bg-teal-50 border border-teal-200 text-[#2AB5A0] text-sm lg:text-base font-bold px-4 lg:px-5 py-2 lg:py-2.5 rounded-full whitespace-nowrap">✨ AI 추천</span>
             <span className="text-[#3CDBC0] font-bold flex-shrink-0">→</span>
-            <div className="flex items-center gap-1.5 bg-teal-50 border border-teal-200 text-[#2AB5A0] text-sm font-bold px-3 py-2 rounded-full whitespace-nowrap flex-shrink-0">
+            <div className="flex items-center gap-1.5 bg-teal-50 border border-teal-200 text-[#2AB5A0] text-sm lg:text-base font-bold px-3 lg:px-4 py-2 lg:py-2.5 rounded-full whitespace-nowrap flex-shrink-0">
               <KakaoTalkBubble className="w-4 h-4" />
               카톡 공유
             </div>
           </div>
-        </section>
+        </div>
+      </section>
 
-        {/* ══════════════════════════════════════
-            FAQ
-        ══════════════════════════════════════ */}
-        <section className="px-6 py-14 fade-section">
+      {/* ══════════════════════════════════════
+          FAQ — 모바일 1열 / PC 2열
+      ══════════════════════════════════════ */}
+      <section className="fade-section">
+        <div className="max-w-lg lg:max-w-5xl mx-auto px-6 py-14 lg:py-24">
           <p className="text-xs font-bold tracking-widest text-[#3CDBC0] mb-3 text-center">FAQ</p>
-          <h2 className="text-2xl font-black text-gray-800 leading-tight mb-8 text-center">
+          <h2 className="text-2xl lg:text-4xl font-black text-gray-800 leading-tight mb-8 lg:mb-14 text-center">
             자주 묻는 질문
           </h2>
-          <div className="space-y-3">
+          <div className="space-y-3 lg:space-y-0 lg:grid lg:grid-cols-2 lg:gap-4">
             {[
               {
                 q: '정말 무료인가요?',
@@ -592,21 +639,23 @@ export default function Landing() {
                 a: '전국을 지원합니다. 전국 79만 곳의 인허가 데이터 기반으로, 어느 지역이든 실존 장소를 추천해드려요.',
               },
             ].map(({ q, a }) => (
-              <div key={q} className="bg-white border border-gray-100 rounded-2xl p-5">
-                <p className="text-sm font-black text-gray-800 mb-2">{q}</p>
-                <p className="text-sm text-gray-500 leading-relaxed">{a}</p>
+              <div key={q} className="bg-white border border-gray-100 rounded-2xl p-5 lg:p-6">
+                <p className="text-sm lg:text-base font-black text-gray-800 mb-2">{q}</p>
+                <p className="text-sm lg:text-[15px] text-gray-500 leading-relaxed">{a}</p>
               </div>
             ))}
           </div>
-        </section>
+        </div>
+      </section>
 
-        {/* ══════════════════════════════════════
-            FINAL CTA
-        ══════════════════════════════════════ */}
-        <section className="px-6 py-16 text-center bg-gradient-to-b from-[#F0FDF9] to-[#E8FBF3] fade-section">
-          <h2 className="text-3xl font-black text-gray-800 leading-tight mb-1">어디 가지?</h2>
-          <h2 className="text-3xl font-black text-[#3CDBC0] leading-tight mb-4">MINT 하지, 뭐.</h2>
-          <p className="text-sm text-gray-400 mb-8">무료로 시작하세요. 회원가입도 없어요.</p>
+      {/* ══════════════════════════════════════
+          FINAL CTA
+      ══════════════════════════════════════ */}
+      <section className="bg-gradient-to-b from-[#F0FDF9] to-[#E8FBF3] fade-section">
+        <div className="max-w-lg lg:max-w-3xl mx-auto px-6 py-16 lg:py-28 text-center">
+          <h2 className="text-3xl lg:text-6xl font-black text-gray-800 leading-tight mb-1">어디 가지?</h2>
+          <h2 className="text-3xl lg:text-6xl font-black text-[#3CDBC0] leading-tight mb-4 lg:mb-6">MINT 하지, 뭐.</h2>
+          <p className="text-sm lg:text-lg text-gray-400 mb-8">무료로 시작하세요. 회원가입도 없어요.</p>
           <div className="flex flex-col gap-3 w-full max-w-xs mb-6 mx-auto">
             <button
               onClick={goToApp}
@@ -645,9 +694,8 @@ export default function Landing() {
               완전 무료
             </div>
           </div>
-        </section>
-
-      </div>
+        </div>
+      </section>
 
       {/* FOOTER */}
       <footer className="bg-white border-t border-gray-100 py-6 text-center">
