@@ -42,4 +42,13 @@ describe('computeFinalScores (L3 재정렬)', () => {
     expect(scored[0].finalScore).toBe(90 + SCORING_CONFIG.gemBonus);
     expect(scored[1].finalScore).toBe(30);
   });
+
+  it('키워드 매칭 개수만큼 가산점, 상한까지만', () => {
+    const [one, four] = computeFinalScores([
+      { ...base, fitScore: 70, keywordHits: 1 },
+      { ...base, fitScore: 70, keywordHits: 4 },  // 4*3=12 > 상한 9
+    ]);
+    expect(one.finalScore).toBe(70 + SCORING_CONFIG.keywordHitBonus);
+    expect(four.finalScore).toBe(70 + SCORING_CONFIG.keywordHitBonusMax);
+  });
 });

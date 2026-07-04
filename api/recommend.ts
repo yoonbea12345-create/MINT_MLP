@@ -28,8 +28,9 @@ const MIDPOINT_RADIUS_KM = 1.5;
 
 // L1(블로그 버즈)·L3(괴리 보정) 재채점을 위해 Claude가 먼저 확정 표시 개수보다
 // 넉넉히 파이널리스트를 뽑게 한 뒤, 재채점 후 최종 표시 개수로 슬라이스한다.
-const FINALIST_COUNT_SINGLE = 12;
-const FINALIST_COUNT_PER_PURPOSE = 6;
+// 표시는 단일 3곳 / 이중 6곳이라, 재정렬 풀은 8·5면 충분하다(출력 토큰 절감).
+const FINALIST_COUNT_SINGLE = 8;
+const FINALIST_COUNT_PER_PURPOSE = 5;
 
 function distKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
   const R = 6371;
@@ -413,6 +414,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       console.error('[recommend] L0 gem candidate injection failed', e);
     }
 
+    // 재추천 제외: 방금 추천한 장소를 후보 목록에서 빼서 Claude가 못 고르게 한다.
+    // (부분 문자열 매칭 — "아키야마 성수본점"과 "아키야마" 같은 표기 차이 흡수)
+    const excludeNames: string[] = Array.isArray(req.body.excludeNames)
+      ? (req.body.excludeNames as unknown[]).filter((n): n is string => typeof n === 'string' && n.length > 0)
+      : [];
+    if (excludeNames.length > 0) {
+      const isExcluded = (name: string) =>
+        excludeNames.some((ex) => name.includes(ex) || ex.includes(name));
+      // 후보가 너무 줄면 추천 자체가 불가 → 3곳 이상 남을 때만 제외 적용
+      const filteredFirst = naverFirstPlaces.filter((p) => !isExcluded(p.name));
+      if (filteredFirst.length >= 3) naverFirstPlaces.splice(0, naverFirstPlaces.length, ...filteredFirst);
+      const filteredSecond = naverSecondPlaces.filter((p) => !isExcluded(p.name));
+      if (filteredSecond.length >= 3) naverSecondPlaces.splice(0, naverSecondPlaces.length, ...filteredSecond);
+      console.log(`[recommend] excludeNames=${excludeNames.length} → first ${naverFirstPlaces.length}, second ${naverSecondPlaces.length}`);
+    }
+
     const hasNaverData = naverFirstPlaces.length > 0;
     console.log(`[recommend] naverFirst=${naverFirstPlaces.length} naverSecond=${naverSecondPlaces.length} hasNaverData=${hasNaverData}`);
     // 2차 네이버 데이터 없으면 단일 목적 모드로 폴백 (할루시네이션 방지)
@@ -652,13 +669,29 @@ ${fitScoreGuide}
         f.isPublicGem = idx >= 0 ? Boolean(list[idx]._isPublicGem) : false;
       }
 
+      // 사용자 지정 키워드가 장소의 태그/설명에 실제로 매칭된 개수 — 객관 순위 신호
+      const countKeywordHits = (f: { vibeTags?: string[]; description?: string; category?: string }): number => {
+        if (keywords.length === 0) return 0;
+        const haystack = [
+          ...(Array.isArray(f.vibeTags) ? f.vibeTags : []),
+          f.description ?? '',
+          f.category ?? '',
+        ].join(' ').replace(/\s/g, '');
+        return keywords.filter((k) => haystack.includes(k.replace(/\s/g, ''))).length;
+      };
+
       const scoreSlot = (slot: number) => {
         const input: {
           placeName: string; address: string; fitScore: number; bubbleScore: number;
-          naverRank: number | null; isPublicGem: boolean;
+          naverRank: number | null; isPublicGem: boolean; keywordHits: number;
         }[] = finalists
           .filter((f) => f.purposeSlot === slot)
-          .map((f) => ({ ...f, fitScore: f.fitScore ?? 0, bubbleScore: f.bubbleScore ?? 0 }));
+          .map((f) => ({
+            ...f,
+            fitScore: f.fitScore ?? 0,
+            bubbleScore: f.bubbleScore ?? 0,
+            keywordHits: countKeywordHits(f),
+          }));
         return computeFinalScores(input);
       };
 

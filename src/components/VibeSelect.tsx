@@ -115,6 +115,15 @@ export default function VibeSelect({ value, onChange, purpose, keywords = [], on
 
   return (
     <div className="px-4 pt-3 pb-6 flex flex-col gap-5">
+      {/* 1차/2차 토글 안내 — 처음 쓰는 사람이 배지 의미를 알 수 있게 */}
+      {hasSecond && (
+        <div className="bg-[#E8F8F5] border border-[#3CDBC0]/30 rounded-xl px-3 py-2 flex items-center gap-2">
+          <span className="text-base">💡</span>
+          <p className="text-[11px] text-[#2AB5A0] leading-snug">
+            같은 항목을 <span className="font-black">탭할 때마다 1차 → 2차 → 해제</span>로 지정돼요
+          </p>
+        </div>
+      )}
       {GROUPS.map((group, groupIdx) => {
         const g = value[group.label] ?? { first: null, second: null };
         return (

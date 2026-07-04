@@ -6,6 +6,10 @@ export const SCORING_CONFIG = {
   discrepancyNaverRankTopPct: 0.3,
   discrepancyFitScoreBottomPct: 0.5,
   gemFitScoreMinPct: 0.5,
+  // 사용자가 명시한 키워드(#루프탑 등)가 실제 매칭되면 순위 가산 — Claude 자가채점의
+  // 주관성을 보완하는 객관 신호. 화면 표시 fitScore는 그대로 두고 순위에만 반영.
+  keywordHitBonus: 3, // 매칭 키워드 1개당
+  keywordHitBonusMax: 9,
 };
 
 export interface ScorableCandidate {
@@ -13,6 +17,7 @@ export interface ScorableCandidate {
   bubbleScore: number;
   naverRank: number | null; // null = 공공데이터 발굴 후보(네이버 노출 없음)
   isPublicGem: boolean;
+  keywordHits?: number; // 사용자 지정 키워드와 매칭된 개수(vibeTags/description 기준)
 }
 
 // finalScore = fitScore - bubblePenalty - discrepancyPenalty + gemBonus
@@ -43,7 +48,12 @@ export function computeFinalScores<T extends ScorableCandidate>(candidates: T[])
     const isFitMidUp = fitPercentile >= SCORING_CONFIG.gemFitScoreMinPct;
     const gemBonus = c.isPublicGem && isFitMidUp ? SCORING_CONFIG.gemBonus : 0;
 
-    const finalScore = c.fitScore - bubblePenalty - discrepancyPenalty + gemBonus;
+    const keywordBonus = Math.min(
+      (c.keywordHits ?? 0) * SCORING_CONFIG.keywordHitBonus,
+      SCORING_CONFIG.keywordHitBonusMax,
+    );
+
+    const finalScore = c.fitScore - bubblePenalty - discrepancyPenalty + gemBonus + keywordBonus;
     return { ...c, finalScore };
   });
 }

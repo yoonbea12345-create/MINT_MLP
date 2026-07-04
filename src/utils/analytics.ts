@@ -4,7 +4,8 @@
 
 import { supabase } from './supabase';
 
-type EventType = 'landing_view' | 'cta_click' | 'reservation_attempt' | 'session_duration' | 'kakao_share' | 'pwa_install_click' | 'landing_demo_place_click';
+type EventType = 'landing_view' | 'cta_click' | 'reservation_attempt' | 'session_duration' | 'kakao_share' | 'pwa_install_click' | 'landing_demo_place_click'
+  | 'retry_fresh' | 'retry_adjust' | 'reject_expensive' | 'reject_far' | 'reject_vibe';
 
 const PAUSE_KEY = 'mint_tracking_paused';
 

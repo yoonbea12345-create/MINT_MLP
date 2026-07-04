@@ -36,12 +36,13 @@ export interface PlaceRecommendation {
 export async function getAIRecommendation(
   input: UserInput,
   midpoint: Coordinates,
-  congestionData: AreaCongestion[]
+  congestionData: AreaCongestion[],
+  excludeNames: string[] = []
 ): Promise<PlaceRecommendation[]> {
   const res = await fetch('/api/recommend', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ input, midpoint, congestionData }),
+    body: JSON.stringify({ input, midpoint, congestionData, excludeNames }),
   });
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));

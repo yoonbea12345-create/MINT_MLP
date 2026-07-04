@@ -7,7 +7,6 @@ export type VibeWeights = Record<string, number>;
 interface Props {
   vibe: VibeState;
   budget: string | null;
-  onRetryImmediate: () => void;
   onRetryWithWeights: (weights: VibeWeights) => void;
   onClose: () => void;
 }
@@ -20,7 +19,7 @@ const WEIGHT_LABELS: Record<number, string> = {
   5: '최우선',
 };
 
-export default function RetryWeightModal({ vibe, budget, onRetryImmediate, onRetryWithWeights, onClose }: Props) {
+export default function RetryWeightModal({ vibe, budget, onRetryWithWeights, onClose }: Props) {
   const selectedVibes: { key: string; label: string }[] = [];
   Object.values(vibe).forEach((g) => {
     if (g.first) selectedVibes.push({ key: g.first, label: VIBE_KEY_TO_LABEL[g.first] ?? g.first });
@@ -49,17 +48,24 @@ export default function RetryWeightModal({ vibe, budget, onRetryImmediate, onRet
       >
         <div className="w-10 h-1 bg-gray-200 rounded-full mx-auto mb-5" />
 
-        <button
-          onClick={onRetryImmediate}
-          className="w-full py-3.5 rounded-2xl border-2 border-gray-200 bg-gray-50 text-gray-600 font-bold text-sm mb-5 hover:border-[#3CDBC0] hover:text-[#2AB5A0] transition-all active:scale-95"
-        >
-          슬라이더 조절 없이 바로 재추천
-        </button>
-
-        {hasItems && (
+        {!hasItems ? (
+          <div className="text-center py-8">
+            <div className="text-3xl mb-3">🎚️</div>
+            <p className="text-sm text-gray-500 leading-relaxed">
+              조절할 취향이 없어요.<br />
+              분위기를 먼저 선택하면 세밀하게 조정할 수 있어요.
+            </p>
+            <button
+              onClick={onClose}
+              className="mt-6 w-full py-3 rounded-2xl border border-gray-200 text-gray-500 font-bold text-sm active:scale-95 transition-all"
+            >
+              닫기
+            </button>
+          </div>
+        ) : (
           <>
-            <h3 className="text-base font-black text-gray-800 mb-0.5">취향 가중치 조정</h3>
-            <p className="text-xs text-gray-400 mb-5">높을수록 AI가 더 우선해서 반영해요</p>
+            <h3 className="text-base font-black text-gray-800 mb-0.5">취향 직접 조절하기</h3>
+            <p className="text-xs text-gray-400 mb-5">슬라이더가 높을수록 AI가 더 우선해서 반영해요</p>
 
             <div className="flex flex-col gap-5 mb-6">
               {selectedVibes.map((v) => (

@@ -19,7 +19,7 @@ import { getMultiAreaCongestion } from '../services/seoulData';
 import { getAIRecommendation } from '../services/ai';
 import type { PlaceRecommendation, UserInput } from '../services/ai';
 import { trackSessionDuration, trackEvent } from '../utils/analytics';
-import { aggregatePurpose, aggregateVibe } from '../utils/groupAggregate';
+import { aggregatePurpose, aggregateVibe, aggregateBudget } from '../utils/groupAggregate';
 import type { GroupMember } from '../utils/groupAggregate';
 import LoadingScreen from '../components/home/LoadingScreen';
 import GroupSetup from '../components/home/GroupSetup';
@@ -46,6 +46,8 @@ const LOADING_MESSAGES = [
 
 // 새로고침해도 마지막 추천 결과가 증발하지 않도록 sessionStorage에 보관
 const RESULT_STORAGE_KEY = 'mint_last_result_v1';
+// 입력 진행 중(solo 모드) 새로고침 대비 초안 저장
+const INPUT_DRAFT_KEY = 'mint_input_draft_v1';
 
 export default function Home() {
   const [appMode, setAppMode] = useState<AppMode>('mode-select');
@@ -111,6 +113,40 @@ export default function Home() {
     } catch { /* 손상된 캐시는 무시 */ }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // 입력 초안 복원 — 결과가 없을 때만, solo 모드 입력만 (그룹은 서버 세션이 소스)
+  useEffect(() => {
+    try {
+      if (sessionStorage.getItem(RESULT_STORAGE_KEY)) return; // 결과 복원이 우선
+      const raw = sessionStorage.getItem(INPUT_DRAFT_KEY);
+      if (!raw) return;
+      const d = JSON.parse(raw);
+      if (d.appMode !== 'solo') return;
+      setAppMode('solo');
+      if (typeof d.step === 'number') setStep(d.step as Step);
+      if (d.groupSize) setGroupSize(d.groupSize);
+      if (d.purpose) setPurpose(d.purpose);
+      if (d.vibe) setVibe(d.vibe);
+      if (Array.isArray(d.keywords)) setKeywords(d.keywords);
+      if (d.vibeCustom) setVibeCustom(d.vibeCustom);
+      if (d.meetingLocation) setMeetingLocation(d.meetingLocation);
+      if (d.budget !== undefined) setBudget(d.budget);
+      if (typeof d.customOccasion === 'string') setCustomOccasion(d.customOccasion);
+      if (Array.isArray(d.locations)) setLocations(d.locations);
+    } catch { /* 손상된 초안 무시 */ }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // 입력 초안 저장 — solo 모드로 입력 진행 중일 때만
+  useEffect(() => {
+    if (view !== 'steps' || appMode !== 'solo') return;
+    try {
+      sessionStorage.setItem(INPUT_DRAFT_KEY, JSON.stringify({
+        appMode, step, groupSize, purpose, vibe, keywords, vibeCustom,
+        meetingLocation, budget, customOccasion, locations,
+      }));
+    } catch { /* 저장 실패는 치명적이지 않음 */ }
+  }, [view, appMode, step, groupSize, purpose, vibe, keywords, vibeCustom, meetingLocation, budget, customOccasion, locations]);
 
   // 결과 화면 상태가 확정될 때마다 스냅샷 저장 (setState 커밋 이후라 stale closure 없음)
   useEffect(() => {
@@ -222,6 +258,7 @@ export default function Home() {
       if (aggregated) setPurpose(aggregated);
       const memberKeywords = Array.from(new Set(groupMembers.flatMap((m) => m.vibe_keywords ?? [])));
       setKeywords(memberKeywords);
+      setBudget(aggregateBudget(groupMembers)); // 멤버 예산도 결과에 반영
       setAppMode('group-ready');
     }
     setStep((s) => (s + 1) as Step);
@@ -286,6 +323,7 @@ export default function Home() {
     nearestAreas: string[],
     validLocs: LocationEntry[],
     vibeWeights?: Record<string, number>,
+    excludeNames: string[] = [],
   ) {
     setLoading(true);
     setLoadingProgress(0);
@@ -336,8 +374,8 @@ export default function Home() {
         });
       }, 250);
 
-      // 실제 마일스톤 2: AI 추천 완료
-      const recommendation = await getAIRecommendation(input, midpoint, congestionData);
+      // 실제 마일스톤 2: AI 추천 완료 (재추천 시 이전 장소 제외)
+      const recommendation = await getAIRecommendation(input, midpoint, congestionData, excludeNames);
       clearInterval(aiProgressInterval);
       setLoadingProgress(100); // 실제 완료
 
@@ -392,23 +430,33 @@ export default function Home() {
     }
   }
 
-  function handleRetry() {
-    setShowRetryModal(true);
+  // 현재 표시 중인 추천 장소 이름 — 재추천 시 제외 목록으로 전달
+  function currentExclude(): string[] {
+    return (result ?? []).map((r) => r.placeName).filter(Boolean);
   }
 
-  function handleRetryImmediate() {
-    setShowRetryModal(false);
+  // 🔄 다시 뽑기 = 방금 곳 제외하고 즉시 다른 곳 (조건 그대로, 모달 없음)
+  function handleRetry() {
     if (!midpointData) return;
+    trackEvent('retry_fresh');
     const validLocs = locations.filter((l) => l.lat != null && l.lng != null);
+    const exclude = currentExclude();
     setTreasurer(null);
     setResultTravelTimes(null);
-    handleRecommend(midpointData.midpoint, midpointData.nearestAreas, validLocs);
+    handleRecommend(midpointData.midpoint, midpointData.nearestAreas, validLocs, undefined, exclude);
+  }
+
+  // 🎚️ 취향 직접 조절 = 슬라이더 모달 진입
+  function handleAdjust() {
+    setShowRetryModal(true);
   }
 
   function handleRetryWithWeights(weights: VibeWeights) {
     setShowRetryModal(false);
     if (!midpointData) return;
+    trackEvent('retry_adjust');
     const validLocs = locations.filter((l) => l.lat != null && l.lng != null);
+    const exclude = currentExclude();
     const labeledWeights: Record<string, number> = {};
     Object.entries(weights).forEach(([k, v]) => {
       if (k.startsWith('budget:')) {
@@ -419,13 +467,14 @@ export default function Home() {
     });
     setTreasurer(null);
     setResultTravelTimes(null);
-    handleRecommend(midpointData.midpoint, midpointData.nearestAreas, validLocs, labeledWeights);
+    handleRecommend(midpointData.midpoint, midpointData.nearestAreas, validLocs, labeledWeights, exclude);
   }
 
   function handleReject(reason: 'expensive' | 'far' | 'vibe') {
     if (!midpointData) return;
     trackEvent(`reject_${reason}`);
     const validLocs = locations.filter((l) => l.lat != null && l.lng != null);
+    const exclude = currentExclude();
     setTreasurer(null);
     setResultTravelTimes(null);
 
@@ -456,7 +505,7 @@ export default function Home() {
       rejectWeights['새로운 분위기'] = 5;
     }
 
-    handleRecommend(midpointData.midpoint, midpointData.nearestAreas, validLocs, rejectWeights);
+    handleRecommend(midpointData.midpoint, midpointData.nearestAreas, validLocs, rejectWeights, exclude);
   }
 
   function handleShare() {
@@ -596,7 +645,7 @@ export default function Home() {
           <div className="flex items-center justify-between mb-2">
             <button
               onClick={() => {
-                try { sessionStorage.removeItem(RESULT_STORAGE_KEY); } catch { /* ignore */ }
+                try { sessionStorage.removeItem(RESULT_STORAGE_KEY); sessionStorage.removeItem(INPUT_DRAFT_KEY); } catch { /* ignore */ }
                 setResult(null);
                 setView('steps');
                 setStep(0);
@@ -627,8 +676,11 @@ export default function Home() {
             showTravelTime={meetingLocation?.type === 'auto'}
             midpointAreaName={midpointData?.areaName}
             purpose={purpose?.first ? { first: purpose.first, second: purpose.second ?? null } : undefined}
+            vibeLabels={Object.values(vibe).flatMap((g) => [g.first, g.second]).filter((k): k is string => !!k).map((k) => VIBE_KEY_TO_LABEL[k] ?? k)}
+            keywords={keywords}
             treasurer={treasurer}
             onRetry={handleRetry}
+            onAdjust={handleAdjust}
             onShare={handleShare}
             onReserve={() => setView('reserve')}
             onReject={handleReject}
@@ -638,7 +690,6 @@ export default function Home() {
             <RetryWeightModal
               vibe={vibe}
               budget={budget}
-              onRetryImmediate={handleRetryImmediate}
               onRetryWithWeights={handleRetryWithWeights}
               onClose={() => setShowRetryModal(false)}
             />

@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react';
 import type { PlaceRecommendation } from '../services/ai';
 import { congestionDotClass } from '../services/seoulData';
 import type { CongestionLevel } from '../services/seoulData';
+import MiniMap from './MiniMap';
 
 interface TravelResult {
   label: string;
@@ -21,8 +22,11 @@ interface Props {
   showTravelTime?: boolean;
   midpointAreaName?: string;
   purpose?: { first: string; second: string | null };
+  vibeLabels?: string[];
+  keywords?: string[];
   treasurer: string | null;
   onRetry: () => void;
+  onAdjust?: () => void;
   onShare: () => void;
   onReserve: () => void;
   onReject?: (reason: 'expensive' | 'far' | 'vibe') => void;
@@ -271,8 +275,11 @@ export default function ResultCard({
   showTravelTime = true,
   midpointAreaName,
   purpose,
+  vibeLabels = [],
+  keywords = [],
   treasurer,
   onRetry,
+  onAdjust,
   onShare,
   onReserve,
   onReject,
@@ -286,6 +293,9 @@ export default function ResultCard({
   const secondResult = hasSecond ? results[1] : null;
   const extraFirstResults = hasSecond ? results.slice(2, 4) : results.slice(1);
   const extraSecondResults = hasSecond ? results.slice(4) : [];
+
+  // 개인화 설득 문구 — 사용자가 고른 취향/키워드를 결과에 되짚어준다
+  const matchChips = [...vibeLabels, ...keywords].slice(0, 3);
 
   const toggleDest = useCallback(() => {
     if (hasSecond && travelTimes?.second) setDestTarget((d) => d === 'first' ? 'second' : 'first');
@@ -307,6 +317,18 @@ export default function ResultCard({
 
   return (
     <div className="flex flex-col gap-2 animate-fade-in-up">
+
+      {/* 개인화 설득 배너 — "내 취향을 반영했다"는 체감 */}
+      {matchChips.length > 0 && (
+        <div className="bg-[#E8F8F5] border border-[#3CDBC0]/30 rounded-2xl px-4 py-3">
+          <p className="text-xs text-[#2AB5A0] leading-relaxed">
+            <span className="font-black">
+              {matchChips.map((c) => `#${c}`).join(' ')}
+            </span>
+            <span className="text-[#2AB5A0]/80"> 취향에 딱 맞는 곳으로 골랐어요</span>
+          </p>
+        </div>
+      )}
 
       {/* 상단 요약 바 — 자동 중간지점 모드에서만 소요시간 표시 */}
       {midpointAreaName && showTravelTime && (
@@ -370,6 +392,11 @@ export default function ResultCard({
         gradient="linear-gradient(135deg, #3CDBC0 0%, #2AB5A0 100%)"
         shadowColor="shadow-[#3CDBC0]/25"
       />
+
+      {/* 위치 지도 미리보기 — 어디쯤인지 바로 감 잡히게 */}
+      {result.lat != null && result.lng != null && result.lat !== 0 && (
+        <MiniMap lat={result.lat} lng={result.lng} placeName={result.placeName} />
+      )}
 
       {/* 1차 대안 추천 — 항상 펼쳐진 독립 카드 */}
       {!hasSecond && <AltsSection alts={extraFirstResults} accentColor="#3CDBC0" />}
@@ -459,18 +486,10 @@ export default function ResultCard({
         <AltsSection alts={extraSecondResults} accentColor="#1A7A6E" />
       )}
 
-      {/* 예약하기 */}
-      <button
-        onClick={onReserve}
-        className="w-full py-3 rounded-2xl bg-[#3CDBC0] text-white font-black text-base flex items-center justify-center gap-2 shadow-lg shadow-[#3CDBC0]/30 hover:bg-[#2AB5A0] active:scale-95 transition-all"
-      >
-        📋 이 장소 예약하기
-      </button>
-
-      {/* 카카오톡 공유 */}
+      {/* ── 1순위 CTA: 카카오톡 공유 (핵심 유입 경로) ── */}
       <button
         onClick={onShare}
-        className="w-full py-3 rounded-2xl bg-[#FEE500] text-gray-900 font-black text-base flex items-center justify-center gap-2 shadow-lg shadow-yellow-200 active:scale-95 transition-transform"
+        className="w-full py-4 rounded-2xl bg-[#FEE500] text-gray-900 font-black text-base flex items-center justify-center gap-2 shadow-lg shadow-yellow-200 active:scale-95 transition-transform mt-1"
       >
         <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
           <path d="M12 2C6.48 2 2 6.08 2 11.1c0 3.13 1.73 5.9 4.35 7.57V22l3.97-2.18c1.06.29 2.18.44 3.33.44 5.52 0 10-4.08 10-9.1C23.65 6.08 17.52 2 12 2z" />
@@ -478,30 +497,54 @@ export default function ResultCard({
         카카오톡으로 공유하기
       </button>
 
-      {/* 거절 기반 재큐레이션 */}
-      {onReject && (
-        <div className="flex flex-col gap-1.5">
-          <p className="text-[10px] text-gray-400 text-center font-medium">이 추천이 마음에 안 드는 이유는?</p>
-          <div className="grid grid-cols-3 gap-2">
-            {([
-              { reason: 'expensive', emoji: '💸', label: '너무 비싸' },
-              { reason: 'far',       emoji: '📍', label: '너무 멀어' },
-              { reason: 'vibe',      emoji: '🎭', label: '분위기 달라' },
-            ] as const).map(({ reason, emoji, label }) => (
-              <button
-                key={reason}
-                onClick={() => onReject(reason)}
-                className="flex flex-col items-center justify-center gap-0.5 py-2.5 rounded-xl border border-gray-200 bg-white text-gray-500 text-xs font-bold hover:border-[#3CDBC0] hover:text-[#2AB5A0] hover:bg-[#E8F8F5] transition-all active:scale-95"
-              >
-                <span className="text-base leading-none">{emoji}</span>
-                <span>{label}</span>
-              </button>
-            ))}
+      {/* ── 재추천 영역: 3역할 명확 분리 ── */}
+      <div className="bg-white border border-gray-100 rounded-2xl p-3.5 flex flex-col gap-3 mt-1">
+        {/* ① 이유 기반 — "왜 별로였는지" */}
+        {onReject && (
+          <div className="flex flex-col gap-1.5">
+            <p className="text-xs text-gray-500 text-center font-bold">별로였다면, 이유를 알려주세요</p>
+            <p className="text-[10px] text-gray-400 text-center -mt-1">이유를 반영해 다른 곳으로 다시 골라드려요</p>
+            <div className="grid grid-cols-3 gap-2 mt-0.5">
+              {([
+                { reason: 'expensive', emoji: '💸', label: '너무 비싸' },
+                { reason: 'far',       emoji: '📍', label: '너무 멀어' },
+                { reason: 'vibe',      emoji: '🎭', label: '분위기 달라' },
+              ] as const).map(({ reason, emoji, label }) => (
+                <button
+                  key={reason}
+                  onClick={() => onReject(reason)}
+                  className="flex flex-col items-center justify-center gap-0.5 py-2.5 rounded-xl border border-gray-200 bg-white text-gray-500 text-xs font-bold hover:border-[#3CDBC0] hover:text-[#2AB5A0] hover:bg-[#E8F8F5] transition-all active:scale-95"
+                >
+                  <span className="text-base leading-none">{emoji}</span>
+                  <span>{label}</span>
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* 총무 + 다시뽑기 반반 */}
+        {/* ② 그냥 다른 곳 + ③ 취향 직접 조절 */}
+        <div className="flex gap-2 pt-1 border-t border-gray-100">
+          <button
+            onClick={onRetry}
+            className="flex-1 py-2.5 rounded-xl bg-[#E8F8F5] text-[#2AB5A0] font-black text-sm flex items-center justify-center gap-1.5 hover:bg-[#d4f3ee] transition-all active:scale-95"
+          >
+            <span className="text-base">🔄</span>
+            <span>다른 곳 보기</span>
+          </button>
+          {onAdjust && (
+            <button
+              onClick={onAdjust}
+              className="flex-1 py-2.5 rounded-xl border border-gray-200 bg-white text-gray-500 font-bold text-sm flex items-center justify-center gap-1.5 hover:border-[#3CDBC0] hover:text-[#2AB5A0] transition-all active:scale-95"
+            >
+              <span className="text-base">🎚️</span>
+              <span>취향 조절</span>
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* ── 보조: 총무 + 예약(연동 준비 중) ── */}
       <div className="flex gap-2">
         <button
           onClick={() => treasurer && setShowTreasurerPopup(true)}
@@ -511,11 +554,11 @@ export default function ResultCard({
           <span className="text-sm font-black text-amber-700">오늘의 총무</span>
         </button>
         <button
-          onClick={onRetry}
+          onClick={onReserve}
           className="flex-1 py-2.5 rounded-2xl border border-gray-200 bg-white text-gray-500 font-bold text-sm flex items-center justify-center gap-2 hover:border-[#3CDBC0] hover:text-[#2AB5A0] transition-all active:scale-95"
         >
-          <span className="text-lg">🔄</span>
-          <span>다시 뽑기</span>
+          <span className="text-lg">📋</span>
+          <span>예약 문의</span>
         </button>
       </div>
 

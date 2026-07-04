@@ -45,3 +45,20 @@ export function aggregateVibe(members: GroupMember[]): VibeState {
   const topAtm = Object.entries(counts).sort((a, b) => b[1] - a[1])[0]?.[0] ?? null;
   return topAtm ? { 분위기: { first: topAtm, second: null } } : {};
 }
+
+// 멤버들이 각자 고른 예산을 하나로 집계 — 최빈값, 동률이면 낮은 예산 우선(보수적).
+// 예산이 낮게 잡히면 모두가 부담 없는 선택이 되므로 동률 시 저가 쪽을 택한다.
+const BUDGET_ORDER = ['~2만원', '2~4만원', '4만원+'];
+export function aggregateBudget(members: GroupMember[]): string | null {
+  const counts: Record<string, number> = {};
+  members.forEach((m) => {
+    if (m.vibe_budget) counts[m.vibe_budget] = (counts[m.vibe_budget] || 0) + 1;
+  });
+  const entries = Object.entries(counts);
+  if (entries.length === 0) return null;
+  const maxCount = Math.max(...entries.map(([, c]) => c));
+  // 최빈값이 여럿이면 BUDGET_ORDER상 가장 낮은(저가) 예산 선택
+  const tied = entries.filter(([, c]) => c === maxCount).map(([b]) => b);
+  tied.sort((a, b) => BUDGET_ORDER.indexOf(a) - BUDGET_ORDER.indexOf(b));
+  return tied[0] ?? null;
+}
