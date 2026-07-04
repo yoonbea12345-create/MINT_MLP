@@ -48,7 +48,8 @@ function formatDuration(minutes: number): string {
   return m > 0 ? `${h}시간 ${m}분` : `${h}시간`;
 }
 
-const ODSAY_KEY: string = import.meta.env.VITE_ODSAY_API_KEY ?? '';
+// env에 앞뒤 공백/탭이 섞여 들어가는 경우가 잦아 trim 필수 (ApiKeyAuthFailed 방지)
+const ODSAY_KEY: string = (import.meta.env.VITE_ODSAY_API_KEY ?? '').trim();
 
 // ODsay 대중교통 경로 총 소요(분). 실패/CORS/에러 시 null → 추정 폴백.
 async function odsayTransitMin(origin: Point, dest: Point): Promise<number | null> {
