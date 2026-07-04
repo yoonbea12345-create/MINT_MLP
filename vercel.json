@@ -18,6 +18,9 @@
     },
     "api/admin-refresh-license-cache.ts": {
       "maxDuration": 60
+    },
+    "api/admin-warm-buzz-cache.ts": {
+      "maxDuration": 60
     }
   },
   "rewrites": [
