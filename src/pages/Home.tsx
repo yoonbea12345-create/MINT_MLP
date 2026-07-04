@@ -18,6 +18,7 @@ import type { PresetRegion, Coordinates } from '../services/midpoint';
 import { getMultiAreaCongestion } from '../services/seoulData';
 import { getAIRecommendation } from '../services/ai';
 import type { PlaceRecommendation, UserInput } from '../services/ai';
+import { computeTravelTimes } from '../services/travelTime';
 import { trackSessionDuration, trackEvent } from '../utils/analytics';
 import { aggregatePurpose, aggregateVibe, aggregateBudget } from '../utils/groupAggregate';
 import type { GroupMember } from '../utils/groupAggregate';
@@ -88,7 +89,7 @@ export default function Home() {
   const [compromiseMessage, setCompromiseMessage] = useState<string | null>(null);
   const [showCompromiseToast, setShowCompromiseToast] = useState(false);
 
-  const travelAbortRef = useRef<AbortController | null>(null);
+  const travelReqRef = useRef(0);
 
   useEffect(() => {
     if (!sessionStorage.getItem('mintSessionStart')) {
@@ -402,23 +403,13 @@ export default function Home() {
           ? { lat: secondPlace.lat, lng: secondPlace.lng! }
           : undefined;
         // 재추천 직후 이전 응답이 늦게 도착해 옛 장소의 소요시간이 표시되는 레이스 방지
-        travelAbortRef.current?.abort();
-        const controller = new AbortController();
-        travelAbortRef.current = controller;
-        fetch('/api/travel-time', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            origins: validLocs.map((l) => ({ lat: l.lat!, lng: l.lng!, label: l.name })),
-            destinations: { first: firstDest, ...(secondDest ? { second: secondDest } : {}) },
-          }),
-          signal: controller.signal,
-        })
-          .then((r) => r.json())
-          .then((data) => setResultTravelTimes(data))
-          .catch((e) => {
-            if ((e as Error).name !== 'AbortError') setResultTravelTimes(null);
-          });
+        const reqId = ++travelReqRef.current;
+        computeTravelTimes(
+          validLocs.map((l) => ({ lat: l.lat!, lng: l.lng!, label: l.name })),
+          { first: firstDest, ...(secondDest ? { second: secondDest } : {}) },
+        )
+          .then((data) => { if (reqId === travelReqRef.current) setResultTravelTimes(data); })
+          .catch(() => { if (reqId === travelReqRef.current) setResultTravelTimes(null); });
       } else {
         setResultTravelTimes(null);
       }
