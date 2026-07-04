@@ -109,6 +109,8 @@ export default function Home() {
       if (saved.treasurer) setTreasurer(saved.treasurer);
       if (saved.meetingLocation) setMeetingLocation(saved.meetingLocation);
       if (saved.resultTravelTimes) setResultTravelTimes(saved.resultTravelTimes);
+      if (saved.vibe) setVibe(saved.vibe);            // 개인화 배너 복원용
+      if (Array.isArray(saved.keywords)) setKeywords(saved.keywords);
       setView('result');
     } catch { /* 손상된 캐시는 무시 */ }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -153,10 +155,10 @@ export default function Home() {
     if (view !== 'result' || !result || result.length === 0) return;
     try {
       sessionStorage.setItem(RESULT_STORAGE_KEY, JSON.stringify({
-        result, purpose, midpointData, treasurer, meetingLocation, resultTravelTimes,
+        result, purpose, midpointData, treasurer, meetingLocation, resultTravelTimes, vibe, keywords,
       }));
     } catch { /* 저장 실패는 치명적이지 않음 */ }
-  }, [view, result, purpose, midpointData, treasurer, meetingLocation, resultTravelTimes]);
+  }, [view, result, purpose, midpointData, treasurer, meetingLocation, resultTravelTimes, vibe, keywords]);
 
 
   useEffect(() => {
