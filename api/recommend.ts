@@ -250,6 +250,50 @@ async function searchKakaoPlaceUrl(
   }
 }
 
+// Claude 응답에서 places 배열을 추출한다. 정상이면 JSON.parse 한 방에 되지만,
+// max_tokens로 응답이 잘리면 마지막 객체가 불완전해 parse가 실패한다. 그럴 때
+// 균형 잡힌 중괄호로 "완전한 객체만" 골라 복구한다(장소 몇 곳이라도 건지는 게 500보다 낫다).
+function extractPlaces(text: string): Record<string, unknown>[] | null {
+  const jsonMatch = text.match(/\{[\s\S]*\}/);
+  if (jsonMatch) {
+    try {
+      const parsed = JSON.parse(jsonMatch[0]);
+      if (Array.isArray(parsed.places)) return parsed.places;
+      if (parsed.placeName) return [parsed];
+    } catch { /* 잘린 JSON → 아래 부분 복구로 폴백 */ }
+  }
+
+  // 부분 복구: "places" 배열 이후 균형 잡힌 최상위 {…} 객체들만 개별 파싱
+  const placesIdx = text.indexOf('places');
+  const arrStart = placesIdx >= 0 ? text.indexOf('[', placesIdx) : text.indexOf('[');
+  if (arrStart < 0) return null;
+
+  const objects: Record<string, unknown>[] = [];
+  let depth = 0;
+  let start = -1;
+  let inStr = false;
+  let escaped = false;
+  for (let i = arrStart; i < text.length; i++) {
+    const c = text[i];
+    if (inStr) {
+      if (escaped) escaped = false;
+      else if (c === '\\') escaped = true;
+      else if (c === '"') inStr = false;
+      continue;
+    }
+    if (c === '"') { inStr = true; continue; }
+    if (c === '{') { if (depth === 0) start = i; depth++; }
+    else if (c === '}') {
+      depth--;
+      if (depth === 0 && start >= 0) {
+        try { objects.push(JSON.parse(text.slice(start, i + 1))); } catch { /* 이 조각은 버림 */ }
+        start = -1;
+      }
+    }
+  }
+  return objects.length ? objects : null;
+}
+
 function formatNaverPlaces(places: (NaverPlace & { _isPublicGem?: boolean; _buzzHint?: string })[]): string {
   return places.map((p, i) => {
     const tag = p._isPublicGem ? '[공공데이터 발굴 후보 — 정보 적음, 업종/연차 기반 보수적 평가, 배제 금지] ' : '';
@@ -507,18 +551,20 @@ ${fitScoreGuide}
   ${Array.from({ length: FINALIST_COUNT_SINGLE }, (_, i) => finalistSchema(i + 1, 1)).join(',\n  ')}
 ]}`;
 
+    // 파이널리스트 12곳 JSON이 잘리지 않도록 넉넉하게. non-streaming이라 timeout 여유 안에서 8192.
+    const MAX_TOKENS = 8192;
     let message;
     try {
       message = await client.messages.create({
         model: 'claude-opus-4-8',
-        max_tokens: 4096,
+        max_tokens: MAX_TOKENS,
         messages: [{ role: 'user', content: prompt }],
       });
     } catch (e) {
       if (e instanceof Anthropic.APIError && e.status === 529) {
         message = await client.messages.create({
           model: 'claude-sonnet-4-6',
-          max_tokens: 4096,
+          max_tokens: MAX_TOKENS,
           messages: [{ role: 'user', content: prompt }],
         });
       } else {
@@ -526,16 +572,20 @@ ${fitScoreGuide}
       }
     }
 
+    if (message.stop_reason === 'max_tokens') {
+      console.warn('[recommend] 응답이 max_tokens에서 잘림 — 부분 복구 시도');
+    }
+
     const text = message.content
       .filter((b): b is { type: 'text'; text: string } => b.type === 'text')
       .map((b) => b.text)
       .join('');
 
-    const jsonMatch = text.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) return res.status(500).json({ error: 'AI 응답 파싱 실패' });
-
-    const parsed = JSON.parse(jsonMatch[0]);
-    const finalists = Array.isArray(parsed.places) ? parsed.places : [parsed];
+    const finalists = extractPlaces(text);
+    if (!finalists || finalists.length === 0) {
+      console.error('[recommend] places 추출 실패. 응답 앞부분:', text.slice(0, 300));
+      return res.status(500).json({ error: '추천 결과를 정리하지 못했어요. 다시 시도해주세요.' });
+    }
 
     // 네이버 실존 데이터로 강제 덮어쓰기 (할루시네이션 방지) — purposeSlot 기준으로 목록 선택
     if (hasNaverData) {
