@@ -106,10 +106,12 @@ const AREA_SEARCH_NAME: Record<string, string> = {
   '건대입구역':         '건대',
   '북촌한옥마을':       '북촌',
   '고양 정발산역':      '일산',
+  '홍대입구역':         '홍대',
 };
 
 function toSearchName(area: string): string {
-  return AREA_SEARCH_NAME[area] ?? area;
+  // 매핑에 없으면 '관광특구' 접미사만 제거 — "홍대 관광특구 술집" 같은 저효율 쿼리 방지
+  return AREA_SEARCH_NAME[area] ?? area.replace(/\s*관광특구$/, '');
 }
 
 // 단일 Naver 쿼리 → raw items 반환 (display=5 is API max for local search)
@@ -554,16 +556,18 @@ rank 1이 반드시 가장 높아야 하며, 장소마다 솔직하고 차별화
     // slotRank: 해당 purposeSlot 목록 내에서 Claude가 매긴 선호 순서(1이 최선).
     // purposeSlot: 1=1차 목적, 2=2차 목적. 최종 표시 3~6곳으로 줄이기 전, 버즈 분석(L1)·
     // 괴리 보정(L3) 재채점을 위해 넉넉한 파이널리스트를 먼저 받는다.
+    // 네이버 후보 목록이 없을 때 sourceIndex를 요구하면 모델이 "목록이 없어 선택 불가"로
+    // 거부해 JSON 파싱이 실패한다(간헐 500의 원인). 목록 있을 때만 스키마에 포함.
     const finalistSchema = (slotRank: number, purposeSlot: number) => `{
   "slotRank": ${slotRank},
-  "purposeSlot": ${purposeSlot},
-  "sourceIndex": <목록번호>,
-  "placeName": "장소명 (목록에서 그대로)",
+  "purposeSlot": ${purposeSlot},${hasNaverData ? `
+  "sourceIndex": <목록번호>,` : ''}
+  "placeName": "장소명${hasNaverData ? ' (목록에서 그대로)' : ''}",
   "category": "카테고리",
   "description": "한 줄 설명 20자 내외",
   "priceRange": "1인 예상 가격대",
   "vibeTags": ["태그1", "태그2", "태그3"],
-  "address": "주소 (목록에서 그대로)",
+  "address": "주소${hasNaverData ? ' (목록에서 그대로)' : ' (모르면 동네명만)'}",
   "area": "지역명",
   "congestionLevel": "혼잡도",
   "fitScore": <0~100>,
@@ -577,9 +581,9 @@ ${naverSection}
 ${commonInfo}
 ${fitScoreGuide}
 
-## 응답 구성 (1차 목록에서 ${FINALIST_COUNT_PER_PURPOSE}곳 + 2차 목록에서 ${FINALIST_COUNT_PER_PURPOSE}곳, 총 ${FINALIST_COUNT_PER_PURPOSE * 2}곳)
-- purposeSlot 1(1차 "${purpose.first}") ${FINALIST_COUNT_PER_PURPOSE}곳: slotRank 1이 가장 적합, 내림차순. 같은 슬롯 내 sourceIndex 중복 금지
-- purposeSlot 2(2차 "${purpose.second}") ${FINALIST_COUNT_PER_PURPOSE}곳: slotRank 1이 가장 적합, 내림차순. 같은 슬롯 내 sourceIndex 중복 금지
+## 응답 구성 (${hasNaverData ? `1차 목록에서 ${FINALIST_COUNT_PER_PURPOSE}곳 + 2차 목록에서 ${FINALIST_COUNT_PER_PURPOSE}곳, ` : ''}총 ${FINALIST_COUNT_PER_PURPOSE * 2}곳)
+- purposeSlot 1(1차 "${purpose.first}") ${FINALIST_COUNT_PER_PURPOSE}곳: slotRank 1이 가장 적합, 내림차순. 같은 슬롯 내 ${hasNaverData ? 'sourceIndex' : '장소'} 중복 금지
+- purposeSlot 2(2차 "${purpose.second}") ${FINALIST_COUNT_PER_PURPOSE}곳: slotRank 1이 가장 적합, 내림차순. 같은 슬롯 내 ${hasNaverData ? 'sourceIndex' : '장소'} 중복 금지
 - 각 슬롯의 slotRank 1은 서로 도보 15분 이내로 이어질 수 있는 조합을 우선 고려
 
 ## 응답 형식 (JSON만, 다른 텍스트 없이)
@@ -592,8 +596,8 @@ ${naverSection}
 ${commonInfo}
 ${fitScoreGuide}
 
-## 응답 구성 (1차 목록에서 서로 다른 ${FINALIST_COUNT_SINGLE}곳, purposeSlot은 항상 1)
-- slotRank 1이 가장 적합, 내림차순. sourceIndex 중복 금지
+## 응답 구성 (${hasNaverData ? '1차 목록에서 ' : ''}서로 다른 ${FINALIST_COUNT_SINGLE}곳, purposeSlot은 항상 1)
+- slotRank 1이 가장 적합, 내림차순. ${hasNaverData ? 'sourceIndex' : '장소'} 중복 금지
 
 ## 응답 형식 (JSON만, 다른 텍스트 없이)
 {"places": [
