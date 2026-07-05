@@ -113,16 +113,22 @@ function toSearchName(area: string): string {
 }
 
 // 단일 Naver 쿼리 → raw items 반환 (display=5 is API max for local search)
+// 429(초당 호출 제한)는 잠깐 쉬고 1회 재시도 — 키워드/목적 쿼리가 조용히 누락되는 걸 방지
 async function fetchNaverQuery(
   query: string,
   clientId: string,
   clientSecret: string,
+  attempt = 0,
 ): Promise<NaverPlace[]> {
   try {
     const url = `https://openapi.naver.com/v1/search/local.json?query=${encodeURIComponent(query)}&display=5&start=1&sort=random`;
     const res = await fetch(url, {
       headers: { 'X-Naver-Client-Id': clientId, 'X-Naver-Client-Secret': clientSecret },
     });
+    if (res.status === 429 && attempt === 0) {
+      await new Promise((r) => setTimeout(r, 700 + Math.random() * 500));
+      return fetchNaverQuery(query, clientId, clientSecret, 1);
+    }
     if (!res.ok) {
       const errText = await res.text().catch(() => '');
       console.error(`[Naver API] FAIL query="${query}" status=${res.status} body=${errText.slice(0, 200)}`);
@@ -199,7 +205,15 @@ async function searchNaverMulti(
     if (searchAreas[1]) queries.push(`${searchAreas[1]} ${kw} ${categoryHint}`);
   }
 
-  const batches = await Promise.all(queries.map((q) => fetchNaverQuery(q, clientId, clientSecret)));
+  // 네이버 QPS 제한(초당 10회) — 1·2차 검색이 병렬로 돌므로 호출당 5개씩 끊어 실행
+  const batches: NaverPlace[][] = [];
+  for (let i = 0; i < queries.length; i += 5) {
+    if (i > 0) await new Promise((r) => setTimeout(r, 350));
+    const chunk = await Promise.all(
+      queries.slice(i, i + 5).map((q) => fetchNaverQuery(q, clientId, clientSecret)),
+    );
+    batches.push(...chunk);
+  }
 
   // 중복 제거 (이름+주소 기준)
   const seen = new Set<string>();
