@@ -606,11 +606,20 @@ ${fitScoreGuide}
 
     // 파이널리스트 12곳 JSON이 잘리지 않도록 넉넉하게. non-streaming이라 timeout 여유 안에서 8192.
     const MAX_TOKENS = 8192;
+    // 모델 A/B 실험용 오버라이드 — 관리자 키 일치 시에만 (일반 사용자 요청에는 영향 없음)
+    const benchModel = typeof req.body._benchModel === 'string'
+      && !!process.env.ADMIN_PASSWORD
+      && req.headers['x-admin-key'] === process.env.ADMIN_PASSWORD
+      ? req.body._benchModel : null;
+    const model = benchModel ?? 'claude-opus-4-8';
+    const aiStart = Date.now();
     let message;
     try {
       message = await client.messages.create({
-        model: 'claude-opus-4-8',
+        model,
         max_tokens: MAX_TOKENS,
+        // sonnet-5는 thinking 생략 시 adaptive가 기본 — JSON 선택 작업이라 저지연을 위해 비활성화
+        ...(model.startsWith('claude-sonnet-5') ? { thinking: { type: 'disabled' as const } } : {}),
         messages: [{ role: 'user', content: prompt }],
       });
     } catch (e) {
@@ -624,6 +633,7 @@ ${fitScoreGuide}
         throw e;
       }
     }
+    const aiMs = Date.now() - aiStart;
 
     if (message.stop_reason === 'max_tokens') {
       console.warn('[recommend] 응답이 max_tokens에서 잘림 — 부분 복구 시도');
@@ -859,6 +869,8 @@ ${fitScoreGuide}
       ...(process.env.EXPOSE_DEBUG === '1'
         ? { _debug: { naverPlacesCount: naverFirstPlaces.length, bubbleScores: debugBubbleScores } }
         : {}),
+      // 모델 실험 시에만 측정 메타 노출
+      ...(benchModel ? { _bench: { model, aiMs, outputTokens: message.usage?.output_tokens ?? null } } : {}),
     });
   } catch (e) {
     console.error('[recommend] failed', e);
