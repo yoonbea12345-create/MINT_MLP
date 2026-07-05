@@ -15,7 +15,6 @@ import type { VibeWeights } from '../components/RetryWeightModal';
 import Reserve from './Reserve';
 import { PRESET_REGIONS, findNearestAreas, findBalancedAreas } from '../services/midpoint';
 import type { PresetRegion, Coordinates } from '../services/midpoint';
-import { getMultiAreaCongestion } from '../services/seoulData';
 import { getAIRecommendation } from '../services/ai';
 import type { PlaceRecommendation, UserInput } from '../services/ai';
 import { computeTravelTimes } from '../services/travelTime';
@@ -340,10 +339,8 @@ export default function Home() {
     let aiProgressInterval: ReturnType<typeof setInterval> | null = null;
 
     try {
-      // 실제 마일스톤 1: 혼잡도 데이터 fetch
-      setLoadingProgress(5);
-      const congestionData = await getMultiAreaCongestion(nearestAreas);
-      setLoadingProgress(25); // 실제 완료
+      // 혼잡도는 서버가 추천 파이프라인 안에서 병렬 조회 — 클라이언트 선행 왕복 제거
+      setLoadingProgress(15);
 
       const vibeFirst: string[] = [];
       const vibeSecond: string[] = [];
@@ -383,7 +380,7 @@ export default function Home() {
       }, 250);
 
       // 실제 마일스톤 2: AI 추천 완료 (재추천 시 이전 장소 제외)
-      const recommendation = await getAIRecommendation(input, midpoint, congestionData, excludeNames);
+      const recommendation = await getAIRecommendation(input, midpoint, [], excludeNames, nearestAreas);
       clearInterval(aiProgressInterval);
       setLoadingProgress(100); // 실제 완료
 

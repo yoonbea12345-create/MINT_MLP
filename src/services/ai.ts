@@ -37,12 +37,14 @@ export async function getAIRecommendation(
   input: UserInput,
   midpoint: Coordinates,
   congestionData: AreaCongestion[],
-  excludeNames: string[] = []
+  excludeNames: string[] = [],
+  areas: string[] = []
 ): Promise<PlaceRecommendation[]> {
   const res = await fetch('/api/recommend', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ input, midpoint, congestionData, excludeNames }),
+    // areas를 보내면 혼잡도는 서버가 네이버 검색과 병렬로 조회 (클라이언트 왕복 1회 절감)
+    body: JSON.stringify({ input, midpoint, congestionData, excludeNames, areas }),
   });
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));

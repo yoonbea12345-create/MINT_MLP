@@ -80,6 +80,12 @@ export function validateRecommendBody(body: unknown): string | null {
   const congestionData = b.congestionData;
   if (!Array.isArray(congestionData) || congestionData.length > 5) return invalid;
 
+  // 혼잡도 서버 병렬 조회용 지역명 목록 (선택 — 구버전 클라이언트는 congestionData만 보냄)
+  if (b.areas != null) {
+    if (!Array.isArray(b.areas) || b.areas.length > 5) return invalid;
+    for (const a of b.areas) if (!isShortStr(a, 40)) return invalid;
+  }
+
   if (input.keywords != null) {
     if (!Array.isArray(input.keywords) || input.keywords.length > 10) return invalid;
     for (const k of input.keywords) if (!isShortStr(k, 30)) return invalid;

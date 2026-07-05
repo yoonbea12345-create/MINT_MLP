@@ -6,6 +6,7 @@ import { fetchStoresInRadius, matchStoreToPlace, lookupYearsAlive, computeLocalG
 import { getSupabaseAdmin } from './_lib/supabaseAdmin.js';
 import { placeKey } from './_lib/placeKey.js';
 import { computeFinalScores } from './_lib/scoring.js';
+import { fetchCongestion } from './_lib/congestion.js';
 
 interface NaverPlace {
   name: string;
@@ -376,29 +377,28 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const keywords: string[] = Array.isArray(input.keywords) ? input.keywords : [];
 
-    const areaNames = (congestionData as { areaName: string; level: string }[])
-      .map((c) => c.areaName)
-      .join(', ');
-    const congestionSummary = (congestionData as { areaName: string; level: string }[])
-      .map((c) => `${c.areaName}: ${c.level}`)
-      .join(', ');
+    // 지역명 목록: 신버전 클라이언트는 areas만 보내고 혼잡도는 서버가 병렬 조회(왕복 1회 절감),
+    // 구버전 클라이언트는 congestionData에 조회 결과를 담아 보냄 — 둘 다 수용
+    const clientCongestion = congestionData as { areaName: string; level: string }[];
+    const areaList: string[] = clientCongestion.length
+      ? clientCongestion.map((c) => c.areaName)
+      : (Array.isArray(req.body.areas) ? (req.body.areas as string[]) : []);
+
+    const areaNames = areaList.join(', ');
     const locationStr = (input.locations as { name: string }[])
       .map((l) => l.name)
       .filter(Boolean)
       .join(', ');
-    const primaryArea = (congestionData as { areaName: string }[])[0]?.areaName || areaNames;
+    const primaryArea = areaList[0] || areaNames;
 
-    // 날씨 + 네이버 장소 병렬 fetch
+    // 날씨 + 네이버 장소 + 혼잡도 병렬 fetch
     const midLat: number = midpoint?.lat ?? 37.5665;
     const midLng: number = midpoint?.lng ?? 126.9780;
 
     // 검색 지역 목록 (primaryArea + nearestAreas, 최대 3개)
-    const searchAreas = [
-      primaryArea,
-      ...((congestionData as { areaName: string }[]).map((c) => c.areaName).filter((a) => a !== primaryArea)),
-    ].slice(0, 3);
+    const searchAreas = areaList.slice(0, 3);
 
-    const [weather, naverFirstRaw, naverSecondRaw, publicStores] = await Promise.all([
+    const [weather, naverFirstRaw, naverSecondRaw, publicStores, congestionResolved] = await Promise.all([
       fetchWeather(midLat, midLng),
       searchNaverMulti(purpose.first, searchAreas, groupSize, midLat, midLng, occasion, relation, budget, keywords),
       hasTwoPurposes && purpose.second
@@ -408,7 +408,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         console.error('[recommend] L0 public data fetch failed', e);
         return [];
       }),
+      clientCongestion.length
+        ? Promise.resolve(clientCongestion)
+        : fetchCongestion(areaList).catch(() => [] as { areaName: string; level: string }[]),
     ]);
+    const congestionSummary = congestionResolved.map((c) => `${c.areaName}: ${c.level}`).join(', ');
     // 기하학적 중간지점 반경 이내 장소만 사용
     const naverFirstPlaces: (NaverPlace & { _isPublicGem?: boolean })[] = filterByRadius(naverFirstRaw, midLat, midLng);
     const naverSecondPlaces: (NaverPlace & { _isPublicGem?: boolean })[] =
@@ -493,7 +497,7 @@ ${formatNaverPlaces(naverSecondPlaces)}` : ''}
 
 ⚠️ 반드시 위 목록의 번호(1~N)에서만 선택. 목록 외 장소 생성 절대 금지.
 ⚠️ sourceIndex는 선택한 목록 번호를 정확히 기재. 같은 목록 내 중복 사용 금지.
-⚠️ placeName·address·lat·lng는 위 데이터 그대로 복사. 절대 임의 생성 금지.
+⚠️ placeName은 위 데이터 그대로 복사. 절대 임의 생성 금지.
 ⚠️ 상황(예산·인원·분위기·목적)에 가장 맞는 장소를 프랜차이즈 여부에 무관하게 선택.` : `
 ## 절대 규칙
 1. 실제 존재하고 영업 중인 장소만 추천
@@ -558,18 +562,28 @@ rank 1이 반드시 가장 높아야 하며, 장소마다 솔직하고 차별화
     // 괴리 보정(L3) 재채점을 위해 넉넉한 파이널리스트를 먼저 받는다.
     // 네이버 후보 목록이 없을 때 sourceIndex를 요구하면 모델이 "목록이 없어 선택 불가"로
     // 거부해 JSON 파싱이 실패한다(간헐 500의 원인). 목록 있을 때만 스키마에 포함.
-    const finalistSchema = (slotRank: number, purposeSlot: number) => `{
+    // AI 출력 다이어트: 주소·좌표·카테고리·지역은 어차피 서버가 네이버 실데이터로 덮어쓰고,
+    // 혼잡도는 서버가 실측값으로 대체/제거한다 — 목록이 있으면 스키마에서 제외해
+    // 출력 토큰을 ~35% 줄인다(응답 속도 단축, 최종 데이터는 동일).
+    const finalistSchema = (slotRank: number, purposeSlot: number) => hasNaverData ? `{
   "slotRank": ${slotRank},
-  "purposeSlot": ${purposeSlot},${hasNaverData ? `
-  "sourceIndex": <목록번호>,` : ''}
-  "placeName": "장소명${hasNaverData ? ' (목록에서 그대로)' : ''}",
+  "purposeSlot": ${purposeSlot},
+  "sourceIndex": <목록번호>,
+  "placeName": "장소명 (목록에서 그대로)",
+  "description": "한 줄 설명 20자 내외",
+  "priceRange": "1인 예상 가격대",
+  "vibeTags": ["태그1", "태그2", "태그3"],
+  "fitScore": <0~100>
+}` : `{
+  "slotRank": ${slotRank},
+  "purposeSlot": ${purposeSlot},
+  "placeName": "장소명",
   "category": "카테고리",
   "description": "한 줄 설명 20자 내외",
   "priceRange": "1인 예상 가격대",
   "vibeTags": ["태그1", "태그2", "태그3"],
-  "address": "주소${hasNaverData ? ' (목록에서 그대로)' : ' (모르면 동네명만)'}",
+  "address": "주소 (모르면 동네명만)",
   "area": "지역명",
-  "congestionLevel": "혼잡도",
   "fitScore": <0~100>,
   "lat": 0,
   "lng": 0
@@ -611,7 +625,9 @@ ${fitScoreGuide}
       && !!process.env.ADMIN_PASSWORD
       && req.headers['x-admin-key'] === process.env.ADMIN_PASSWORD
       ? req.body._benchModel : null;
-    const model = benchModel ?? 'claude-opus-4-8';
+    // A/B 실측(2026-07-06, 18회): sonnet-5는 opus-4-8과 목적적합률·키워드반영률·성공률 전 항목
+    // 동률에 AI 구간 18% 빠르고 비용 절반 — 후보 선별+L3 재정렬 구조라 모델 상한에 둔감.
+    const model = benchModel ?? 'claude-sonnet-5';
     const aiStart = Date.now();
     let message;
     try {
@@ -684,6 +700,8 @@ ${fitScoreGuide}
         place.lat = naver.lat;
         place.lng = naver.lng;
         if (naver.category) place.category = naver.category;
+        // 슬림 스키마에는 area가 없으므로 서버가 채움 (UI의 address 폴백 표기용)
+        if (place.area == null) place.area = primaryArea;
 
         // openingHours는 Naver에 없어서 항상 할루시네이션 → 제거
         delete place.openingHours;
@@ -802,7 +820,7 @@ ${fitScoreGuide}
 
     // 혼잡도 정직화: 서울 실시간 데이터가 실제로 있을 때만 노출, 없으면 필드 제거
     // (기존에는 Claude가 지어낸 혼잡도가 그대로 나갔다 — 실측 아닌 값은 보여주지 않는다)
-    const realCongestion = (congestionData as { areaName: string; level: string }[])
+    const realCongestion = congestionResolved
       .find((c) => c.level && c.level !== '알 수 없음')?.level ?? null;
     for (const p of places) {
       if (realCongestion) p.congestionLevel = realCongestion;
