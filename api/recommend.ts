@@ -239,25 +239,39 @@ async function searchNaverMulti(
   return all.slice(0, 50);
 }
 
-// OpenWeatherMap 날씨 조회
+// Open-Meteo 현재 날씨 조회 — API 키 불필요.
+// (기존 OpenWeather는 프로덕션에서 항상 null을 반환하고 있었음 — 키 인증 실패.
+//  키 관리가 필요 없는 Open-Meteo로 교체해 이 고장 유형 자체를 제거)
+function wmoDescription(code: number): string {
+  if (code === 0) return '맑음';
+  if (code <= 2) return '구름 조금';
+  if (code === 3) return '흐림';
+  if (code === 45 || code === 48) return '안개';
+  if (code <= 57) return '이슬비';
+  if (code <= 67) return '비';
+  if (code <= 77) return '눈';
+  if (code <= 82) return '소나기';
+  if (code <= 86) return '소낙눈';
+  return '뇌우';
+}
+
 async function fetchWeather(lat: number, lng: number): Promise<WeatherInfo | null> {
-  const apiKey = process.env.OPENWEATHER_API_KEY;
-  if (!apiKey) return null;
   try {
-    const url = `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lng}&appid=${apiKey}&units=metric&lang=kr`;
+    const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current=temperature_2m,precipitation,weather_code&timezone=Asia%2FSeoul`;
     const res = await fetch(url);
     if (!res.ok) return null;
     const data = await res.json() as {
-      weather: { description: string; id: number }[];
-      main: { temp: number };
+      current?: { temperature_2m?: number; precipitation?: number; weather_code?: number };
     };
-    const weatherId = data.weather[0]?.id ?? 800;
-    const temp = data.main.temp;
-    const isRainy = weatherId >= 200 && weatherId < 700;
+    const cur = data.current;
+    if (!cur || typeof cur.temperature_2m !== 'number') return null;
+    const code = cur.weather_code ?? 0;
+    const temp = cur.temperature_2m;
     return {
-      description: data.weather[0]?.description ?? '',
+      description: wmoDescription(code),
       temp: Math.round(temp),
-      isRainy,
+      // WMO 51 이상 = 강수(이슬비~뇌우). 실측 강수량도 함께 본다.
+      isRainy: code >= 51 || (cur.precipitation ?? 0) > 0.1,
       isHot: temp >= 28,
       isCold: temp <= 5,
     };
