@@ -353,16 +353,21 @@ export default function Home() {
       });
 
       const input: UserInput = {
-        locations,
+        // 서버 검증 통과를 위해 이름 없는 항목 제외 (지역 직접 선택 시 빈 배열)
+        locations: locations.filter((l) => l.name?.trim()),
         groupSize: appMode === 'group-ready' ? (locations.length >= 5 ? '5명 이상' : locations.length >= 3 ? '3~4명' : '2명') : groupSize,
         purpose: { first: purpose!.first!, second: purpose!.second ?? null },
         vibe: { first: vibeFirst, second: vibeSecond },
         relation: purpose?.relation ?? null,
-        occasion: purpose?.occasion ?? null,
+        occasion: purpose?.occasion?.trim().slice(0, 40) || null,
         budget,
         ...(vibeWeights && Object.keys(vibeWeights).length > 0 ? { vibeWeights } : {}),
         ...((() => {
-          const allKw = [...keywords, ...Object.values(vibeCustom).filter(Boolean)];
+          // 서버 검증 한도(개수 10 · 항목당 30자)에 맞춰 잘라서 전송
+          const allKw = [...keywords, ...Object.values(vibeCustom).filter(Boolean)]
+            .map((k) => k.trim().slice(0, 30))
+            .filter(Boolean)
+            .slice(0, 10);
           return allKw.length > 0 ? { keywords: allKw } : {};
         })()),
       };

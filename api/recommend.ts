@@ -353,7 +353,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const congestionSummary = (congestionData as { areaName: string; level: string }[])
       .map((c) => `${c.areaName}: ${c.level}`)
       .join(', ');
-    const locationStr = input.locations.map((l: { name: string }) => l.name).join(', ');
+    const locationStr = (input.locations as { name: string }[])
+      .map((l) => l.name)
+      .filter(Boolean)
+      .join(', ');
     const primaryArea = (congestionData as { areaName: string }[])[0]?.areaName || areaNames;
 
     // 날씨 + 네이버 장소 병렬 fetch
@@ -489,7 +492,7 @@ ${formatNaverPlaces(naverSecondPlaces)}` : ''}
 
     const commonInfo = `
 ## 모임 정보
-- 출발지: ${locationStr}
+- 출발지: ${locationStr || `미입력 (${areaNames} 일대에서 모임)`}
 - 추천 지역: ${areaNames}
 - 인원: ${groupSize}명${groupSize >= 5 ? ' (단체석 또는 넓은 공간 필수)' : ''}${relationLine}${occasionLine}${budgetLine}${keywordsLine}
 - 분위기: ${vibeFirstStr}${vibeSecondStr ? ` / 2차: ${vibeSecondStr}` : ''}

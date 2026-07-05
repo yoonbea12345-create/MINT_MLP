@@ -59,10 +59,13 @@ export function validateRecommendBody(body: unknown): string | null {
   const input = b.input as Record<string, unknown> | undefined;
   if (!input || typeof input !== 'object') return invalid;
 
+  // 출발지는 선택 입력 — 지역 직접 선택 플로우에서는 빈 배열로 온다
   const locations = input.locations;
-  if (!Array.isArray(locations) || locations.length < 1 || locations.length > 12) return invalid;
+  if (!Array.isArray(locations) || locations.length > 12) return invalid;
   for (const l of locations) {
-    if (!l || typeof l !== 'object' || !isShortStr((l as Record<string, unknown>).name, 80)) return invalid;
+    if (!l || typeof l !== 'object') return invalid;
+    const name = (l as Record<string, unknown>).name;
+    if (typeof name !== 'string' || name.length > 80) return invalid;
   }
 
   const purpose = input.purpose as Record<string, unknown> | undefined;
