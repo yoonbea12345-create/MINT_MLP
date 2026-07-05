@@ -161,6 +161,7 @@ async function searchNaverMulti(
   occasion?: string | null,
   relation?: string | null,
   budget?: string | null,
+  userKeywords: string[] = [],
 ): Promise<NaverPlace[]> {
   const clientId     = process.env.NAVER_CLIENT_ID;
   const clientSecret = process.env.NAVER_CLIENT_SECRET;
@@ -169,7 +170,9 @@ async function searchNaverMulti(
   const isLargeGroup = groupSize >= 5;
   const groupPrefix  = isLargeGroup ? '단체 ' : '';
   const budgetPrefix = budget === '~2만원' ? '가성비 ' : budget === '4만원+' ? '고급 ' : '';
-  const baseKeywords = PURPOSE_KEYWORDS[purpose] ?? PURPOSE_KEYWORDS['기타'];
+  // 기타(직접 입력) 목적은 입력 텍스트 자체가 최우선 검색 키워드 — 안 넣으면 원하는 업종이 후보에 아예 없음
+  const isCustomPurpose = !PURPOSE_KEYWORDS[purpose];
+  const baseKeywords = isCustomPurpose ? [purpose, ...PURPOSE_KEYWORDS['기타']] : PURPOSE_KEYWORDS[purpose];
 
   // 행사/관계 추가 키워드 병합
   const extraKeywords = [
@@ -185,6 +188,16 @@ async function searchNaverMulti(
   if (searchAreas[0]) keywords.forEach((kw) => queries.push(`${searchAreas[0]} ${groupPrefix}${budgetPrefix}${kw}`));
   if (searchAreas[1]) keywords.slice(0, 5).forEach((kw) => queries.push(`${searchAreas[1]} ${groupPrefix}${budgetPrefix}${kw}`));
   if (searchAreas[2]) keywords.slice(0, 3).forEach((kw) => queries.push(`${searchAreas[2]} ${groupPrefix}${budgetPrefix}${kw}`));
+
+  // 사용자 지정 키워드(편의시설 칩·직접 입력)를 목적 힌트와 결합해 후보 검색에 직접 반영
+  // — 프롬프트의 "필수 키워드"는 후보 풀에 해당 장소가 있어야만 작동하기 때문
+  const categoryHint = isCustomPurpose
+    ? purpose
+    : ({ '밥': '맛집', '술': '술집', '카페': '카페' } as Record<string, string>)[purpose] ?? '맛집';
+  for (const kw of userKeywords.slice(0, 5)) {
+    if (searchAreas[0]) queries.push(`${searchAreas[0]} ${kw} ${categoryHint}`);
+    if (searchAreas[1]) queries.push(`${searchAreas[1]} ${kw} ${categoryHint}`);
+  }
 
   const batches = await Promise.all(queries.map((q) => fetchNaverQuery(q, clientId, clientSecret)));
 
@@ -371,9 +384,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const [weather, naverFirstRaw, naverSecondRaw, publicStores] = await Promise.all([
       fetchWeather(midLat, midLng),
-      searchNaverMulti(purpose.first, searchAreas, groupSize, midLat, midLng, occasion, relation, budget),
+      searchNaverMulti(purpose.first, searchAreas, groupSize, midLat, midLng, occasion, relation, budget, keywords),
       hasTwoPurposes && purpose.second
-        ? searchNaverMulti(purpose.second, searchAreas, groupSize, midLat, midLng, occasion, relation, budget)
+        ? searchNaverMulti(purpose.second, searchAreas, groupSize, midLat, midLng, occasion, relation, budget, keywords)
         : Promise.resolve([]),
       fetchStoresInRadius(midLat, midLng, MIDPOINT_RADIUS_KM * 1000).catch((e) => {
         console.error('[recommend] L0 public data fetch failed', e);
@@ -675,9 +688,10 @@ ${fitScoreGuide}
       }
 
       // 사용자 지정 키워드가 장소의 태그/설명에 실제로 매칭된 개수 — 객관 순위 신호
-      const countKeywordHits = (f: { vibeTags?: string[]; description?: string; category?: string }): number => {
+      const countKeywordHits = (f: { placeName?: string; vibeTags?: string[]; description?: string; category?: string }): number => {
         if (keywords.length === 0) return 0;
         const haystack = [
+          f.placeName ?? '',
           ...(Array.isArray(f.vibeTags) ? f.vibeTags : []),
           f.description ?? '',
           f.category ?? '',
