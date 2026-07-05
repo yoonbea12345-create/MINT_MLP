@@ -78,15 +78,25 @@ interface CardProps {
 }
 
 // 대안 추천 카드 — 항상 펼쳐진 독립 카드
-function AltsSection({ alts, accentColor = '#3CDBC0' }: { alts: PlaceRecommendation[]; accentColor?: string }) {
+function AltsSection({ alts, accentColor = '#3CDBC0', label }: { alts: PlaceRecommendation[]; accentColor?: string; label?: string }) {
   if (!alts.length) return null;
   return (
     <div className="flex flex-col gap-2">
-      <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest px-1">다른 추천</p>
+      {label ? (
+        <span
+          className="self-start text-xs font-black text-white px-3 py-1 rounded-full"
+          style={{ background: accentColor }}
+        >
+          {label}
+        </span>
+      ) : (
+        <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest px-1">다른 추천</p>
+      )}
       {alts.map((p, idx) => (
         <div
           key={idx}
-          className="bg-white rounded-2xl border border-gray-100 p-3.5 shadow-sm cursor-pointer active:scale-[0.99] transition-transform"
+          className="bg-white rounded-2xl border border-gray-100 border-l-4 p-3.5 shadow-sm cursor-pointer active:scale-[0.99] transition-transform"
+          style={{ borderLeftColor: accentColor }}
           onClick={() => window.open(kakaoUrl(p), '_blank')}
         >
           <div className="flex items-start justify-between gap-2 mb-1">
@@ -415,8 +425,15 @@ export default function ResultCard({
         <MiniMap lat={result.lat} lng={result.lng} placeName={result.placeName} />
       )}
 
-      {/* 1차 대안 추천 — 항상 펼쳐진 독립 카드 */}
+      {/* 1차 대안 추천 — 1차 카드 바로 아래에 붙여 소속을 명확히 */}
       {!hasSecond && <AltsSection alts={extraFirstResults} accentColor="#3CDBC0" />}
+      {hasSecond && extraFirstResults.length > 0 && (
+        <AltsSection
+          alts={extraFirstResults}
+          accentColor="#3CDBC0"
+          label={`1차 ${purpose!.first} · 다른 추천 ${extraFirstResults.length}곳`}
+        />
+      )}
 
       {/* 도보 정중앙 + 2차 배지 왼쪽 */}
       {hasSecond && secondResult && (
@@ -495,12 +512,13 @@ export default function ResultCard({
         </div>
       )}
 
-      {/* 1차/2차 대안 추천 — 항상 펼쳐진 독립 카드 */}
-      {hasSecond && extraFirstResults.length > 0 && (
-        <AltsSection alts={extraFirstResults} accentColor="#3CDBC0" />
-      )}
+      {/* 2차 대안 추천 — 2차 카드 바로 아래 */}
       {hasSecond && extraSecondResults.length > 0 && (
-        <AltsSection alts={extraSecondResults} accentColor="#1A7A6E" />
+        <AltsSection
+          alts={extraSecondResults}
+          accentColor="#1A7A6E"
+          label={`2차 ${purpose!.second} · 다른 추천 ${extraSecondResults.length}곳`}
+        />
       )}
 
       {/* ── 1순위 CTA: 카카오톡 공유 (핵심 유입 경로) ── */}
