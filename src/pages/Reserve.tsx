@@ -65,19 +65,45 @@ export default function Reserve({ placeName, address, openingHours, onBack }: Pr
           <h1 className="text-lg font-black text-gray-800">예약 요청하기</h1>
         </div>
 
-        {/* 정직한 안내 — 아직 예약 연동 전, 수요 조사 단계 */}
-        <div className="bg-[#E8F8F5] border border-[#3CDBC0]/30 rounded-2xl px-4 py-3 mb-4 -mt-2">
-          <p className="text-xs text-[#2AB5A0] leading-relaxed">
-            🌱 매장 예약 연동을 준비 중이에요. 남겨주신 요청은 연동 우선순위에 반영됩니다.
-          </p>
-        </div>
-
         {/* 장소 정보 */}
-        <div className="bg-white rounded-2xl border-2 border-gray-100 p-4 mb-6">
+        <div className="bg-white rounded-2xl border-2 border-gray-100 p-4 mb-4 -mt-1">
           <span className="text-xs font-bold text-[#36CFA0] bg-teal-50 px-2 py-0.5 rounded-full">예약 장소</span>
           <div className="mt-2 font-black text-gray-800 text-lg">{placeName}</div>
           {address && <div className="text-sm text-gray-400 mt-1">📍 {address}</div>}
           {openingHours && <div className="text-sm text-gray-400 mt-0.5">🕐 {openingHours}</div>}
+        </div>
+
+        {/* 바로 예약 — 예약 플랫폼 딥링크 (입점 매장이면 그 자리에서 예약 완료) */}
+        <div className="bg-white rounded-2xl border-2 border-gray-100 p-4 mb-4">
+          <p className="text-sm font-black text-gray-800 mb-1">⚡ 바로 예약해보기</p>
+          <p className="text-[11px] text-gray-400 mb-3">예약 앱에 입점한 매장이면 바로 예약할 수 있어요</p>
+          <div className="grid grid-cols-2 gap-2">
+            <a
+              href={`https://app.catchtable.co.kr/ct/search?keyword=${encodeURIComponent(placeName)}`}
+              target="_blank"
+              rel="noreferrer"
+              onClick={() => trackEvent('reserve_deeplink_catchtable')}
+              className="flex items-center justify-center gap-1.5 py-3 rounded-xl bg-[#FF3D00]/5 border-2 border-[#FF3D00]/20 text-[#E63600] text-sm font-black active:scale-95 transition-all hover:border-[#FF3D00]/40"
+            >
+              🍽️ 캐치테이블
+            </a>
+            <a
+              href={`https://map.naver.com/p/search/${encodeURIComponent(placeName)}`}
+              target="_blank"
+              rel="noreferrer"
+              onClick={() => trackEvent('reserve_deeplink_naver')}
+              className="flex items-center justify-center gap-1.5 py-3 rounded-xl bg-[#03C75A]/5 border-2 border-[#03C75A]/25 text-[#02A64B] text-sm font-black active:scale-95 transition-all hover:border-[#03C75A]/45"
+            >
+              N 네이버 예약
+            </a>
+          </div>
+        </div>
+
+        {/* 정직한 안내 — MINT 자체 예약 연동은 준비 중, 수요 조사 단계 */}
+        <div className="bg-[#E8F8F5] border border-[#3CDBC0]/30 rounded-2xl px-4 py-3 mb-4">
+          <p className="text-xs text-[#2AB5A0] leading-relaxed">
+            🌱 MINT 안에서 끝나는 예약을 준비 중이에요. 아래 요청을 남겨주시면 연동 우선순위에 반영됩니다.
+          </p>
         </div>
 
         {status === 'form' ? (
@@ -130,10 +156,9 @@ export default function Reserve({ placeName, address, openingHours, onBack }: Pr
             <div className="text-4xl mb-3">🙏</div>
             <div className="text-lg font-black text-gray-800 mb-2">요청이 접수됐어요!</div>
             <div className="text-sm text-gray-500 leading-relaxed">
-              아직 매장 예약 연동을 준비 중이라<br />
-              바로 예약해드리지는 못해요.<br />
-              지금은 카카오맵에서 매장 정보를 확인해<br />
-              직접 예약해주세요.
+              아직 MINT 자체 예약 연동은 준비 중이에요.<br />
+              위의 <strong className="text-gray-700">⚡ 바로 예약해보기</strong> 버튼이나<br />
+              카카오맵에서 직접 예약해주세요.
             </div>
             <a
               href={`https://map.kakao.com/link/search/${encodeURIComponent(placeName)}`}

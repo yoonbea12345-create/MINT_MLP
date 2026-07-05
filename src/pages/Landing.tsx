@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
 import { trackEvent } from '../utils/analytics';
+import { loadHistory, openHistoryEntry } from '../utils/history';
+import type { HistoryEntry } from '../utils/history';
 
 interface BeforeInstallPromptEvent extends Event {
   prompt(): Promise<void>;
@@ -83,6 +85,8 @@ export default function Landing() {
   const [comboIdx, setComboIdx] = useState(0);
   const [visitCount, setVisitCount] = useState(0);
   const [showPrivacy, setShowPrivacy] = useState(false);
+  // 지난 추천 — 재방문자가 한 번에 결과로 돌아갈 수 있게 (렌더 시 1회 로드)
+  const [history] = useState<HistoryEntry[]>(() => loadHistory());
 
   // 소셜 프루프 카운터 (localStorage 캐시로 깜빡임 방지)
   useEffect(() => {
@@ -206,6 +210,30 @@ export default function Landing() {
               </button>
               {installButton}
             </div>
+
+            {/* 지난 추천 — 결과 화면으로 바로 복원 */}
+            {history.length > 0 && (
+              <div className="w-full max-w-xs mx-auto lg:mx-0 mb-4 text-left">
+                <p className="text-[11px] font-bold text-gray-400 mb-1.5 px-1">🕘 지난 추천 다시 보기</p>
+                <div className="flex flex-col gap-1.5">
+                  {history.slice(0, 3).map((h) => (
+                    <button
+                      key={h.savedAt}
+                      onClick={() => { trackEvent('history_open'); openHistoryEntry(h); }}
+                      className="flex items-center justify-between gap-2 bg-white border border-teal-100 rounded-xl px-3 py-2 hover:border-[#3CDBC0] transition-colors active:scale-[0.98] text-left"
+                    >
+                      <span className="text-xs font-bold text-gray-700 truncate">
+                        {h.areaName ? `${h.areaName} · ` : ''}{h.placeName}
+                        {h.secondPlaceName ? ` → ${h.secondPlaceName}` : ''}
+                      </span>
+                      <span className="text-[10px] text-gray-400 shrink-0">
+                        {new Date(h.savedAt).toLocaleDateString('ko-KR', { month: 'numeric', day: 'numeric' })}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {visitCount >= 50 && (
               <p className="text-xs text-gray-400 mb-8">

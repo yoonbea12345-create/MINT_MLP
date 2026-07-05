@@ -3,6 +3,12 @@ import type { PlaceRecommendation } from '../services/ai';
 import { congestionDotClass } from '../services/seoulData';
 import type { CongestionLevel } from '../services/seoulData';
 import MiniMap from './MiniMap';
+import type { MapPin } from './MiniMap';
+
+// 깨진 이미지는 흔적 없이 숨긴다 (네이버 썸네일 만료 대응)
+function hideOnError(e: React.SyntheticEvent<HTMLImageElement>) {
+  e.currentTarget.style.display = 'none';
+}
 
 interface TravelResult {
   label: string;
@@ -109,9 +115,20 @@ function AltsSection({ alts, accentColor = '#3CDBC0', label }: { alts: PlaceReco
               </div>
               <p className="text-xs text-gray-400">{p.category}</p>
             </div>
-            {p.fitScore != null && (
-              <span className="text-sm font-black shrink-0" style={{ color: accentColor }}>{p.fitScore}점</span>
-            )}
+            <div className="flex items-center gap-2 shrink-0">
+              {p.fitScore != null && (
+                <span className="text-sm font-black" style={{ color: accentColor }}>{p.fitScore}점</span>
+              )}
+              {p.imageUrl && (
+                <img
+                  src={p.imageUrl}
+                  alt={p.placeName}
+                  className="w-14 h-14 rounded-xl object-cover"
+                  loading="lazy"
+                  onError={hideOnError}
+                />
+              )}
+            </div>
           </div>
           <p className="text-xs text-gray-500 mb-2 leading-relaxed">{p.description}</p>
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-400">
@@ -173,6 +190,16 @@ function PlaceCard({ place, extraResults = [], gradient, shadowColor }: CardProp
       style={{ background: gradient }}
       onClick={() => window.open(url, '_blank')}
     >
+      {/* 대표 사진 — 카드 신뢰도의 절반 */}
+      {place.imageUrl && (
+        <img
+          src={place.imageUrl}
+          alt={place.placeName}
+          className="w-full h-36 object-cover"
+          loading="lazy"
+          onError={hideOnError}
+        />
+      )}
       <div className="py-3 px-4">
         {/* 카테고리 + 혼잡도 */}
         <div className="flex items-center justify-between mb-1.5">
@@ -420,9 +447,23 @@ export default function ResultCard({
         shadowColor="shadow-[#3CDBC0]/25"
       />
 
-      {/* 위치 지도 미리보기 — 어디쯤인지 바로 감 잡히게 */}
+      {/* 코스 지도 — 1차·2차·대안 위치를 한 장에 (대안은 회색 점) */}
       {result.lat != null && result.lng != null && result.lat !== 0 && (
-        <MiniMap lat={result.lat} lng={result.lng} placeName={result.placeName} />
+        <MiniMap
+          lat={result.lat}
+          lng={result.lng}
+          placeName={result.placeName}
+          pins={(() => {
+            const pins: MapPin[] = [{ lat: result.lat!, lng: result.lng!, name: result.placeName, kind: 'first' }];
+            if (secondResult?.lat && secondResult.lng && secondResult.lat !== 0) {
+              pins.push({ lat: secondResult.lat, lng: secondResult.lng, name: secondResult.placeName, kind: 'second' });
+            }
+            for (const p of [...extraFirstResults, ...extraSecondResults]) {
+              if (p.lat && p.lng && p.lat !== 0) pins.push({ lat: p.lat, lng: p.lng, name: p.placeName, kind: 'alt' });
+            }
+            return pins;
+          })()}
+        />
       )}
 
       {/* 1차 대안 추천 — 1차 카드 바로 아래에 붙여 소속을 명확히 */}
@@ -458,6 +499,15 @@ export default function ResultCard({
             style={{ background: 'linear-gradient(135deg, #1A7A6E 0%, #155E54 100%)' }}
             onClick={() => window.open(kakaoUrl(secondResult), '_blank')}
           >
+            {secondResult.imageUrl && (
+              <img
+                src={secondResult.imageUrl}
+                alt={secondResult.placeName}
+                className="w-full h-36 object-cover"
+                loading="lazy"
+                onError={hideOnError}
+              />
+            )}
             <div className="py-3 px-4">
               {(() => {
                 const cong = congestionInfo(secondResult.congestionLevel);

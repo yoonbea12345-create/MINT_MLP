@@ -177,3 +177,21 @@ CREATE TABLE IF NOT EXISTS recommendation_log (
 CREATE INDEX IF NOT EXISTS idx_recommendation_log_created_at ON recommendation_log(created_at);
 
 ALTER TABLE recommendation_log ENABLE ROW LEVEL SECURITY;
+
+-- =============================================
+-- 공유 결과 페이지 멤버 투표 (share-vote API)
+-- 서버(service role)만 접근 — anon 정책 없음.
+-- =============================================
+CREATE TABLE IF NOT EXISTS mint_share_votes (
+  id          BIGSERIAL PRIMARY KEY,
+  share_id    TEXT NOT NULL,
+  voter_id    TEXT NOT NULL,
+  choice      INTEGER NOT NULL,
+  place_name  TEXT,
+  created_at  TIMESTAMPTZ DEFAULT now(),
+  UNIQUE (share_id, voter_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_share_votes_share ON mint_share_votes(share_id);
+
+ALTER TABLE mint_share_votes ENABLE ROW LEVEL SECURITY;

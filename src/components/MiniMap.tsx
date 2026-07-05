@@ -1,60 +1,101 @@
 import { useEffect, useRef } from 'react';
 import { ensureKakaoMaps } from '../utils/kakaoLoader';
 
-interface KakaoMapInstance {
-  setCenter: (latlng: KakaoLatLng) => void;
-  setLevel: (level: number) => void;
-}
-interface KakaoLatLng { getLat: () => number; getLng: () => number }
-interface KakaoMarker { setMap: (map: KakaoMapInstance | null) => void }
-interface KakaoInfoWindow {
-  open: (map: KakaoMapInstance, marker: KakaoMarker) => void;
-  close: () => void;
-  setContent: (content: string) => void;
+export interface MapPin {
+  lat: number;
+  lng: number;
+  name: string;
+  kind: 'first' | 'second' | 'alt';
 }
 
 interface Props {
   lat: number;
   lng: number;
   placeName: string;
+  /** 있으면 코스 전체(1차·2차·대안)를 한 지도에 그린다. 없으면 단일 핀(기존 동작). */
+  pins?: MapPin[];
 }
 
-export default function MiniMap({ lat, lng, placeName }: Props) {
+// 지도 위에 얹는 오버레이 HTML — 1차/2차는 색 필 배지, 대안은 회색 점
+function pinContent(pin: MapPin): string {
+  if (pin.kind === 'alt') {
+    return `<div title="${pin.name}" style="width:11px;height:11px;border-radius:50%;background:#9CA3AF;border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.35);"></div>`;
+  }
+  const bg = pin.kind === 'first' ? '#3CDBC0' : '#1A7A6E';
+  const label = pin.kind === 'first' ? '1차' : '2차';
+  const shortName = pin.name.length > 10 ? `${pin.name.slice(0, 10)}…` : pin.name;
+  return `<div style="display:flex;align-items:center;gap:4px;background:${bg};color:#fff;font-weight:800;font-size:11px;padding:3px 9px;border-radius:999px;box-shadow:0 2px 6px rgba(0,0,0,.28);font-family:'Pretendard',sans-serif;white-space:nowrap;transform:translateY(-6px);">${label} · ${shortName}</div>`;
+}
+
+interface KakaoMapObj {
+  setCenter(latlng: unknown): void;
+  setLevel(level: number): void;
+  setBounds(bounds: unknown, ...padding: number[]): void;
+}
+
+export default function MiniMap({ lat, lng, placeName, pins }: Props) {
   const mapRef = useRef<HTMLDivElement>(null);
-  const mapInstance = useRef<KakaoMapInstance | null>(null);
-  const markerInstance = useRef<KakaoMarker | null>(null);
-  const infoWindowInstance = useRef<KakaoInfoWindow | null>(null);
+  // 오버레이/폴리라인을 모아뒀다가 다음 렌더에서 일괄 제거
+  const mapInstance = useRef<KakaoMapObj | null>(null);
+  const overlaysRef = useRef<{ setMap: (m: unknown) => void }[]>([]);
+
+  const effectivePins: MapPin[] =
+    pins && pins.length > 0 ? pins : [{ lat, lng, name: placeName, kind: 'first' }];
 
   function renderMap() {
     if (!mapRef.current || !window.kakao?.maps) return;
+    const kakao = window.kakao;
+    const center = new kakao.maps.LatLng(effectivePins[0].lat, effectivePins[0].lng);
 
-    const center = new window.kakao.maps.LatLng(lat, lng);
+    if (!mapInstance.current) {
+      mapInstance.current = new kakao.maps.Map(mapRef.current, { center, level: 4 });
+    }
+    const map = mapInstance.current;
 
-    if (mapInstance.current) {
-      // 지도 이미 존재 → 센터 이동 + 마커 갱신
-      mapInstance.current.setCenter(center);
-      if (markerInstance.current) markerInstance.current.setMap(null);
-      const marker = new window.kakao.maps.Marker({ position: center, map: mapInstance.current });
-      markerInstance.current = marker;
-      infoWindowInstance.current?.setContent(infoContent(placeName));
-      infoWindowInstance.current?.open(mapInstance.current, marker);
-      return;
+    // 이전 오버레이 정리
+    overlaysRef.current.forEach((o) => o.setMap(null));
+    overlaysRef.current = [];
+
+    // 1차→2차 도보 동선 (점선) — 오버레이보다 먼저 그려 배지가 위에 오게
+    const first = effectivePins.find((p) => p.kind === 'first');
+    const second = effectivePins.find((p) => p.kind === 'second');
+    if (first && second) {
+      const line = new kakao.maps.Polyline({
+        map,
+        path: [
+          new kakao.maps.LatLng(first.lat, first.lng),
+          new kakao.maps.LatLng(second.lat, second.lng),
+        ],
+        strokeWeight: 3,
+        strokeColor: '#3CDBC0',
+        strokeOpacity: 0.85,
+        strokeStyle: 'shortdash',
+      });
+      overlaysRef.current.push(line);
     }
 
-    // 최초 생성
-    const map = new window.kakao.maps.Map(mapRef.current, { center, level: 4 });
-    mapInstance.current = map;
+    // 대안(회색 점)을 먼저, 1차/2차 배지를 나중에 올려 겹칠 때 배지가 위로
+    const ordered = [...effectivePins].sort((a, b) => (a.kind === 'alt' ? -1 : 1) - (b.kind === 'alt' ? -1 : 1));
+    for (const pin of ordered) {
+      const overlay = new kakao.maps.CustomOverlay({
+        map,
+        position: new kakao.maps.LatLng(pin.lat, pin.lng),
+        content: pinContent(pin),
+        yAnchor: pin.kind === 'alt' ? 0.5 : 1,
+        zIndex: pin.kind === 'alt' ? 1 : pin.kind === 'second' ? 2 : 3,
+      });
+      overlaysRef.current.push(overlay);
+    }
 
-    const marker = new window.kakao.maps.Marker({ position: center, map });
-    markerInstance.current = marker;
-
-    const infoWindow = new window.kakao.maps.InfoWindow({ content: infoContent(placeName) });
-    infoWindowInstance.current = infoWindow;
-    infoWindow.open(map, marker);
-  }
-
-  function infoContent(name: string) {
-    return `<div style="padding:6px 10px;font-size:12px;font-weight:700;color:#2AB5A0;font-family:'Pretendard',sans-serif;">${name}</div>`;
+    // 핀이 여러 개면 전부 들어오게 화면 맞춤, 하나면 센터 고정
+    if (effectivePins.length > 1) {
+      const bounds = new kakao.maps.LatLngBounds();
+      effectivePins.forEach((p) => bounds.extend(new kakao.maps.LatLng(p.lat, p.lng)));
+      map.setBounds(bounds, 36, 36, 36, 36);
+    } else {
+      map.setCenter(center);
+      map.setLevel(4);
+    }
   }
 
   useEffect(() => {
@@ -63,7 +104,8 @@ export default function MiniMap({ lat, lng, placeName }: Props) {
       .then(() => { if (active) renderMap(); })
       .catch(() => { /* SDK 로드 실패 시 지도 없이 링크만 노출 */ });
     return () => { active = false; };
-  }, [lat, lng, placeName]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lat, lng, placeName, JSON.stringify(pins ?? [])]);
 
   return (
     <div className="rounded-2xl overflow-hidden border border-gray-200 shadow-sm">

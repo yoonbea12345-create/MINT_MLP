@@ -16,7 +16,8 @@ import Reserve from './Reserve';
 import { PRESET_REGIONS, findNearestAreas, findBalancedAreas } from '../services/midpoint';
 import type { PresetRegion, Coordinates } from '../services/midpoint';
 import { getAIRecommendation } from '../services/ai';
-import type { PlaceRecommendation, UserInput } from '../services/ai';
+import type { PlaceRecommendation, UserInput, WeatherSummary } from '../services/ai';
+import { RESULT_STORAGE_KEY, saveHistory } from '../utils/history';
 import { computeTravelTimes } from '../services/travelTime';
 import { trackSessionDuration, trackEvent } from '../utils/analytics';
 import { aggregatePurpose, aggregateVibe, aggregateBudget } from '../utils/groupAggregate';
@@ -44,10 +45,60 @@ const LOADING_MESSAGES = [
   '✨ 오늘의 코스 완성 직전!',
 ];
 
-// 새로고침해도 마지막 추천 결과가 증발하지 않도록 sessionStorage에 보관
-const RESULT_STORAGE_KEY = 'mint_last_result_v1';
+// 새로고침해도 마지막 추천 결과가 증발하지 않도록 sessionStorage에 보관 (키는 history 유틸과 공유)
 // 입력 진행 중(solo 모드) 새로고침 대비 초안 저장
 const INPUT_DRAFT_KEY = 'mint_input_draft_v1';
+
+// 공유 투표용 ID (세션 아님 — 공유 클릭마다 새로 발급)
+const SHARE_ID_CHARS = 'abcdefghijkmnpqrstuvwxyz23456789';
+function newShareId(): string {
+  let s = 'sh';
+  for (let i = 0; i < 10; i++) s += SHARE_ID_CHARS[Math.floor(Math.random() * SHARE_ID_CHARS.length)];
+  return s;
+}
+
+function distMeters(aLat: number, aLng: number, bLat: number, bLng: number): number {
+  const R = 6371000;
+  const dLat = (bLat - aLat) * Math.PI / 180;
+  const dLng = (bLng - aLng) * Math.PI / 180;
+  const h = Math.sin(dLat / 2) ** 2 +
+    Math.cos(aLat * Math.PI / 180) * Math.cos(bLat * Math.PI / 180) * Math.sin(dLng / 2) ** 2;
+  return Math.round(R * 2 * Math.atan2(Math.sqrt(h), Math.sqrt(1 - h)));
+}
+
+type ChangeReason = 'retry' | 'adjust' | 'expensive' | 'far' | 'vibe';
+
+// 재추천이 이전 결과 대비 "뭐가 달라졌는지" 한 줄 — 실측 가능한 사실(거리)만 숫자로 말한다
+function buildChangeNote(
+  prev: PlaceRecommendation | null,
+  next: PlaceRecommendation | undefined,
+  midpoint: Coordinates,
+  reason: ChangeReason,
+): string | null {
+  if (!prev || !next || prev.placeName === next.placeName) return null;
+
+  let distPart: string | null = null;
+  if (prev.lat && prev.lng && next.lat && next.lng && prev.lat !== 0 && next.lat !== 0) {
+    const diff = distMeters(midpoint.lat, midpoint.lng, prev.lat, prev.lng)
+      - distMeters(midpoint.lat, midpoint.lng, next.lat, next.lng);
+    if (diff > 150) distPart = `중간지점에서 ${diff >= 1000 ? `${(diff / 1000).toFixed(1)}km` : `${Math.round(diff / 50) * 50}m`} 더 가까워졌어요`;
+  }
+
+  switch (reason) {
+    case 'expensive':
+      return `${prev.placeName} 대신 가격 부담을 낮춘 곳으로 다시 골랐어요 (이번엔 ${next.priceRange})`;
+    case 'far':
+      return distPart
+        ? `${prev.placeName} 대신 ${distPart.replace('졌어요', '운 곳')}으로 바꿨어요`
+        : `${prev.placeName} 대신 이동 부담을 줄이는 방향으로 다시 골랐어요`;
+    case 'vibe':
+      return `분위기를 바꿔 ${next.placeName}(${next.category})로 다시 골랐어요`;
+    case 'adjust':
+      return `조절한 취향을 반영해 ${next.placeName}로 바꿨어요${distPart ? ` · ${distPart}` : ''}`;
+    default:
+      return `아까 본 ${prev.placeName} 말고 새로운 곳으로 골랐어요${distPart ? ` · ${distPart}` : ''}`;
+  }
+}
 
 export default function Home() {
   const [appMode, setAppMode] = useState<AppMode>('mode-select');
@@ -85,6 +136,8 @@ export default function Home() {
     second: { transit: TravelResult[]; driving: TravelResult[] } | null;
   } | null>(null);
   const [treasurer, setTreasurer] = useState<string | null>(null);
+  const [resultWeather, setResultWeather] = useState<WeatherSummary | null>(null);
+  const [changeNote, setChangeNote] = useState<string | null>(null);
   const [compromiseMessage, setCompromiseMessage] = useState<string | null>(null);
   const [showCompromiseToast, setShowCompromiseToast] = useState(false);
 
@@ -109,6 +162,7 @@ export default function Home() {
       if (saved.treasurer) setTreasurer(saved.treasurer);
       if (saved.meetingLocation) setMeetingLocation(saved.meetingLocation);
       if (saved.resultTravelTimes) setResultTravelTimes(saved.resultTravelTimes);
+      if (saved.resultWeather) setResultWeather(saved.resultWeather);
       if (saved.vibe) setVibe(saved.vibe);            // 개인화 배너 복원용
       if (Array.isArray(saved.keywords)) setKeywords(saved.keywords);
       setView('result');
@@ -151,14 +205,25 @@ export default function Home() {
   }, [view, appMode, step, groupSize, purpose, vibe, keywords, vibeCustom, meetingLocation, budget, customOccasion, locations]);
 
   // 결과 화면 상태가 확정될 때마다 스냅샷 저장 (setState 커밋 이후라 stale closure 없음)
+  // + 같은 스냅샷을 localStorage 히스토리에도 적재 — 랜딩 "지난 추천"에서 그대로 복원
   useEffect(() => {
     if (view !== 'result' || !result || result.length === 0) return;
+    const snapshot = {
+      result, purpose, midpointData, treasurer, meetingLocation, resultTravelTimes, resultWeather, vibe, keywords,
+    };
     try {
-      sessionStorage.setItem(RESULT_STORAGE_KEY, JSON.stringify({
-        result, purpose, midpointData, treasurer, meetingLocation, resultTravelTimes, vibe, keywords,
-      }));
+      sessionStorage.setItem(RESULT_STORAGE_KEY, JSON.stringify(snapshot));
     } catch { /* 저장 실패는 치명적이지 않음 */ }
-  }, [view, result, purpose, midpointData, treasurer, meetingLocation, resultTravelTimes, vibe, keywords]);
+    const hasSecondCourse = !!(purpose?.second && purpose.second !== '없음');
+    saveHistory({
+      savedAt: Date.now(),
+      placeName: result[0].placeName,
+      secondPlaceName: hasSecondCourse ? result[1]?.placeName ?? null : null,
+      areaName: midpointData?.areaName ?? null,
+      purposeFirst: purpose?.first ?? null,
+      snapshot,
+    });
+  }, [view, result, purpose, midpointData, treasurer, meetingLocation, resultTravelTimes, resultWeather, vibe, keywords]);
 
 
   useEffect(() => {
@@ -326,7 +391,11 @@ export default function Home() {
     validLocs: LocationEntry[],
     vibeWeights?: Record<string, number>,
     excludeNames: string[] = [],
+    changeReason?: ChangeReason,
   ) {
+    // 재추천이면 이전 1순위를 기억해뒀다가 "뭐가 달라졌는지" 한 줄에 사용
+    const prevFirst = changeReason ? result?.[0] ?? null : null;
+    setChangeNote(null);
     setLoading(true);
     setLoadingProgress(0);
     setError(null);
@@ -380,11 +449,15 @@ export default function Home() {
       }, 250);
 
       // 실제 마일스톤 2: AI 추천 완료 (재추천 시 이전 장소 제외)
-      const recommendation = await getAIRecommendation(input, midpoint, [], excludeNames, nearestAreas);
+      const { places: recommendation, weather } = await getAIRecommendation(input, midpoint, [], excludeNames, nearestAreas);
       clearInterval(aiProgressInterval);
       setLoadingProgress(100); // 실제 완료
 
       setResult(recommendation);
+      setResultWeather(weather);
+      if (changeReason) {
+        setChangeNote(buildChangeNote(prevFirst, recommendation[0], midpoint, changeReason));
+      }
 
       let pickedTreasurer: string | null = null;
       const namedLocs = locations.filter((l) => l.name);
@@ -438,7 +511,7 @@ export default function Home() {
     const exclude = currentExclude();
     setTreasurer(null);
     setResultTravelTimes(null);
-    handleRecommend(midpointData.midpoint, midpointData.nearestAreas, validLocs, undefined, exclude);
+    handleRecommend(midpointData.midpoint, midpointData.nearestAreas, validLocs, undefined, exclude, 'retry');
   }
 
   // 🎚️ 취향 직접 조절 = 슬라이더 모달 진입
@@ -462,7 +535,7 @@ export default function Home() {
     });
     setTreasurer(null);
     setResultTravelTimes(null);
-    handleRecommend(midpointData.midpoint, midpointData.nearestAreas, validLocs, labeledWeights, exclude);
+    handleRecommend(midpointData.midpoint, midpointData.nearestAreas, validLocs, labeledWeights, exclude, 'adjust');
   }
 
   function handleReject(reason: 'expensive' | 'far' | 'vibe') {
@@ -500,7 +573,7 @@ export default function Home() {
       rejectWeights['새로운 분위기'] = 5;
     }
 
-    handleRecommend(midpointData.midpoint, midpointData.nearestAreas, validLocs, rejectWeights, exclude);
+    handleRecommend(midpointData.midpoint, midpointData.nearestAreas, validLocs, rejectWeights, exclude, reason);
   }
 
   function handleShare() {
@@ -510,6 +583,11 @@ export default function Home() {
     const mlpUrl = window.location.origin;
     const hasSecond = !!(purpose?.second && purpose.second !== '없음');
     const secondPlace = hasSecond && result.length > 1 ? result[1] : null;
+
+    // 투표 후보 = 1차 메인 + 1차 대안들 (URL 길이를 위해 슬림 포맷: n=이름, c=카테고리, s=적합도)
+    const firstCandidates = (hasSecond ? [result[0], result[2], result[3]] : result.slice(0, 3))
+      .filter((p): p is PlaceRecommendation => !!p)
+      .map((p) => ({ n: p.placeName, c: p.category, s: p.fitScore ?? null }));
 
     // SharedResult URL — 수신자가 링크 누르면 결과 카드로 바로 이동
     const sharedData = {
@@ -524,6 +602,10 @@ export default function Home() {
       lat: primary.lat,
       lng: primary.lng,
       kakaoPlaceUrl: primary.kakaoPlaceUrl,
+      imageUrl: primary.imageUrl,
+      // 멤버 투표용 — 수신자들이 1차 후보에 👍 할 수 있게
+      shareId: newShareId(),
+      candidates: firstCandidates.length >= 2 ? firstCandidates : undefined,
     };
     const sharedUrl = `${mlpUrl}/shared?data=${encodeURIComponent(JSON.stringify(sharedData))}`;
 
@@ -657,6 +739,8 @@ export default function Home() {
                 setMeetingLocation(null);
                 setMidpointData(null);
                 setTreasurer(null);
+                setResultWeather(null);
+                setChangeNote(null);
               }}
               className="text-sm text-gray-400 hover:text-gray-600"
             >
@@ -664,6 +748,36 @@ export default function Home() {
             </button>
             <span className="text-[#3CDBC0] font-black text-lg">MINT</span>
           </div>
+
+          {/* 날씨 반영 배너 — "모든 변수 반영"을 유저가 체감하게 */}
+          {resultWeather && (resultWeather.isRainy || resultWeather.isHot || resultWeather.isCold) && (
+            <div className="mb-2 bg-white border border-gray-100 rounded-2xl px-4 py-2.5 flex items-center gap-2 shadow-sm animate-fade-in-up">
+              <span className="text-base leading-none">
+                {resultWeather.isRainy ? '☔' : resultWeather.isHot ? '🥵' : '🥶'}
+              </span>
+              <p className="text-xs text-gray-600 leading-relaxed flex-1">
+                {resultWeather.isRainy
+                  ? `오늘 ${resultWeather.description} 소식이 있어 실내 위주로 골랐어요`
+                  : resultWeather.isHot
+                    ? `${resultWeather.temp}°C 더운 날씨라 시원한 실내 위주로 골랐어요`
+                    : `${resultWeather.temp}°C 추운 날씨라 따뜻한 실내 위주로 골랐어요`}
+              </p>
+            </div>
+          )}
+
+          {/* 재추천 변경점 한 줄 — 이전 결과 대비 뭐가 달라졌는지 */}
+          {changeNote && (
+            <div className="mb-2 bg-[#E8F8F5] border border-[#3CDBC0]/40 rounded-2xl px-4 py-2.5 flex items-start gap-2 animate-fade-in-up">
+              <span className="text-base leading-none mt-0.5">🔁</span>
+              <p className="text-xs text-[#1A7A6E] leading-relaxed flex-1">{changeNote}</p>
+              <button
+                onClick={() => setChangeNote(null)}
+                className="text-[#2AB5A0]/60 hover:text-[#2AB5A0] text-xs px-1"
+              >
+                ✕
+              </button>
+            </div>
+          )}
 
           <ResultCard
             results={result}

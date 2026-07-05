@@ -31,6 +31,20 @@ export interface PlaceRecommendation {
   nearbySpots?: string[];
   walkingToNext?: number;
   fitScore?: number;
+  imageUrl?: string;
+}
+
+export interface WeatherSummary {
+  description: string;
+  temp: number;
+  isRainy: boolean;
+  isHot: boolean;
+  isCold: boolean;
+}
+
+export interface RecommendationResult {
+  places: PlaceRecommendation[];
+  weather: WeatherSummary | null;
 }
 
 export async function getAIRecommendation(
@@ -39,7 +53,7 @@ export async function getAIRecommendation(
   congestionData: AreaCongestion[],
   excludeNames: string[] = [],
   areas: string[] = []
-): Promise<PlaceRecommendation[]> {
+): Promise<RecommendationResult> {
   const res = await fetch('/api/recommend', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -52,8 +66,11 @@ export async function getAIRecommendation(
   }
   const data = await res.json();
   if (data.error) throw new Error(data.error);
-  // API returns { places, _debug } or legacy plain array
+  // API returns { places, weather, _debug } or legacy plain array
   const places = Array.isArray(data) ? data : (data.places ?? [data]);
   if (data._debug) console.log('[recommend] debug', data._debug);
-  return places as PlaceRecommendation[];
+  return {
+    places: places as PlaceRecommendation[],
+    weather: (data.weather ?? null) as WeatherSummary | null,
+  };
 }

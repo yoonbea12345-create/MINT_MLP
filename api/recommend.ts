@@ -266,6 +266,31 @@ async function fetchWeather(lat: number, lng: number): Promise<WeatherInfo | nul
   }
 }
 
+// 네이버 이미지 검색으로 장소 대표 사진 1장 확보.
+// link(원본)는 핫링크 차단이 잦아 네이버 CDN 썸네일(search.pstatic.net)을 쓰고,
+// type 파라미터만 키워 카드 배너 해상도로 올린다.
+async function fetchPlaceImage(
+  name: string,
+  area: string,
+  clientId: string,
+  clientSecret: string,
+): Promise<string | null> {
+  try {
+    const query = `${area} ${name}`.trim();
+    const url = `https://openapi.naver.com/v1/search/image?query=${encodeURIComponent(query)}&display=1&sort=sim`;
+    const res = await fetch(url, {
+      headers: { 'X-Naver-Client-Id': clientId, 'X-Naver-Client-Secret': clientSecret },
+    });
+    if (!res.ok) return null;
+    const data = await res.json() as { items?: { thumbnail?: string }[] };
+    const thumb = data.items?.[0]?.thumbnail;
+    if (!thumb || !thumb.startsWith('https://')) return null;
+    return thumb.replace(/type=b\d+/, 'type=b400');
+  } catch {
+    return null;
+  }
+}
+
 async function searchKakaoPlaceUrl(
   name: string,
   lat: number,
@@ -807,18 +832,25 @@ ${fitScoreGuide}
       delete p.purposeSlot;
     }
 
-    // Kakao 장소 URL 병렬 보강 (place_url 있으면 정식 카카오 페이지 연결)
+    // Kakao 장소 URL + 대표 사진 병렬 보강 (표시 확정된 3~6곳만 — 추가 왕복 1회 안에 처리)
     const kakaoRestKey = process.env.VITE_KAKAO_REST_API_KEY;
-    if (kakaoRestKey) {
-      await Promise.all(
-        places.map(async (place: { placeName: string; lat: number; lng: number; kakaoPlaceUrl?: string }) => {
-          if (place.lat && place.lng && place.lat !== 0 && place.lng !== 0) {
-            const placeUrl = await searchKakaoPlaceUrl(place.placeName, place.lat, place.lng, kakaoRestKey);
-            if (placeUrl) place.kakaoPlaceUrl = placeUrl;
-          }
-        })
-      );
-    }
+    const naverImgId = process.env.NAVER_CLIENT_ID;
+    const naverImgSecret = process.env.NAVER_CLIENT_SECRET;
+    await Promise.all(
+      places.map(async (place: { placeName: string; area?: string; lat: number; lng: number; kakaoPlaceUrl?: string; imageUrl?: string }) => {
+        const hasCoords = place.lat && place.lng && place.lat !== 0 && place.lng !== 0;
+        const [placeUrl, imageUrl] = await Promise.all([
+          kakaoRestKey && hasCoords
+            ? searchKakaoPlaceUrl(place.placeName, place.lat, place.lng, kakaoRestKey)
+            : Promise.resolve(null),
+          naverImgId && naverImgSecret
+            ? fetchPlaceImage(place.placeName, toSearchName(typeof place.area === 'string' ? place.area : primaryArea), naverImgId, naverImgSecret)
+            : Promise.resolve(null),
+        ]);
+        if (placeUrl) place.kakaoPlaceUrl = placeUrl;
+        if (imageUrl) place.imageUrl = imageUrl;
+      })
+    );
 
     // 혼잡도 정직화: 서울 실시간 데이터가 실제로 있을 때만 노출, 없으면 필드 제거
     // (기존에는 Claude가 지어낸 혼잡도가 그대로 나갔다 — 실측 아닌 값은 보여주지 않는다)
@@ -885,6 +917,10 @@ ${fitScoreGuide}
 
     return res.status(200).json({
       places,
+      // 유저 배너용 날씨 요약 — 프롬프트에는 이미 반영됨(우천 시 실내 우선), 이제 그 사실을 유저에게도 보여준다
+      weather: weather
+        ? { description: weather.description, temp: weather.temp, isRainy: weather.isRainy, isHot: weather.isHot, isCold: weather.isCold }
+        : null,
       // 내부 스코어링은 디버그 플래그 켰을 때만 노출
       ...(process.env.EXPOSE_DEBUG === '1'
         ? { _debug: { naverPlacesCount: naverFirstPlaces.length, bubbleScores: debugBubbleScores } }
