@@ -143,7 +143,9 @@ async function fetchNaverQuery(
     const items = data.items ?? [];
     console.log(`[Naver API] OK query="${query}" count=${items.length}`);
     return items.map((item) => ({
-      name: item.title.replace(/<[^>]*>/g, ''),
+      // 태그 제거 + HTML 엔티티 복원 ("&amp;" 그대로 노출 방지)
+      name: item.title.replace(/<[^>]*>/g, '')
+        .replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'"),
       category: item.category,
       address: item.roadAddress || item.address,
       lat: parseInt(item.mapy) / 1e7,
