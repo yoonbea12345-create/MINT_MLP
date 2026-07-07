@@ -428,35 +428,76 @@ export default function Landing() {
             다같이 정할 땐 <span className="text-[#3CDBC0]">링크 하나면 돼요</span>
           </h2>
           <p className="text-sm lg:text-base text-gray-400 mb-2 leading-relaxed">
-            <span className="block lg:inline">총대 멜 필요 없이 </span>
-            <span className="block lg:inline">각자 30초씩만 입력하면 </span>
-            <span className="block lg:inline"><strong className="text-gray-600">모두의 중간지점과 취향</strong>이 종합돼 나옵니다</span>
+            <span className="block lg:inline">총대 멜 필요 없이 각자 30초씩. </span>
+            <span className="block lg:inline"><strong className="text-gray-600">흩어진 출발지와 몰래 숨긴 취향</strong>이 하나로 종합돼요</span>
           </p>
-          <p className="text-xs text-[#2AB5A0] font-bold mb-6 lg:hidden">옆으로 넘겨보세요 →</p>
         </div>
 
-        {/* 모바일: 가로 스와이프 / PC: 5열 그리드 */}
-        <div className="max-w-7xl mx-auto flex gap-4 overflow-x-auto snap-x snap-mandatory scrollbar-hide px-6 pb-2 lg:grid lg:grid-cols-5 lg:gap-5 lg:overflow-visible lg:mt-10">
-          {[
-            { n: '1', title: '링크 만들기', desc: '인원수·코스만 고르면 3초 완성', img: '/image/landing/group-create.webp' },
-            { n: '2', title: '단톡방에 공유', desc: '입력 현황이 실시간으로 보여요', img: '/image/landing/group-share.webp' },
-            { n: '3', title: '각자 이름·출발지', desc: '멤버는 회원가입 없이 링크만 열면 끝', img: '/image/landing/join-start.webp' },
-            { n: '4', title: '취향은 몰래', desc: '눈치 안 보고 각자 원하는 분위기 선택', img: '/image/landing/join-vibe.webp' },
-            { n: '5', title: '중간지점이든 동네든', desc: '전원 모이면 중간지점 자동 계산 or 원하는 동네 직접 선택 → 딱 1곳', img: '/image/landing/region.webp' },
-          ].map(({ n, title, desc, img }) => (
-            <div key={n} className="snap-center flex-shrink-0 w-60 lg:w-full text-center">
-              {/* 텍스트(번호·제목·설명)를 이미지 위에 — 혼자정하기(HOW IT WORKS)와 위치 통일 */}
-              <div className="flex items-center justify-center gap-2 mb-1.5">
-                <span className="w-6 h-6 rounded-full bg-[#3CDBC0] text-white text-xs font-black flex items-center justify-center flex-shrink-0">{n}</span>
-                <span className="text-sm font-black text-gray-800">{title}</span>
-              </div>
-              <p className="text-xs text-gray-400 mb-4 leading-relaxed lg:min-h-[48px]">{desc}</p>
-              <PhoneMockup src={img} alt={`그룹 모드 ${title}`} width="w-full" />
+        {/* ── 수렴 비주얼: 여러 명 → 공평하게 하나로 (혼자 모드가 못 하는 것) ── */}
+        <div className="max-w-lg lg:max-w-3xl mx-auto px-6 mt-8 lg:mt-12">
+
+          {/* 단톡방 콜백 — "누가 정해줘"의 그 순간 */}
+          <div className="flex flex-col items-center">
+            <div className="flex flex-wrap items-center justify-center gap-2">
+              <span className="bg-[#B2C7D9] text-gray-800 text-xs lg:text-sm font-medium px-3 py-2 rounded-2xl rounded-tl-sm">🙋 난 아무데나~</span>
+              <span className="bg-[#FEE500] text-gray-800 text-xs lg:text-sm font-bold px-3 py-2 rounded-2xl rounded-tr-sm">누가 정해줘 ㅋㅋ</span>
             </div>
-          ))}
+            <p className="text-xs lg:text-sm text-[#2AB5A0] font-bold mt-3">MINT 링크 하나 툭 던지면 ↓</p>
+          </div>
+
+          {/* 3명이 각자 몰래 입력 — 서로 다른 출발지·취향 */}
+          <div className="mt-4">
+            <div className="grid grid-cols-3 gap-2 lg:gap-4">
+              {[
+                { emoji: '😎', name: '민준', from: '강남 출발', taste: ['시끌벅적', '검증된'] },
+                { emoji: '🙂', name: '서연', from: '홍대 출발', taste: ['조용한', '감성'] },
+                { emoji: '🤔', name: '지훈', from: '성수 출발', taste: ['힙한', '뷰맛집'] },
+              ].map((m) => (
+                <div key={m.name} className="bg-white border border-teal-100 rounded-2xl p-3 lg:p-4 text-center shadow-sm">
+                  <div className="text-2xl lg:text-3xl leading-none mb-1">{m.emoji}</div>
+                  <p className="text-xs lg:text-sm font-black text-gray-800">{m.name}</p>
+                  <p className="text-[10px] lg:text-xs text-gray-400 mb-2">📍 {m.from}</p>
+                  <div className="flex flex-col gap-1 items-center">
+                    {m.taste.map((t) => (
+                      <span key={t} className="bg-[#E8F8F5] text-[#2AB5A0] text-[9px] lg:text-[11px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap">#{t}</span>
+                    ))}
+                  </div>
+                  <p className="text-[9px] lg:text-[10px] text-gray-300 mt-2">🤫 몰래 입력</p>
+                </div>
+              ))}
+            </div>
+            <p className="text-center text-[11px] lg:text-xs text-gray-400 mt-2">3/3 입력 완료 · 현황이 실시간으로 채워져요</p>
+          </div>
+
+          {/* 수렴 → 공평하게 종합 */}
+          <div className="flex flex-col items-center my-1">
+            <svg viewBox="0 0 200 34" className="w-36 lg:w-44 h-7 text-[#3CDBC0]" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+              <path d="M18 4 L100 30" opacity="0.55" />
+              <path d="M100 4 L100 30" opacity="0.55" />
+              <path d="M182 4 L100 30" opacity="0.55" />
+            </svg>
+            <span className="bg-[#3CDBC0] text-white text-[11px] lg:text-xs font-black px-4 py-1.5 rounded-full shadow-md shadow-teal-200/60 -mt-0.5">✨ 눈치 게임 없이, 공평하게 종합</span>
+          </div>
+
+          {/* 결과 딱 1곳 */}
+          <div className="max-w-sm mx-auto mt-3 bg-gradient-to-br from-[#3CDBC0] to-[#2AB5A0] rounded-3xl p-5 lg:p-6 text-white shadow-xl shadow-teal-200 text-center">
+            <p className="text-[11px] font-bold text-white/70 tracking-[0.2em] mb-1">모두의 답</p>
+            <p className="text-2xl lg:text-3xl font-black mb-2">성수옥상</p>
+            <span className="inline-block bg-white/20 rounded-full px-3 py-0.5 text-xs font-black mb-3">적합도 92</span>
+            <p className="text-xs lg:text-sm text-white/90 leading-relaxed">
+              3명의 <strong className="text-white">중간지점</strong>과 <strong className="text-white">몰래 고른 취향</strong>을<br />공평하게 종합한 딱 1곳
+            </p>
+          </div>
+
+          {/* 만날 곳: 중간지점 자동 OR 동네 직접 입력 — 둘 다 됨을 명확히 */}
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-2 mt-5">
+            <span className="inline-flex items-center gap-1.5 bg-white border border-teal-200 text-[#2AB5A0] text-xs lg:text-sm font-bold px-4 py-2 rounded-full">🧭 중간지점 자동 계산</span>
+            <span className="text-gray-300 text-xs font-bold">또는</span>
+            <span className="inline-flex items-center gap-1.5 bg-white border border-teal-200 text-[#2AB5A0] text-xs lg:text-sm font-bold px-4 py-2 rounded-full">✏️ 원하는 동네 직접 입력</span>
+          </div>
         </div>
 
-        <div className="max-w-lg lg:max-w-2xl mx-auto px-6 mt-6 lg:mt-10">
+        <div className="max-w-lg lg:max-w-2xl mx-auto px-6 mt-8 lg:mt-12">
           <div className="bg-teal-50 border border-teal-100 rounded-2xl p-4 lg:p-6 text-center">
             <p className="text-sm lg:text-base text-gray-600 leading-relaxed">
               "난 아무데나 괜찮아"가 진짜였는지,<br />
