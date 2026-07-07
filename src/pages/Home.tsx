@@ -1109,6 +1109,8 @@ export default function Home() {
               value={vibe}
               onChange={setVibe}
               purpose={purpose ? { first: purpose.first, second: purpose.second } : undefined}
+              budget={budget}
+              onBudgetChange={setBudget}
               keywords={keywords}
               onKeywordsChange={setKeywords}
               excludeFoods={excludeFoods}

@@ -43,6 +43,13 @@ const GROUPS = [
   },
 ];
 
+// 값은 서버(recommend.ts)·집계(groupAggregate BUDGET_ORDER)와 반드시 일치시켜야 검색 프리픽스/예산 반영이 작동한다
+const BUDGET_OPTIONS = [
+  { value: '~2만원',  label: '~2만원',  emoji: '💵', sub: '가성비' },
+  { value: '2~4만원', label: '2~4만원', emoji: '🍽️', sub: '적당히' },
+  { value: '4만원+',  label: '4만원+',  emoji: '💎', sub: 'special' },
+];
+
 const KEYWORD_CHIPS = [
   { label: '단체룸', emoji: '🚪' },
   { label: '야외테라스', emoji: '🌿' },
@@ -74,7 +81,7 @@ interface Props {
 
 const PRESET_CHIP_LABELS = ['단체룸', '야외테라스', '주차가능', '루프탑', '포토존', '야경맛집', '24시간', '반려동물', '혼잡하지않은'];
 
-export default function VibeSelect({ value, onChange, purpose, keywords = [], onKeywordsChange, excludeFoods = [], onExcludeFoodsChange, section = 'all' }: Props) {
+export default function VibeSelect({ value, onChange, purpose, budget = null, onBudgetChange, keywords = [], onKeywordsChange, excludeFoods = [], onExcludeFoodsChange, section = 'all' }: Props) {
   const showMood = section === 'all' || section === 'mood';
   const showExtras = section === 'all' || section === 'extras';
   const [customInput, setCustomInput] = useState('');
@@ -205,6 +212,36 @@ export default function VibeSelect({ value, onChange, purpose, keywords = [], on
           </div>
         );
       })}
+
+      {/* 예산 — 1인 기준. 서버가 검색 키워드에 '가성비/고급' 프리픽스 + AI 예산 제약으로 반영 */}
+      {showExtras && onBudgetChange && (
+        <div>
+          <div className="flex items-center gap-2 mb-2">
+            <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest">💰 예산</p>
+            <span className="text-[10px] text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full font-medium">1인 기준 · 선택사항</span>
+          </div>
+          <div className="grid grid-cols-3 gap-2">
+            {BUDGET_OPTIONS.map((opt) => {
+              const isActive = budget === opt.value;
+              return (
+                <button
+                  key={opt.value}
+                  onClick={() => onBudgetChange(isActive ? null : opt.value)}
+                  className={`flex flex-col items-center justify-center h-16 rounded-xl border-2 text-xs font-bold transition-all duration-200 active:scale-[0.97] ${
+                    isActive
+                      ? 'border-[#3CDBC0] bg-[#E8F8F5] text-[#2AB5A0] shadow-md shadow-[#3CDBC0]/20'
+                      : 'border-gray-200 bg-white text-gray-700 hover:border-[#3CDBC0]/50'
+                  }`}
+                >
+                  <span className="text-lg mb-0.5 leading-none">{opt.emoji}</span>
+                  <span>{opt.label}</span>
+                  <span className={`text-[9px] font-medium ${isActive ? 'text-[#2AB5A0]/70' : 'text-gray-400'}`}>{opt.sub}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* 편식 필터 — 못 먹는 음식은 입력만 하면 추천에서 확실히 제외 */}
       {showExtras && showExcludeFoods && (

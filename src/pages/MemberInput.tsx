@@ -9,7 +9,7 @@ import type { VibeState } from '../components/VibeSelect';
 import StepProgress from '../components/StepProgress';
 import { EXCLUDE_FOOD_PREFIX } from '../utils/groupAggregate';
 
-type Phase = 'step0' | 'step1' | 'step2' | 'step3' | 'done';
+type Phase = 'step0' | 'step1' | 'step2' | 'done';
 
 function SuggestionDropdown({
   suggestions,
@@ -244,7 +244,7 @@ export default function MemberInput() {
     );
   }
 
-  const stepIndex = phase === 'step0' ? 0 : phase === 'step1' ? 1 : phase === 'step2' ? 2 : 3;
+  const stepIndex = phase === 'step0' ? 0 : phase === 'step1' ? 1 : 2;
 
   return (
     <div className="h-[100dvh] bg-[#F5FBF8] flex flex-col overflow-hidden">
@@ -261,7 +261,7 @@ export default function MemberInput() {
 
       {/* 스텝 프로그레스 */}
       <div className="flex-shrink-0">
-        <StepProgress current={stepIndex} total={4} labels={['출발지', '코스', '분위기', '취향']} />
+        <StepProgress current={stepIndex} total={3} labels={['출발지', '코스', '취향']} />
       </div>
 
       {/* 스텝 제목 */}
@@ -270,13 +270,9 @@ export default function MemberInput() {
           {phase === 'step0' && '이름과 출발지를 알려주세요'}
           {phase === 'step1' && '오늘의 코스 선택'}
           {phase === 'step2' && '원하는 분위기를 골라봐요'}
-          {phase === 'step3' && '취향을 더 알려주세요'}
         </h2>
         {phase === 'step2' && (
-          <p className="text-xs text-gray-400 mt-1">많이 고를수록 추천이 정확해져요</p>
-        )}
-        {phase === 'step3' && (
-          <p className="text-xs text-gray-400 mt-1">못 먹는 음식·편의시설 (선택)</p>
+          <p className="text-xs text-gray-400 mt-1">분위기·예산·못 먹는 음식까지 (많이 고를수록 정확해져요)</p>
         )}
       </div>
 
@@ -338,16 +334,6 @@ export default function MemberInput() {
 
         {phase === 'step2' && (
           <VibeSelect
-            section="mood"
-            value={vibe}
-            onChange={setVibe}
-            purpose={{ first: purpose.first, second: purpose.second }}
-          />
-        )}
-
-        {phase === 'step3' && (
-          <VibeSelect
-            section="extras"
             value={vibe}
             onChange={setVibe}
             purpose={{ first: purpose.first, second: purpose.second }}
@@ -375,7 +361,7 @@ export default function MemberInput() {
         <div className="flex gap-3">
           {stepIndex > 0 && (
             <button
-              onClick={() => setPhase((['step0', 'step1', 'step2', 'step3'] as const)[stepIndex - 1])}
+              onClick={() => setPhase((['step0', 'step1', 'step2'] as const)[stepIndex - 1])}
               className="w-14 py-4 rounded-2xl border-2 border-gray-200 bg-white text-gray-500 font-bold text-lg hover:border-gray-300 transition-all active:scale-95"
             >
               ←
@@ -411,15 +397,6 @@ export default function MemberInput() {
           )}
 
           {phase === 'step2' && (
-            <button
-              onClick={() => setPhase('step3')}
-              className="flex-1 py-4 rounded-2xl font-black text-base transition-all active:scale-95 bg-[#3CDBC0] text-white shadow-lg shadow-[#3CDBC0]/30 hover:bg-[#2AB5A0]"
-            >
-              다음
-            </button>
-          )}
-
-          {phase === 'step3' && (
             <button
               onClick={handleSubmit}
               disabled={submitting}
