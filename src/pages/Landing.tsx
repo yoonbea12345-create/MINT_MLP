@@ -398,7 +398,7 @@ export default function Landing() {
               { badge: 'STEP 2', title: '누구와 함께하나요', desc: <>친구·연인·가족, 기념일·소개팅<br />같은 특별한 날까지 반영해요</>, img: '/image/landing/relation.webp', highlight: false },
               { badge: 'STEP 3', title: '어디서 만날까요', desc: <>원하는 동네를 직접 고르거나,<br />전원 출발지 중간지점을 맡겨요</>, img: '/image/landing/region.webp', highlight: false },
               { badge: 'STEP 4', title: '분위기와 못 먹는 음식까지', desc: <>1차·2차 분위기를 따로 고르고,<br />못 먹는 음식은 빼고 추천해요</>, img: '/image/landing/vibe.webp', highlight: false },
-              { badge: '✨ RESULT', title: 'AI가 딱 하나 골라줍니다', desc: <>혼잡도·날씨·블로그 버즈까지 반영한 최종 1곳.<br />마음에 안 들면 다시 추천받으세요</>, img: '/image/landing/result.webp', highlight: true },
+              { badge: '✨ RESULT', title: 'AI가 딱 하나 골라줍니다', desc: <>혼잡도 · 날씨 · 블로그 버즈까지<br />반영해 딱 1곳만 골라줘요</>, img: '/image/landing/result.webp', highlight: true },
             ].map(({ badge, title, desc, img, highlight }, i) => (
               <div key={badge} className="contents lg:block">
                 {i > 0 && (
@@ -444,13 +444,14 @@ export default function Landing() {
             { n: '4', title: '취향은 몰래', desc: '눈치 안 보고 각자 원하는 분위기 선택', img: '/image/landing/join-vibe.webp' },
             { n: '5', title: '중간지점이든 동네든', desc: '전원 모이면 중간지점 자동 계산 or 원하는 동네 직접 선택 → 딱 1곳', img: '/image/landing/region.webp' },
           ].map(({ n, title, desc, img }) => (
-            <div key={n} className="snap-center flex-shrink-0 w-60 lg:w-full">
-              <div className="flex items-center gap-2 mb-3 lg:justify-center">
+            <div key={n} className="snap-center flex-shrink-0 w-60 lg:w-full text-center">
+              {/* 텍스트(번호·제목·설명)를 이미지 위에 — 혼자정하기(HOW IT WORKS)와 위치 통일 */}
+              <div className="flex items-center justify-center gap-2 mb-1.5">
                 <span className="w-6 h-6 rounded-full bg-[#3CDBC0] text-white text-xs font-black flex items-center justify-center flex-shrink-0">{n}</span>
                 <span className="text-sm font-black text-gray-800">{title}</span>
               </div>
+              <p className="text-xs text-gray-400 mb-4 leading-relaxed lg:min-h-[48px]">{desc}</p>
               <PhoneMockup src={img} alt={`그룹 모드 ${title}`} width="w-full" />
-              <p className="text-xs text-gray-400 mt-3 text-center leading-relaxed">{desc}</p>
             </div>
           ))}
         </div>
