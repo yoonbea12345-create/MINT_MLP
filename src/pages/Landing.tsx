@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useState } from 'react';
 import { trackEvent } from '../utils/analytics';
 
 interface BeforeInstallPromptEvent extends Event {
@@ -85,30 +85,6 @@ function PhoneMockup({ src, alt, width = 'w-56' }: { src: string; alt: string; w
     <div className={`${width} mx-auto bg-white rounded-3xl shadow-xl shadow-teal-100 border-2 border-gray-100 overflow-hidden`}>
       <div className="w-12 h-1 bg-gray-200 rounded-full mx-auto mt-2 mb-1" />
       <img src={src} alt={alt} className="w-full block" loading="lazy" />
-    </div>
-  );
-}
-
-// 지그재그 밴드용 목업 묶음 (2개 또는 3개) — 한 줄에 몰아넣지 않고 밴드로 나눠 숨통을 튼다
-function MockupGroup({ imgs, cols }: { imgs: { src: string; alt: string }[]; cols: 2 | 3 }) {
-  return (
-    <div className={`grid gap-3 lg:gap-4 mx-auto ${cols === 2 ? 'grid-cols-2 max-w-xs lg:max-w-sm' : 'grid-cols-3 max-w-sm lg:max-w-md'}`}>
-      {imgs.map((m) => (
-        <PhoneMockup key={m.src} src={m.src} alt={m.alt} width="w-full" />
-      ))}
-    </div>
-  );
-}
-
-// 밴드 텍스트 블록 (스텝 배지 + 제목 + 설명)
-function BandText({ badge, title, desc, highlight = false }: { badge: string; title: string; desc: ReactNode; highlight?: boolean }) {
-  return (
-    <div className="text-center lg:text-left mb-6 lg:mb-0">
-      <span className={`inline-block text-xs font-black px-3 py-1 rounded-full mb-3 ${
-        highlight ? 'bg-white border-2 border-[#3CDBC0] text-[#2AB5A0]' : 'bg-[#3CDBC0] text-white'
-      }`}>{badge}</span>
-      <h3 className="text-xl lg:text-2xl font-black text-gray-800 mb-2 leading-snug">{title}</h3>
-      <p className="text-sm lg:text-base text-gray-400 leading-relaxed">{desc}</p>
     </div>
   );
 }
@@ -415,40 +391,29 @@ export default function Landing() {
             </p>
           </div>
 
-          {/* 지그재그 밴드 — 혼자 모드는 "텍스트 → 목업" 방향(그룹과 좌우 반전) */}
-          <div className="flex flex-col gap-14 lg:gap-24">
-
-            {/* 밴드 A: (PC) 텍스트 왼쪽 · 목업 2개 오른쪽 */}
-            <div className="lg:grid lg:grid-cols-2 lg:gap-12 xl:gap-16 lg:items-center">
-              <BandText
-                badge="STEP 1 · 2"
-                title="어떤 모임인지, 누구와"
-                desc={<>인원수와 1·2차 목적(밥/술/카페) — 밥이면 <strong className="text-gray-600">한식·일식까지</strong> 좁히고, 친구·연인·가족, 기념일 같은 특별한 날까지 골라요.</>}
-              />
-              <MockupGroup cols={2} imgs={[
-                { src: '/image/landing/purpose.webp', alt: '모임·목적 선택 화면' },
-                { src: '/image/landing/relation.webp', alt: '관계·특별한 날 선택 화면' },
-              ]} />
-            </div>
-
-            {/* 밴드 B: (PC) 목업 3개 왼쪽 · 텍스트 오른쪽 */}
-            <div className="lg:grid lg:grid-cols-2 lg:gap-12 xl:gap-16 lg:items-center">
-              <div className="lg:order-2">
-                <BandText
-                  badge="✨ RESULT"
-                  title="어디서·어떤 분위기로 → 딱 1곳"
-                  desc={<>원하는 동네나 중간지점, 1·2차 분위기와 못 먹는 음식까지. <strong className="text-gray-600">혼잡도·날씨·버즈를 반영</strong>해 최종 딱 1곳을 골라줘요.</>}
-                  highlight
-                />
+          {/* 모바일: 세로 스택 + 연결선 / PC: 5열 그리드 */}
+          <div className="flex flex-col items-center gap-0 lg:grid lg:grid-cols-5 lg:gap-4 lg:items-start">
+            {[
+              { badge: 'STEP 1', title: '어떤 모임인지 골라요', desc: <>인원수와 1차·2차 목적(밥/술/카페),<br />밥이면 한식·일식까지 골라 좁혀요</>, img: '/image/landing/purpose.webp', highlight: false },
+              { badge: 'STEP 2', title: '누구와 함께하나요', desc: <>친구·연인·가족, 기념일·소개팅<br />같은 특별한 날까지 반영해요</>, img: '/image/landing/relation.webp', highlight: false },
+              { badge: 'STEP 3', title: '어디서 만날까요', desc: <>원하는 동네를 직접 고르거나,<br />전원 출발지 중간지점을 맡겨요</>, img: '/image/landing/region.webp', highlight: false },
+              { badge: 'STEP 4', title: '분위기와 못 먹는 음식까지', desc: <>1차·2차 분위기를 따로 고르고,<br />못 먹는 음식은 빼고 추천해요</>, img: '/image/landing/vibe.webp', highlight: false },
+              { badge: '✨ RESULT', title: 'AI가 딱 하나 골라줍니다', desc: <>혼잡도 · 날씨 · 블로그 버즈까지<br />반영해 딱 1곳만 골라줘요</>, img: '/image/landing/result.webp', highlight: true },
+            ].map(({ badge, title, desc, img, highlight }, i) => (
+              <div key={badge} className="contents lg:block">
+                {i > 0 && (
+                  <div className="w-0.5 h-8 bg-gradient-to-b from-[#3CDBC0] to-transparent my-2 lg:hidden" />
+                )}
+                <div className="text-center w-full">
+                  <span className={`inline-block text-xs font-black px-3 py-1 rounded-full mb-3 ${
+                    highlight ? 'bg-white border-2 border-[#3CDBC0] text-[#2AB5A0]' : 'bg-[#3CDBC0] text-white font-bold'
+                  }`}>{badge}</span>
+                  <h3 className="text-lg font-black text-gray-800 mb-1">{title}</h3>
+                  <p className="text-sm text-gray-400 mb-5 lg:min-h-[60px]">{desc}</p>
+                  <PhoneMockup src={img} alt={`${badge} ${title}`} width="w-56 lg:w-full" />
+                </div>
               </div>
-              <div className="lg:order-1">
-                <MockupGroup cols={3} imgs={[
-                  { src: '/image/landing/region.webp', alt: '지역·장소 선택 화면' },
-                  { src: '/image/landing/vibe.webp', alt: '분위기·못 먹는 음식 화면' },
-                  { src: '/image/landing/result.webp', alt: 'AI 추천 결과 화면' },
-                ]} />
-              </div>
-            </div>
+            ))}
           </div>
         </div>
       </section>
@@ -462,43 +427,36 @@ export default function Landing() {
           <h2 className="text-2xl lg:text-4xl font-black text-gray-800 leading-tight mb-3">
             다같이 정할 땐 <span className="text-[#3CDBC0]">링크 하나면 돼요</span>
           </h2>
-          <p className="text-sm lg:text-base text-gray-400 leading-relaxed">
-            총대 멜 필요 없이 각자 30초씩. <strong className="text-gray-600">모두의 중간지점과 취향</strong>이 종합돼 나옵니다
+          <p className="text-sm lg:text-base text-gray-400 mb-2 leading-relaxed">
+            <span className="block lg:inline">총대 멜 필요 없이 </span>
+            <span className="block lg:inline">각자 30초씩만 입력하면 </span>
+            <span className="block lg:inline"><strong className="text-gray-600">모두의 중간지점과 취향</strong>이 종합돼 나옵니다</span>
           </p>
+          <p className="text-xs text-[#2AB5A0] font-bold mb-6 lg:hidden">옆으로 넘겨보세요 →</p>
         </div>
 
-        {/* 지그재그 밴드 — 그룹 모드는 "목업 → 텍스트" 방향(혼자와 좌우 반전) */}
-        <div className="max-w-lg lg:max-w-7xl mx-auto px-6 mt-10 lg:mt-16 flex flex-col gap-14 lg:gap-24">
-
-          {/* 밴드 A: (PC) 목업 2개 왼쪽 · 텍스트 오른쪽 */}
-          <div className="lg:grid lg:grid-cols-2 lg:gap-12 xl:gap-16 lg:items-center">
-            <MockupGroup cols={2} imgs={[
-              { src: '/image/landing/group-create.webp', alt: '그룹 링크 만들기 화면' },
-              { src: '/image/landing/group-share.webp', alt: '단톡방 공유·실시간 입력 현황 화면' },
-            ]} />
-            <BandText
-              badge="STEP 1"
-              title="링크 하나 만들어 단톡방에 공유"
-              desc={<>총대 멜 필요 없이. 인원수·코스만 고르면 3초 완성, 단톡방에 링크를 던지면 <strong className="text-gray-600">입력 현황이 실시간</strong>으로 채워져요.</>}
-            />
-          </div>
-
-          {/* 밴드 B: (PC) 텍스트 왼쪽 · 목업 3개 오른쪽 */}
-          <div className="lg:grid lg:grid-cols-2 lg:gap-12 xl:gap-16 lg:items-center">
-            <BandText
-              badge="STEP 2"
-              title="각자 30초씩 몰래 → 딱 1곳"
-              desc={<>회원가입 없이 링크만 열면 끝. 눈치 게임 없이 취향을 종합하고, 만날 곳은 <strong className="text-gray-600">중간지점 자동 계산 또는 원하는 동네 직접 입력</strong>으로 정해요.</>}
-            />
-            <MockupGroup cols={3} imgs={[
-              { src: '/image/landing/join-start.webp', alt: '멤버 이름·출발지 입력 화면' },
-              { src: '/image/landing/join-vibe.webp', alt: '멤버 취향 선택 화면' },
-              { src: '/image/landing/region.webp', alt: '중간지점·동네 선택 화면' },
-            ]} />
-          </div>
+        {/* 모바일: 가로 스와이프 / PC: 5열 그리드 */}
+        <div className="max-w-7xl mx-auto flex gap-4 overflow-x-auto snap-x snap-mandatory scrollbar-hide px-6 pb-2 lg:grid lg:grid-cols-5 lg:gap-5 lg:overflow-visible lg:mt-10">
+          {[
+            { n: '1', title: '링크 만들기', desc: '인원수·코스만 고르면 3초 완성', img: '/image/landing/group-create.webp' },
+            { n: '2', title: '단톡방에 공유', desc: '입력 현황이 실시간으로 보여요', img: '/image/landing/group-share.webp' },
+            { n: '3', title: '각자 이름·출발지', desc: '멤버는 회원가입 없이 링크만 열면 끝', img: '/image/landing/join-start.webp' },
+            { n: '4', title: '취향은 몰래', desc: '눈치 안 보고 각자 원하는 분위기 선택', img: '/image/landing/join-vibe.webp' },
+            { n: '5', title: '중간지점이든 동네든', desc: '전원 모이면 중간지점 자동 계산 or 원하는 동네 직접 선택 → 딱 1곳', img: '/image/landing/region.webp' },
+          ].map(({ n, title, desc, img }) => (
+            <div key={n} className="snap-center flex-shrink-0 w-60 lg:w-full text-center">
+              {/* 텍스트(번호·제목·설명)를 이미지 위에 — 혼자정하기(HOW IT WORKS)와 위치 통일 */}
+              <div className="flex items-center justify-center gap-2 mb-1.5">
+                <span className="w-6 h-6 rounded-full bg-[#3CDBC0] text-white text-xs font-black flex items-center justify-center flex-shrink-0">{n}</span>
+                <span className="text-sm font-black text-gray-800">{title}</span>
+              </div>
+              <p className="text-xs text-gray-400 mb-4 leading-relaxed lg:min-h-[48px]">{desc}</p>
+              <PhoneMockup src={img} alt={`그룹 모드 ${title}`} width="w-full" />
+            </div>
+          ))}
         </div>
 
-        <div className="max-w-lg lg:max-w-2xl mx-auto px-6 mt-12 lg:mt-16">
+        <div className="max-w-lg lg:max-w-2xl mx-auto px-6 mt-6 lg:mt-10">
           <div className="bg-teal-50 border border-teal-100 rounded-2xl p-4 lg:p-6 text-center">
             <p className="text-sm lg:text-base text-gray-600 leading-relaxed">
               "난 아무데나 괜찮아"가 진짜였는지,<br />
