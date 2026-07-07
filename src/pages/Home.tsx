@@ -821,6 +821,7 @@ export default function Home() {
             purpose={purpose?.first ? { first: purpose.first, second: purpose.second ?? null } : undefined}
             vibeLabels={Object.values(vibe).flatMap((g) => [g.first, g.second]).filter((k): k is string => !!k).map((k) => VIBE_KEY_TO_LABEL[k] ?? k)}
             keywords={keywords}
+            genreLabels={[purpose?.firstGenre, purpose?.secondGenre].filter((g): g is string => !!g)}
             excludeFoods={excludeFoods}
             treasurer={treasurer}
             onRetry={handleRetry}

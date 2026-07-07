@@ -30,6 +30,7 @@ interface Props {
   purpose?: { first: string; second: string | null };
   vibeLabels?: string[];
   keywords?: string[];
+  genreLabels?: string[];
   excludeFoods?: string[];
   treasurer: string | null;
   onRetry: () => void;
@@ -326,6 +327,7 @@ export default function ResultCard({
   purpose,
   vibeLabels = [],
   keywords = [],
+  genreLabels = [],
   excludeFoods = [],
   treasurer,
   onRetry,
@@ -344,8 +346,9 @@ export default function ResultCard({
   const extraFirstResults = hasSecond ? results.slice(2, 4) : results.slice(1);
   const extraSecondResults = hasSecond ? results.slice(4) : [];
 
-  // 개인화 설득 문구 — 사용자가 고른 취향/키워드를 결과에 되짚어준다
-  const matchChips = [...vibeLabels, ...keywords].slice(0, 3);
+  // 개인화 설득 문구 — 사용자가 고른 장르/취향/키워드를 결과에 되짚어준다.
+  // 장르는 유저가 명시적으로 좁힌 조건이라 맨 앞에 둬 항상 노출되게 한다.
+  const matchChips = [...genreLabels, ...vibeLabels, ...keywords].slice(0, 3);
 
   const toggleDest = useCallback(() => {
     if (hasSecond && travelTimes?.second) setDestTarget((d) => d === 'first' ? 'second' : 'first');

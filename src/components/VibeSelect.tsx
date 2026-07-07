@@ -222,11 +222,12 @@ export default function VibeSelect({ value, onChange, purpose, keywords = [], on
               }}
               onBlur={() => { if (excludeInput.trim()) addExcludeFoods(); }}
               placeholder="예: 회, 오이, 곱창 (쉼표로 여러 개)"
-              className="flex-1 border-2 border-gray-200 rounded-xl px-4 py-2.5 text-sm text-gray-700 placeholder-gray-400 focus:outline-none focus:border-red-300 transition-colors"
+              className="flex-1 border-2 border-gray-200 rounded-xl px-4 py-2.5 text-sm text-gray-700 placeholder-gray-400 focus:outline-none focus:border-[#3CDBC0] transition-colors"
             />
+            {/* 추가 버튼은 편의시설과 동일한 민트로 통일 — 빨강은 '제외' 신호로 태그에만 사용 */}
             <button
               onClick={addExcludeFoods}
-              className="flex-shrink-0 px-4 rounded-xl bg-red-400 text-white text-sm font-bold transition-all active:scale-95 hover:bg-red-500"
+              className="flex-shrink-0 px-4 rounded-xl bg-[#3CDBC0] text-white text-sm font-bold transition-all active:scale-95 hover:bg-[#2AB5A0]"
             >
               추가
             </button>

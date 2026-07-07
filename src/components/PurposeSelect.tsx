@@ -136,7 +136,7 @@ export default function PurposeSelect({ value, onChange }: Props) {
                   onClick={() => toggleGenre('first', g)}
                   className={`px-3 py-1.5 rounded-full border-2 text-xs font-bold transition-all active:scale-95 ${
                     value.firstGenre === g
-                      ? 'border-[#3CDBC0] bg-[#E8F8F5] text-[#2AB5A0] shadow-sm shadow-[#3CDBC0]/20'
+                      ? 'border-[#3CDBC0] bg-[#3CDBC0] text-white shadow-md shadow-[#3CDBC0]/30'
                       : 'border-gray-200 bg-white text-gray-500 hover:border-[#3CDBC0]/50'
                   }`}
                 >
@@ -192,10 +192,10 @@ export default function PurposeSelect({ value, onChange }: Props) {
           })}
         </div>
 
-        {/* 2차 장르 좁히기 (선택) */}
+        {/* 2차 장르 좁히기 (선택) — 안내문구는 1차와 중복이라 짧게 */}
         {value.secondRaw && PURPOSE_GENRES[value.secondRaw] && (
           <div className="mb-2.5 animate-fade-in-up">
-            <p className="text-[10px] text-gray-400 mb-1.5">장르를 좁히고 싶다면 골라주세요 (선택)</p>
+            <p className="text-[10px] text-gray-400 mb-1.5">2차 장르 (선택)</p>
             <div className="flex flex-wrap gap-1.5">
               {PURPOSE_GENRES[value.secondRaw].map((g) => (
                 <button
@@ -203,7 +203,7 @@ export default function PurposeSelect({ value, onChange }: Props) {
                   onClick={() => toggleGenre('second', g)}
                   className={`px-3 py-1.5 rounded-full border-2 text-xs font-bold transition-all active:scale-95 ${
                     value.secondGenre === g
-                      ? 'border-orange-400 bg-orange-50 text-orange-500 shadow-sm shadow-orange-200/50'
+                      ? 'border-orange-400 bg-orange-400 text-white shadow-md shadow-orange-200/60'
                       : 'border-gray-200 bg-white text-gray-500 hover:border-orange-300'
                   }`}
                 >
