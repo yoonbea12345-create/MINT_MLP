@@ -384,19 +384,20 @@ export default function Landing() {
           <div className="lg:text-center">
             <p className="text-xs font-bold tracking-widest text-[#3CDBC0] mb-3">HOW IT WORKS</p>
             <h2 className="text-2xl lg:text-4xl font-black text-gray-800 leading-tight mb-3">
-              고르기만 하면 <span className="lg:text-[#3CDBC0]">끝나는 3스텝</span>
+              고르기만 하면 <span className="lg:text-[#3CDBC0]">끝나는 4스텝</span>
             </h2>
             <p className="text-sm lg:text-base text-gray-400 mb-10 lg:mb-16 leading-relaxed">
               검색어를 몰라도 돼요. 전부 선택지로 준비되어 있으니까요.
             </p>
           </div>
 
-          {/* 모바일: 세로 스택 + 연결선 / PC: 4열 그리드 */}
-          <div className="flex flex-col items-center gap-0 lg:grid lg:grid-cols-4 lg:gap-6 lg:items-start">
+          {/* 모바일: 세로 스택 + 연결선 / PC: 5열 그리드 */}
+          <div className="flex flex-col items-center gap-0 lg:grid lg:grid-cols-5 lg:gap-4 lg:items-start">
             {[
               { badge: 'STEP 1', title: '어떤 모임인지 골라요', desc: <>인원수와 1차·2차 목적(밥/술/카페),<br />밥이면 한식·일식까지 골라 좁혀요</>, img: '/image/landing/purpose.webp', highlight: false },
-              { badge: 'STEP 2', title: '누구와, 어디서', desc: <>기념일 같은 특별한 날도, 만날 곳도.<br />원하는 동네를 고르거나 중간지점을 맡겨요</>, img: '/image/landing/relation.webp', highlight: false },
-              { badge: 'STEP 3', title: '분위기와 못 먹는 음식까지', desc: <>1차·2차 분위기를 따로 고르고,<br />못 먹는 음식은 빼고 추천해요</>, img: '/image/landing/vibe.webp', highlight: false },
+              { badge: 'STEP 2', title: '누구와 함께하나요', desc: <>친구·연인·가족, 기념일·소개팅<br />같은 특별한 날까지 반영해요</>, img: '/image/landing/relation.webp', highlight: false },
+              { badge: 'STEP 3', title: '어디서 만날까요', desc: <>원하는 동네를 직접 고르거나,<br />전원 출발지 중간지점을 맡겨요</>, img: '/image/landing/region.webp', highlight: false },
+              { badge: 'STEP 4', title: '분위기와 못 먹는 음식까지', desc: <>1차·2차 분위기를 따로 고르고,<br />못 먹는 음식은 빼고 추천해요</>, img: '/image/landing/vibe.webp', highlight: false },
               { badge: '✨ RESULT', title: 'AI가 딱 하나 골라줍니다', desc: <>혼잡도·날씨·블로그 버즈까지 반영한 최종 1곳.<br />마음에 안 들면 다시 추천받으세요</>, img: '/image/landing/result.webp', highlight: true },
             ].map(({ badge, title, desc, img, highlight }, i) => (
               <div key={badge} className="contents lg:block">
@@ -441,7 +442,7 @@ export default function Landing() {
             { n: '2', title: '단톡방에 공유', desc: '입력 현황이 실시간으로 보여요', img: '/image/landing/group-share.webp' },
             { n: '3', title: '각자 이름·출발지', desc: '멤버는 회원가입 없이 링크만 열면 끝', img: '/image/landing/join-start.webp' },
             { n: '4', title: '취향은 몰래', desc: '눈치 안 보고 각자 원하는 분위기 선택', img: '/image/landing/join-vibe.webp' },
-            { n: '5', title: '모이면 자동 추천', desc: '중간지점 자동 계산 또는 동네 직접 선택 → 딱 1곳', img: '/image/landing/join-done.webp' },
+            { n: '5', title: '중간지점이든 동네든', desc: '전원 모이면 중간지점 자동 계산 or 원하는 동네 직접 선택 → 딱 1곳', img: '/image/landing/region.webp' },
           ].map(({ n, title, desc, img }) => (
             <div key={n} className="snap-center flex-shrink-0 w-60 lg:w-full">
               <div className="flex items-center gap-2 mb-3 lg:justify-center">
