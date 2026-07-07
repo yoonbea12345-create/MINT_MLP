@@ -395,7 +395,7 @@ export default function Landing() {
           <div className="flex flex-col items-center gap-0 lg:grid lg:grid-cols-4 lg:gap-6 lg:items-start">
             {[
               { badge: 'STEP 1', title: '어떤 모임인지 골라요', desc: <>인원수와 1차·2차 목적(밥/술/카페),<br />밥이면 한식·일식까지 골라 좁혀요</>, img: '/image/landing/purpose.webp', highlight: false },
-              { badge: 'STEP 2', title: '누구와, 어디서', desc: <>기념일·소개팅 같은 특별한 날도,<br />중간지점 계산도 알아서 처리해요</>, img: '/image/landing/relation.webp', highlight: false },
+              { badge: 'STEP 2', title: '누구와, 어디서', desc: <>기념일 같은 특별한 날도, 만날 곳도.<br />원하는 동네를 고르거나 중간지점을 맡겨요</>, img: '/image/landing/relation.webp', highlight: false },
               { badge: 'STEP 3', title: '분위기와 못 먹는 음식까지', desc: <>1차·2차 분위기를 따로 고르고,<br />못 먹는 음식은 빼고 추천해요</>, img: '/image/landing/vibe.webp', highlight: false },
               { badge: '✨ RESULT', title: 'AI가 딱 하나 골라줍니다', desc: <>혼잡도·날씨·블로그 버즈까지 반영한 최종 1곳.<br />마음에 안 들면 다시 추천받으세요</>, img: '/image/landing/result.webp', highlight: true },
             ].map(({ badge, title, desc, img, highlight }, i) => (
@@ -441,7 +441,7 @@ export default function Landing() {
             { n: '2', title: '단톡방에 공유', desc: '입력 현황이 실시간으로 보여요', img: '/image/landing/group-share.webp' },
             { n: '3', title: '각자 이름·출발지', desc: '멤버는 회원가입 없이 링크만 열면 끝', img: '/image/landing/join-start.webp' },
             { n: '4', title: '취향은 몰래', desc: '눈치 안 보고 각자 원하는 분위기 선택', img: '/image/landing/join-vibe.webp' },
-            { n: '5', title: '모이면 자동 추천', desc: '전원 제출 → 종합해서 딱 1곳', img: '/image/landing/join-done.webp' },
+            { n: '5', title: '모이면 자동 추천', desc: '중간지점 자동 계산 또는 동네 직접 선택 → 딱 1곳', img: '/image/landing/join-done.webp' },
           ].map(({ n, title, desc, img }) => (
             <div key={n} className="snap-center flex-shrink-0 w-60 lg:w-full">
               <div className="flex items-center gap-2 mb-3 lg:justify-center">
@@ -506,7 +506,7 @@ export default function Landing() {
                 {[
                   '검색어 없이 조건만 선택하면 끝',
                   'AI가 딱 1곳만 추천 — 선택 피로 제로',
-                  '중간지점 자동 계산, 혼자든 다같이든',
+                  '원하는 동네 직접 선택도, 중간지점 자동 계산도',
                   '전국 79만 실존 장소 · 혼잡도 · 날씨 · 버즈 반영',
                   '카카오톡 한 번이면 공유 완료',
                 ].map((t) => (
@@ -650,7 +650,7 @@ export default function Landing() {
               },
               {
                 q: '친구들과 어떻게 같이 정하나요?',
-                a: '"다같이 정할게요"를 선택해 링크를 만들고 단톡방에 공유하세요. 각자 출발지와 취향을 30초씩 입력하면, 전원의 중간지점과 취향을 종합한 장소가 자동으로 나옵니다.',
+                a: '"다같이 정할게요"를 선택해 링크를 만들고 단톡방에 공유하세요. 각자 출발지와 취향을 30초씩 입력하면 전원의 취향이 종합돼요. 만날 곳은 전원 출발지 기준 중간지점을 자동 계산하거나, 원하는 동네를 직접 골라도 됩니다.',
               },
               {
                 q: '추천이 마음에 안 들면요?',
