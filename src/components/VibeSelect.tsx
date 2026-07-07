@@ -67,11 +67,16 @@ interface Props {
   onVibeCustomChange?: (label: string, text: string) => void;
   excludeFoods?: string[];
   onExcludeFoodsChange?: (f: string[]) => void;
+  // 'all'(기본)=전체 한 화면 / 'mood'=분위기·취향 카드만 / 'extras'=못먹는음식·편의시설만
+  // 그룹 참여(MemberInput)에서 취향을 2개 스텝으로 나눠 4단계로 맞추기 위한 스위치
+  section?: 'all' | 'mood' | 'extras';
 }
 
 const PRESET_CHIP_LABELS = ['단체룸', '야외테라스', '주차가능', '루프탑', '포토존', '야경맛집', '24시간', '반려동물', '혼잡하지않은'];
 
-export default function VibeSelect({ value, onChange, purpose, keywords = [], onKeywordsChange, excludeFoods = [], onExcludeFoodsChange }: Props) {
+export default function VibeSelect({ value, onChange, purpose, keywords = [], onKeywordsChange, excludeFoods = [], onExcludeFoodsChange, section = 'all' }: Props) {
+  const showMood = section === 'all' || section === 'mood';
+  const showExtras = section === 'all' || section === 'extras';
   const [customInput, setCustomInput] = useState('');
   const [excludeInput, setExcludeInput] = useState('');
 
@@ -142,7 +147,7 @@ export default function VibeSelect({ value, onChange, purpose, keywords = [], on
   return (
     <div className="px-4 pt-3 pb-6 flex flex-col gap-5">
       {/* 1차/2차 토글 안내 — 처음 쓰는 사람이 배지 의미를 알 수 있게 */}
-      {hasSecond && (
+      {showMood && hasSecond && (
         <div className="bg-[#E8F8F5] border border-[#3CDBC0]/30 rounded-xl px-3 py-2 flex items-center gap-2">
           <span className="text-base">💡</span>
           <p className="text-[11px] text-[#2AB5A0] leading-snug">
@@ -150,7 +155,7 @@ export default function VibeSelect({ value, onChange, purpose, keywords = [], on
           </p>
         </div>
       )}
-      {GROUPS.map((group, groupIdx) => {
+      {showMood && GROUPS.map((group, groupIdx) => {
         const g = value[group.label] ?? { first: null, second: null };
         return (
           <div key={group.label}>
@@ -202,7 +207,7 @@ export default function VibeSelect({ value, onChange, purpose, keywords = [], on
       })}
 
       {/* 편식 필터 — 못 먹는 음식은 입력만 하면 추천에서 확실히 제외 */}
-      {showExcludeFoods && (
+      {showExtras && showExcludeFoods && (
         <div>
           <div className="flex items-center gap-2 mb-2">
             <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest">🚫 못 먹는 음식</p>
@@ -252,7 +257,7 @@ export default function VibeSelect({ value, onChange, purpose, keywords = [], on
       )}
 
       {/* 편의시설 키워드 */}
-      {onKeywordsChange && (
+      {showExtras && onKeywordsChange && (
         <div>
           <div className="flex items-center gap-2 mb-2">
             <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest">편의시설</p>
