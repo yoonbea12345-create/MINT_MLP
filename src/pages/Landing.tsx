@@ -214,7 +214,7 @@ export default function Landing() {
             )}
             {visitCount < 50 && <div className="mb-5" />}
 
-            <div className="flex justify-center lg:justify-start gap-8 items-end text-center">
+            <div className="flex justify-center lg:justify-start gap-8 items-end text-center lg:text-left">
               <div>
                 <div className="text-2xl lg:text-3xl font-black text-[#3CDBC0] whitespace-nowrap">30초</div>
                 <div className="text-xs text-gray-400 mt-0.5">추천까지 걸리는 시간</div>
