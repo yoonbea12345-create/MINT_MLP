@@ -55,6 +55,10 @@ const LOADING_MESSAGES = [
 const INPUT_DRAFT_KEY = 'mint_input_draft_v1';
 const INPUT_DRAFT_TTL_MS = 6 * 60 * 60 * 1000; // 입력하다 만 초안은 6시간까지만 복원
 
+// 그룹 호스트 세션 — sessionId는 서버 세션의 유일한 열쇠라 state에만 두면 새로고침 시 링크·대기현황이 통째로 증발한다
+const GROUP_SESSION_KEY = 'mint_group_session_v1';
+const GROUP_SESSION_TTL_MS = 6 * 60 * 60 * 1000; // 그룹 대기 세션도 6시간까지만 복원
+
 // 공유 투표용 ID (세션 아님 — 공유 클릭마다 새로 발급)
 const SHARE_ID_CHARS = 'abcdefghijkmnpqrstuvwxyz23456789';
 function newShareId(): string {
@@ -213,6 +217,37 @@ export default function Home() {
     } catch { /* 손상된 초안 무시 */ }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // 그룹 호스트 세션 복원 — 결과 스냅샷이 없을 때만 (결과 화면이 우선)
+  useEffect(() => {
+    try {
+      if (loadResultSnapshot()) return;
+      const raw = localStorage.getItem(GROUP_SESSION_KEY);
+      if (!raw) return;
+      const g = JSON.parse(raw) as { savedAt?: number; sessionId?: string; expectedCount?: number; groupHasSecond?: boolean };
+      if (!g.sessionId) return;
+      if (typeof g.savedAt === 'number' && Date.now() - g.savedAt > GROUP_SESSION_TTL_MS) {
+        localStorage.removeItem(GROUP_SESSION_KEY);
+        return;
+      }
+      setSessionId(g.sessionId);
+      if (typeof g.expectedCount === 'number') setExpectedCount(g.expectedCount);
+      if (typeof g.groupHasSecond === 'boolean') setGroupHasSecond(g.groupHasSecond);
+      setStep(0);                 // solo 초안이 남긴 step을 덮어 대기 화면(step 0)으로 되돌린다
+      setAppMode('group-waiting'); // 폴링이 다시 붙어 멤버 현황을 서버에서 재수화한다
+    } catch { /* 손상된 그룹 세션 무시 */ }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // 그룹 호스트 세션 저장 — 대기·준비 단계에서 sessionId가 살아있는 동안
+  useEffect(() => {
+    if ((appMode !== 'group-waiting' && appMode !== 'group-ready') || !sessionId) return;
+    try {
+      localStorage.setItem(GROUP_SESSION_KEY, JSON.stringify({
+        savedAt: Date.now(), sessionId, expectedCount, groupHasSecond,
+      }));
+    } catch { /* 저장 실패는 치명적이지 않음 */ }
+  }, [appMode, sessionId, expectedCount, groupHasSecond]);
 
   // 입력 초안 저장 — solo 모드로 입력 진행 중일 때만
   useEffect(() => {
@@ -755,7 +790,7 @@ export default function Home() {
             <button
               onClick={() => {
                 clearResultSnapshot();
-                try { localStorage.removeItem(INPUT_DRAFT_KEY); sessionStorage.removeItem(INPUT_DRAFT_KEY); } catch { /* ignore */ }
+                try { localStorage.removeItem(INPUT_DRAFT_KEY); sessionStorage.removeItem(INPUT_DRAFT_KEY); localStorage.removeItem(GROUP_SESSION_KEY); } catch { /* ignore */ }
                 setResult(null);
                 setView('steps');
                 setStep(0);
@@ -898,7 +933,7 @@ export default function Home() {
               {/* 혼자 / 그룹 선택 버튼 */}
               <div className="grid grid-cols-2 gap-3">
                 <button
-                  onClick={() => { setAppMode('solo'); setSessionId(null); setGroupMembers([]); setGroupError(null); }}
+                  onClick={() => { setAppMode('solo'); setSessionId(null); setGroupMembers([]); setGroupError(null); try { localStorage.removeItem(GROUP_SESSION_KEY); } catch { /* ignore */ } }}
                   className={`flex flex-col items-center justify-center gap-1.5 py-5 rounded-2xl border-2 transition-all active:scale-[0.97] ${
                     appMode === 'solo'
                       ? 'border-[#3CDBC0] bg-[#E8F8F5] shadow-md shadow-[#3CDBC0]/20'
