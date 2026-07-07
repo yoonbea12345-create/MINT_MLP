@@ -15,6 +15,20 @@ export interface GroupMember {
   vibe_keywords?: string[];
 }
 
+// 편식 항목은 DB 스키마 변경 없이 vibe_keywords에 접두사로 실어 보낸다 (MemberInput에서 인코딩)
+export const EXCLUDE_FOOD_PREFIX = '안먹:';
+
+// 멤버 키워드에서 일반 키워드와 편식(못 먹는 음식) 항목을 분리 — 편식은 전원 합집합(한 명이라도 못 먹으면 제외)
+export function splitMemberKeywords(members: GroupMember[]): { keywords: string[]; excludeFoods: string[] } {
+  const all = members.flatMap((m) => m.vibe_keywords ?? []);
+  return {
+    keywords: Array.from(new Set(all.filter((k) => !k.startsWith(EXCLUDE_FOOD_PREFIX)))),
+    excludeFoods: Array.from(new Set(
+      all.filter((k) => k.startsWith(EXCLUDE_FOOD_PREFIX)).map((k) => k.slice(EXCLUDE_FOOD_PREFIX.length).trim()).filter(Boolean),
+    )),
+  };
+}
+
 export function aggregatePurpose(members: GroupMember[]): PurposeValue | null {
   const fc: Record<string, number> = {};
   const sc: Record<string, number> = {};

@@ -7,6 +7,7 @@ import type { PurposeValue } from '../components/PurposeSelect';
 import VibeSelect from '../components/VibeSelect';
 import type { VibeState } from '../components/VibeSelect';
 import StepProgress from '../components/StepProgress';
+import { EXCLUDE_FOOD_PREFIX } from '../utils/groupAggregate';
 
 type Phase = 'step0' | 'step1' | 'step2' | 'done';
 
@@ -65,6 +66,7 @@ export default function MemberInput() {
   const [vibe, setVibe] = useState<VibeState>({});
   const [budget, setBudget] = useState<string | null>(null);
   const [keywords, setKeywords] = useState<string[]>([]);
+  const [excludeFoods, setExcludeFoods] = useState<string[]>([]);
   const [vibeCustom, setVibeCustom] = useState<Record<string, string>>({});
 
   const [submitting, setSubmitting] = useState(false);
@@ -161,7 +163,12 @@ export default function MemberInput() {
           vibe_atmosphere: Object.values(vibe).find((g) => g.first)?.first ?? null,
           vibe_budget: budget,
           vibe_keywords: (() => {
-            const all = [...keywords, ...Object.values(vibeCustom).filter(Boolean)];
+            // 편식은 DB 컬럼 추가 없이 접두사로 키워드에 실어 보냄 — 호스트가 집계 시 분리
+            const all = [
+              ...keywords,
+              ...Object.values(vibeCustom).filter(Boolean),
+              ...excludeFoods.map((f) => `${EXCLUDE_FOOD_PREFIX}${f}`),
+            ];
             return all.length > 0 ? all : null;
           })(),
         }),
@@ -331,6 +338,8 @@ export default function MemberInput() {
             onBudgetChange={setBudget}
             keywords={keywords}
             onKeywordsChange={setKeywords}
+            excludeFoods={excludeFoods}
+            onExcludeFoodsChange={setExcludeFoods}
             vibeCustom={vibeCustom}
             onVibeCustomChange={(label, text) => setVibeCustom((prev) => ({ ...prev, [label]: text }))}
           />

@@ -69,6 +69,52 @@ const PURPOSE_KEYWORDS: Record<string, string[]> = {
   '기타':  ['맛집', '음식점', '식당', '카페', '바', '이자카야', '포차', '브런치', '고깃집', '커피'],
 };
 
+// 편식 필터 — 사용자가 입력한 못 먹는 음식명 → 가게명/카테고리에서 걸러낼 확장 토큰.
+// 입력 텍스트가 키를 포함하면 확장 토큰을 적용하고, 입력 자체(2자 이상)도 토큰으로 쓴다.
+// '회'처럼 1글자 음식은 그대로 매칭하면 오탐('회식', '회관')이 나므로 확장 토큰으로만 거른다.
+const EXCLUDE_FOOD_EXPANSIONS: [string, string[]][] = [
+  ['회', ['횟집', '회센터', '물회', '사시미', '오마카세', '참치', '스시', '초밥']],
+  ['날생선', ['횟집', '회센터', '물회', '사시미', '스시', '초밥']],
+  ['생선', ['횟집', '회센터', '물회', '사시미', '생선구이', '생선조림']],
+  ['조개', ['조개', '꼬막', '홍합', '오이스터']],
+  ['굴', ['굴국', '굴보쌈', '굴전', '굴찜', '석화', '오이스터']],
+  ['새우', ['새우', '쉬림프', '랍스터']],
+  ['게', ['대게', '꽃게', '킹크랩', '크랩', '게장']],
+  ['갑각', ['새우', '쉬림프', '랍스터', '대게', '꽃게', '킹크랩', '크랩']],
+  ['해산물', ['해물', '해산물', '횟집', '조개', '수산']],
+  ['곱창', ['곱창', '대창', '막창', '양곱창']],
+  ['내장', ['곱창', '대창', '막창', '양곱창', '내장']],
+  ['순대', ['순대', '순댓']],
+  ['선지', ['선지', '선짓']],
+  ['양고기', ['양고기', '양꼬치', '양갈비']],
+  ['양꼬치', ['양고기', '양꼬치', '양갈비']],
+  ['매운', ['마라', '불닭', '매운', '매콤', '짬뽕', '낙곱새']],
+  ['맵', ['마라', '불닭', '매운', '매콤', '짬뽕', '낙곱새']],
+  ['돼지', ['돼지', '삼겹', '족발', '보쌈', '돈까스', '돈카츠']],
+  ['닭', ['치킨', '닭갈비', '닭발', '닭한마리', '삼계탕', '찜닭']],
+  ['소고기', ['소고기', '한우', '갈비', '스테이크']],
+];
+
+function excludeFoodTokens(excludeFoods: string[]): string[] {
+  const tokens = new Set<string>();
+  for (const raw of excludeFoods) {
+    const food = raw.trim();
+    if (!food) continue;
+    if (food.length >= 2) tokens.add(food); // 입력 자체도 매칭 토큰으로
+    for (const [key, expansions] of EXCLUDE_FOOD_EXPANSIONS) {
+      if (food.includes(key)) expansions.forEach((t) => tokens.add(t));
+    }
+  }
+  return [...tokens];
+}
+
+function filterExcludedFoods<T extends NaverPlace>(places: T[], tokens: string[]): T[] {
+  if (tokens.length === 0) return places;
+  const filtered = places.filter((p) => !tokens.some((t) => p.name.includes(t) || p.category.includes(t)));
+  // 후보가 전멸하면 사전 필터는 포기하고 프롬프트 하드 제약에만 맡긴다 (추천 불가보다 낫다)
+  return filtered.length > 0 ? filtered : places;
+}
+
 // 행사별 추가 키워드 (1순위 지역에 extra 쿼리로 추가)
 const OCCASION_EXTRA_KEYWORDS: Record<string, string[]> = {
   '생일':   ['프라이빗룸 식당', '생일 케이크 반입', '이벤트 레스토랑', '생일 맛집'],
@@ -418,6 +464,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const keywords: string[] = Array.isArray(input.keywords) ? input.keywords : [];
 
+    // 편식 필터 — 후보 사전 제거(아래 filterExcludedFoods) + 프롬프트 절대 제약 이중 적용
+    const excludeFoods: string[] = Array.isArray(input.excludeFoods)
+      ? (input.excludeFoods as unknown[])
+          .filter((f): f is string => typeof f === 'string' && !!f.trim())
+          .map((f) => f.trim())
+      : [];
+    const excludeTokens = excludeFoodTokens(excludeFoods);
+
     // 지역명 목록: 신버전 클라이언트는 areas만 보내고 혼잡도는 서버가 병렬 조회(왕복 1회 절감),
     // 구버전 클라이언트는 congestionData에 조회 결과를 담아 보냄 — 둘 다 수용
     const clientCongestion = congestionData as { areaName: string; level: string }[];
@@ -454,10 +508,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         : fetchCongestion(areaList).catch(() => [] as { areaName: string; level: string }[]),
     ]);
     const congestionSummary = congestionResolved.map((c) => `${c.areaName}: ${c.level}`).join(', ');
-    // 기하학적 중간지점 반경 이내 장소만 사용
-    const naverFirstPlaces: (NaverPlace & { _isPublicGem?: boolean })[] = filterByRadius(naverFirstRaw, midLat, midLng);
+    // 기하학적 중간지점 반경 이내 장소만 사용 + 편식 음식 전문점 사전 제거
+    const naverFirstPlaces: (NaverPlace & { _isPublicGem?: boolean })[] =
+      filterExcludedFoods(filterByRadius(naverFirstRaw, midLat, midLng), excludeTokens);
     const naverSecondPlaces: (NaverPlace & { _isPublicGem?: boolean })[] =
-      naverSecondRaw.length ? filterByRadius(naverSecondRaw, midLat, midLng) : [];
+      naverSecondRaw.length ? filterExcludedFoods(filterByRadius(naverSecondRaw, midLat, midLng), excludeTokens) : [];
+    if (excludeTokens.length > 0) {
+      console.log(`[recommend] excludeFoods=${excludeFoods.join(',')} → first ${naverFirstPlaces.length}, second ${naverSecondPlaces.length}`);
+    }
 
     // L0: 네이버에 없는(=매칭 실패) 공공데이터 상가 중 localGem 상위 소수를 후보 풀에 추가.
     // yearsAlive는 license_cache(사전 배치 적재) 매칭 성공 시에만 채워지며, 실패하면 localGem 0
@@ -481,6 +539,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       // 1차 목록에만 추가 — 2차 목록에도 같은 가게를 넣으면 1차·2차 양쪽에 동시 추천되거나
       // 버즈 분석이 같은 곳을 중복 호출할 수 있다.
       for (const { store } of gemCandidates) {
+        // 편식 필터는 공공데이터 발굴 후보에도 동일 적용
+        if (excludeTokens.some((t) => store.name.includes(t) || store.category.includes(t))) continue;
         naverFirstPlaces.push({
           name: store.name, category: store.category, address: store.address,
           lat: store.lat, lng: store.lng, _isPublicGem: true,
@@ -557,6 +617,9 @@ ${formatNaverPlaces(naverSecondPlaces)}` : ''}
     const keywordsLine = keywords.length > 0
       ? `\n- 필수 키워드: ${keywords.map((k) => `#${k}`).join(' ')} ← 이 조건에 부합하는 장소 최우선 추천`
       : '';
+    const excludeFoodsLine = excludeFoods.length > 0
+      ? `\n- 🚫 못 먹는 음식(절대 제외): ${excludeFoods.join(', ')} ← 이 음식/재료가 주력 메뉴이거나 피하기 어려운 장소는 fitScore와 무관하게 절대 선택 금지 (편식·알레르기 하드 제약)`
+      : '';
 
     const WEIGHT_DESC: Record<number, string> = { 1: '거의 무시', 2: '낮음', 3: '보통', 4: '중요', 5: '최우선 반영' };
     const vibeWeights: Record<string, number> = input.vibeWeights ?? {};
@@ -568,7 +631,7 @@ ${formatNaverPlaces(naverSecondPlaces)}` : ''}
 ## 모임 정보
 - 출발지: ${locationStr || `미입력 (${areaNames} 일대에서 모임)`}
 - 추천 지역: ${areaNames}
-- 인원: ${groupSize}명${groupSize >= 5 ? ' (단체석 또는 넓은 공간 필수)' : ''}${relationLine}${occasionLine}${budgetLine}${keywordsLine}
+- 인원: ${groupSize}명${groupSize >= 5 ? ' (단체석 또는 넓은 공간 필수)' : ''}${relationLine}${occasionLine}${budgetLine}${keywordsLine}${excludeFoodsLine}
 - 분위기: ${vibeFirstStr}${vibeSecondStr ? ` / 2차: ${vibeSecondStr}` : ''}
 - 현재 시각: ${currentTime}
 - 혼잡도: ${congestionSummary || '정보 없음'}
@@ -578,7 +641,7 @@ ${weatherSection}${weightsSection}
 - "${vibeFirstStr}" 분위기에 맞는 곳
 - ${isQuiet ? '조용하고 여유로운 분위기' : '활기찬 분위기'}
 - ${groupSize}명 수용 가능 규모${groupSize >= 5 ? ' (단체석 우선)' : ''}
-- ${currentTime} 기준 영업 중 또는 곧 영업 시작 우선${occasion ? `\n- ${OCCASION_HINT[occasion] ?? ''}` : ''}${budget ? `\n- 1인 예산 ${budget} 내외` : ''}${relation === '연인' ? '\n- 커플 분위기, 프라이빗하고 조용한 공간 선호' : ''}${relation === '직장동료' ? '\n- 회식에 적합한 단체 공간, 넓은 테이블 선호' : ''}${relation === '가족' ? '\n- 가족 모임에 편한 공간, 소음 덜한 환경 선호' : ''}`;
+- ${currentTime} 기준 영업 중 또는 곧 영업 시작 우선${excludeFoods.length > 0 ? `\n- ⚠️ ${excludeFoods.join(', ')} 위주 메뉴 장소 절대 금지 — 일행 중 못 먹는 사람이 있음` : ''}${occasion ? `\n- ${OCCASION_HINT[occasion] ?? ''}` : ''}${budget ? `\n- 1인 예산 ${budget} 내외` : ''}${relation === '연인' ? '\n- 커플 분위기, 프라이빗하고 조용한 공간 선호' : ''}${relation === '직장동료' ? '\n- 회식에 적합한 단체 공간, 넓은 테이블 선호' : ''}${relation === '가족' ? '\n- 가족 모임에 편한 공간, 소음 덜한 환경 선호' : ''}`;
 
     const fitScoreGuide = `
 ## 적합도 점수 (fitScore) 산정 기준 — 각 장소마다 0~100 정수 기재

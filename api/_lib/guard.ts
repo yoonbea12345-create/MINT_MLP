@@ -90,6 +90,10 @@ export function validateRecommendBody(body: unknown): string | null {
     if (!Array.isArray(input.keywords) || input.keywords.length > 10) return invalid;
     for (const k of input.keywords) if (!isShortStr(k, 30)) return invalid;
   }
+  if (input.excludeFoods != null) {
+    if (!Array.isArray(input.excludeFoods) || input.excludeFoods.length > 8) return invalid;
+    for (const f of input.excludeFoods) if (!isShortStr(f, 20)) return invalid;
+  }
   if (input.occasion != null && !isShortStr(input.occasion, 40)) return invalid;
   if (input.relation != null && !isShortStr(input.relation, 20)) return invalid;
   if (input.budget != null && !isShortStr(input.budget, 20)) return invalid;

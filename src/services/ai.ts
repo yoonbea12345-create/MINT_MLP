@@ -11,6 +11,7 @@ export interface UserInput {
   budget?: string | null;
   vibeWeights?: Record<string, number>;
   keywords?: string[];
+  excludeFoods?: string[];
 }
 
 export interface PlaceRecommendation {

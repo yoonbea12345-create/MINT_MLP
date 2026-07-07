@@ -65,12 +65,15 @@ interface Props {
   onKeywordsChange?: (k: string[]) => void;
   vibeCustom?: Record<string, string>;
   onVibeCustomChange?: (label: string, text: string) => void;
+  excludeFoods?: string[];
+  onExcludeFoodsChange?: (f: string[]) => void;
 }
 
 const PRESET_CHIP_LABELS = ['단체룸', '야외테라스', '주차가능', '루프탑', '포토존', '야경맛집', '24시간', '반려동물', '혼잡하지않은'];
 
-export default function VibeSelect({ value, onChange, purpose, keywords = [], onKeywordsChange }: Props) {
+export default function VibeSelect({ value, onChange, purpose, keywords = [], onKeywordsChange, excludeFoods = [], onExcludeFoodsChange }: Props) {
   const [customInput, setCustomInput] = useState('');
+  const [excludeInput, setExcludeInput] = useState('');
 
   function addCustomKeyword() {
     if (!onKeywordsChange) return;
@@ -81,6 +84,24 @@ export default function VibeSelect({ value, onChange, purpose, keywords = [], on
     }
     onKeywordsChange([...keywords, trimmed]);
     setCustomInput('');
+  }
+
+  function removeExcludeFood(label: string) {
+    if (!onExcludeFoodsChange) return;
+    onExcludeFoodsChange(excludeFoods.filter((f) => f !== label));
+  }
+
+  // 쉼표/공백 구분 여러 개 한 번에 입력 지원 ("회, 오이, 곱창" → 3개 태그)
+  function addExcludeFoods() {
+    if (!onExcludeFoodsChange) return;
+    const items = excludeInput
+      .split(/[,，]/)
+      .map((s) => s.trim().slice(0, 20))
+      .filter((s) => s && !excludeFoods.includes(s));
+    if (items.length > 0) {
+      onExcludeFoodsChange([...excludeFoods, ...items].slice(0, 8));
+    }
+    setExcludeInput('');
   }
 
   function toggle(groupLabel: string, key: string) {
@@ -112,6 +133,11 @@ export default function VibeSelect({ value, onChange, purpose, keywords = [], on
   }
 
   const hasSecond = purpose?.second && purpose.second !== '없음';
+
+  // 편식 필터는 음식이 나오는 모임에서만 — 카페만 가는 모임에선 숨김
+  const isFoodPurpose = (p?: string | null) => !!p && p !== '없음' && p !== '카페';
+  const showExcludeFoods =
+    !!onExcludeFoodsChange && (!purpose?.first || isFoodPurpose(purpose.first) || isFoodPurpose(purpose.second));
 
   return (
     <div className="px-4 pt-3 pb-6 flex flex-col gap-5">
@@ -174,6 +200,55 @@ export default function VibeSelect({ value, onChange, purpose, keywords = [], on
           </div>
         );
       })}
+
+      {/* 편식 필터 — 못 먹는 음식은 입력만 하면 추천에서 확실히 제외 */}
+      {showExcludeFoods && (
+        <div>
+          <div className="flex items-center gap-2 mb-2">
+            <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest">🚫 못 먹는 음식</p>
+            <span className="text-[10px] text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full font-medium">선택사항 · 확실히 빼드려요</span>
+          </div>
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={excludeInput}
+              maxLength={60}
+              onChange={(e) => setExcludeInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  addExcludeFoods();
+                }
+              }}
+              onBlur={() => { if (excludeInput.trim()) addExcludeFoods(); }}
+              placeholder="예: 회, 오이, 곱창 (쉼표로 여러 개)"
+              className="flex-1 border-2 border-gray-200 rounded-xl px-4 py-2.5 text-sm text-gray-700 placeholder-gray-400 focus:outline-none focus:border-red-300 transition-colors"
+            />
+            <button
+              onClick={addExcludeFoods}
+              className="flex-shrink-0 px-4 rounded-xl bg-red-400 text-white text-sm font-bold transition-all active:scale-95 hover:bg-red-500"
+            >
+              추가
+            </button>
+          </div>
+
+          {/* 입력한 제외 음식 태그 — 탭하면 삭제 */}
+          {excludeFoods.length > 0 && (
+            <div className="flex flex-wrap gap-2 mt-2.5">
+              {excludeFoods.map((f) => (
+                <button
+                  key={f}
+                  onClick={() => removeExcludeFood(f)}
+                  className="flex items-center gap-1 px-3 py-1.5 rounded-full bg-red-50 border border-red-200 text-red-500 text-xs font-bold transition-all active:scale-95"
+                >
+                  <span>🚫 {f}</span>
+                  <span className="text-red-300">×</span>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* 편의시설 키워드 */}
       {onKeywordsChange && (

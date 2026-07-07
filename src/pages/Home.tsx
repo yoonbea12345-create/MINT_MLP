@@ -20,7 +20,7 @@ import type { PlaceRecommendation, UserInput, WeatherSummary } from '../services
 import { saveResultSnapshot, loadResultSnapshot, clearResultSnapshot, saveHistory } from '../utils/history';
 import { computeTravelTimes } from '../services/travelTime';
 import { trackSessionDuration, trackEvent } from '../utils/analytics';
-import { aggregatePurpose, aggregateVibe, aggregateBudget } from '../utils/groupAggregate';
+import { aggregatePurpose, aggregateVibe, aggregateBudget, splitMemberKeywords } from '../utils/groupAggregate';
 import type { GroupMember } from '../utils/groupAggregate';
 import LoadingScreen from '../components/home/LoadingScreen';
 import GroupSetup from '../components/home/GroupSetup';
@@ -130,6 +130,7 @@ export default function Home() {
   const [result, setResult] = useState<PlaceRecommendation[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [keywords, setKeywords] = useState<string[]>([]);
+  const [excludeFoods, setExcludeFoods] = useState<string[]>([]);
   const [vibeCustom, setVibeCustom] = useState<Record<string, string>>({});
   const [showRetryModal, setShowRetryModal] = useState(false);
   const [midpointData, setMidpointData] = useState<{
@@ -165,6 +166,7 @@ export default function Home() {
         resultWeather?: WeatherSummary;
         vibe?: VibeState;
         keywords?: string[];
+        excludeFoods?: string[];
       } | null;
       if (!saved || !Array.isArray(saved.result) || saved.result.length === 0) return;
       setResult(saved.result);
@@ -176,6 +178,7 @@ export default function Home() {
       if (saved.resultWeather) setResultWeather(saved.resultWeather);
       if (saved.vibe) setVibe(saved.vibe);            // 개인화 배너 복원용
       if (Array.isArray(saved.keywords)) setKeywords(saved.keywords);
+      if (Array.isArray(saved.excludeFoods)) setExcludeFoods(saved.excludeFoods);
       setView('result');
     } catch { /* 손상된 캐시는 무시 */ }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -201,6 +204,7 @@ export default function Home() {
       if (d.purpose) setPurpose(d.purpose);
       if (d.vibe) setVibe(d.vibe);
       if (Array.isArray(d.keywords)) setKeywords(d.keywords);
+      if (Array.isArray(d.excludeFoods)) setExcludeFoods(d.excludeFoods);
       if (d.vibeCustom) setVibeCustom(d.vibeCustom);
       if (d.meetingLocation) setMeetingLocation(d.meetingLocation);
       if (d.budget !== undefined) setBudget(d.budget);
@@ -216,18 +220,18 @@ export default function Home() {
     try {
       localStorage.setItem(INPUT_DRAFT_KEY, JSON.stringify({
         savedAt: Date.now(),
-        appMode, step, groupSize, purpose, vibe, keywords, vibeCustom,
+        appMode, step, groupSize, purpose, vibe, keywords, excludeFoods, vibeCustom,
         meetingLocation, budget, customOccasion, locations,
       }));
     } catch { /* 저장 실패는 치명적이지 않음 */ }
-  }, [view, appMode, step, groupSize, purpose, vibe, keywords, vibeCustom, meetingLocation, budget, customOccasion, locations]);
+  }, [view, appMode, step, groupSize, purpose, vibe, keywords, excludeFoods, vibeCustom, meetingLocation, budget, customOccasion, locations]);
 
   // 결과 화면 상태가 확정될 때마다 스냅샷 저장 (setState 커밋 이후라 stale closure 없음)
   // + 같은 스냅샷을 localStorage 히스토리에도 적재 — 랜딩 "지난 추천"에서 그대로 복원
   useEffect(() => {
     if (view !== 'result' || !result || result.length === 0) return;
     const snapshot = {
-      result, purpose, midpointData, treasurer, meetingLocation, resultTravelTimes, resultWeather, vibe, keywords,
+      result, purpose, midpointData, treasurer, meetingLocation, resultTravelTimes, resultWeather, vibe, keywords, excludeFoods,
     };
     saveResultSnapshot(snapshot);
     const hasSecondCourse = !!(purpose?.second && purpose.second !== '없음');
@@ -239,7 +243,7 @@ export default function Home() {
       purposeFirst: purpose?.first ?? null,
       snapshot,
     });
-  }, [view, result, purpose, midpointData, treasurer, meetingLocation, resultTravelTimes, resultWeather, vibe, keywords]);
+  }, [view, result, purpose, midpointData, treasurer, meetingLocation, resultTravelTimes, resultWeather, vibe, keywords, excludeFoods]);
 
 
   useEffect(() => {
@@ -339,8 +343,10 @@ export default function Home() {
       setVibe(aggregateVibe(groupMembers));
       const aggregated = aggregatePurpose(groupMembers);
       if (aggregated) setPurpose(aggregated);
-      const memberKeywords = Array.from(new Set(groupMembers.flatMap((m) => m.vibe_keywords ?? [])));
+      // 편식은 전원 합집합 — 한 명이라도 못 먹으면 그 음식은 제외
+      const { keywords: memberKeywords, excludeFoods: memberExcludes } = splitMemberKeywords(groupMembers);
       setKeywords(memberKeywords);
+      setExcludeFoods(memberExcludes);
       setBudget(aggregateBudget(groupMembers)); // 멤버 예산도 결과에 반영
       setAppMode('group-ready');
     }
@@ -443,6 +449,10 @@ export default function Home() {
         relation: purpose?.relation ?? null,
         occasion: purpose?.occasion?.trim().slice(0, 40) || null,
         budget,
+        // 편식 필터 — 서버가 후보 사전 제거 + AI 절대 제약으로 이중 반영 (개수·길이는 서버 검증 한도에 맞춤)
+        ...(excludeFoods.length > 0
+          ? { excludeFoods: excludeFoods.map((f) => f.trim().slice(0, 20)).filter(Boolean).slice(0, 8) }
+          : {}),
         ...(vibeWeights && Object.keys(vibeWeights).length > 0 ? { vibeWeights } : {}),
         ...((() => {
           // 서버 검증 한도(개수 10 · 항목당 30자)에 맞춰 잘라서 전송
@@ -752,6 +762,7 @@ export default function Home() {
                 setVibe({});
                 setBudget(null);
                 setKeywords([]);
+                setExcludeFoods([]);
                 setVibeCustom({});
                 setMeetingLocation(null);
                 setMidpointData(null);
@@ -804,6 +815,7 @@ export default function Home() {
             purpose={purpose?.first ? { first: purpose.first, second: purpose.second ?? null } : undefined}
             vibeLabels={Object.values(vibe).flatMap((g) => [g.first, g.second]).filter((k): k is string => !!k).map((k) => VIBE_KEY_TO_LABEL[k] ?? k)}
             keywords={keywords}
+            excludeFoods={excludeFoods}
             treasurer={treasurer}
             onRetry={handleRetry}
             onAdjust={handleAdjust}
@@ -1057,6 +1069,8 @@ export default function Home() {
               purpose={purpose ? { first: purpose.first, second: purpose.second } : undefined}
               keywords={keywords}
               onKeywordsChange={setKeywords}
+              excludeFoods={excludeFoods}
+              onExcludeFoodsChange={setExcludeFoods}
             />
           )}
         </div>

@@ -30,6 +30,7 @@ interface Props {
   purpose?: { first: string; second: string | null };
   vibeLabels?: string[];
   keywords?: string[];
+  excludeFoods?: string[];
   treasurer: string | null;
   onRetry: () => void;
   onAdjust?: () => void;
@@ -325,6 +326,7 @@ export default function ResultCard({
   purpose,
   vibeLabels = [],
   keywords = [],
+  excludeFoods = [],
   treasurer,
   onRetry,
   onAdjust,
@@ -367,14 +369,22 @@ export default function ResultCard({
     <div className="flex flex-col gap-2 animate-fade-in-up">
 
       {/* 개인화 설득 배너 — "내 취향을 반영했다"는 체감 */}
-      {matchChips.length > 0 && (
-        <div className="bg-[#E8F8F5] border border-[#3CDBC0]/30 rounded-2xl px-4 py-3">
-          <p className="text-xs text-[#2AB5A0] leading-relaxed">
-            <span className="font-black">
-              {matchChips.map((c) => `#${c}`).join(' ')}
-            </span>
-            <span className="text-[#2AB5A0]/80"> 취향에 딱 맞는 곳으로 골랐어요</span>
-          </p>
+      {(matchChips.length > 0 || excludeFoods.length > 0) && (
+        <div className="bg-[#E8F8F5] border border-[#3CDBC0]/30 rounded-2xl px-4 py-3 flex flex-col gap-1">
+          {matchChips.length > 0 && (
+            <p className="text-xs text-[#2AB5A0] leading-relaxed">
+              <span className="font-black">
+                {matchChips.map((c) => `#${c}`).join(' ')}
+              </span>
+              <span className="text-[#2AB5A0]/80"> 취향에 딱 맞는 곳으로 골랐어요</span>
+            </p>
+          )}
+          {excludeFoods.length > 0 && (
+            <p className="text-xs text-[#2AB5A0] leading-relaxed">
+              <span className="font-black">🚫 {excludeFoods.join(', ')}</span>
+              <span className="text-[#2AB5A0]/80"> 못 드시는 건 빼고 골랐어요</span>
+            </p>
+          )}
         </div>
       )}
 
