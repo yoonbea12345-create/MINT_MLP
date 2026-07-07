@@ -347,8 +347,9 @@ export default function ResultCard({
   const extraSecondResults = hasSecond ? results.slice(4) : [];
 
   // 개인화 설득 문구 — 사용자가 고른 장르/취향/키워드를 결과에 되짚어준다.
-  // 장르는 유저가 명시적으로 좁힌 조건이라 맨 앞에 둬 항상 노출되게 한다.
-  const matchChips = [...genreLabels, ...vibeLabels, ...keywords].slice(0, 3);
+  // 장르(최대 2개)는 전용 슬롯을 두어 항상 노출하고, 분위기·키워드(최대 3개)는
+  // 장르가 슬롯을 잠식해 안 보이는 일이 없도록 별도로 확보한다.
+  const matchChips = [...genreLabels.slice(0, 2), ...[...vibeLabels, ...keywords].slice(0, 3)];
 
   const toggleDest = useCallback(() => {
     if (hasSecond && travelTimes?.second) setDestTarget((d) => d === 'first' ? 'second' : 'first');
