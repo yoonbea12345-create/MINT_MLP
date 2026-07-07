@@ -71,6 +71,8 @@ export function validateRecommendBody(body: unknown): string | null {
   const purpose = input.purpose as Record<string, unknown> | undefined;
   if (!purpose || !isShortStr(purpose.first, 20)) return invalid;
   if (purpose.second != null && !isShortStr(purpose.second, 20)) return invalid;
+  if (purpose.firstGenre != null && !isShortStr(purpose.firstGenre, 10)) return invalid;
+  if (purpose.secondGenre != null && !isShortStr(purpose.secondGenre, 10)) return invalid;
 
   const midpoint = b.midpoint as Record<string, unknown> | undefined;
   if (!midpoint || !isFiniteNum(midpoint.lat) || !isFiniteNum(midpoint.lng)) return invalid;

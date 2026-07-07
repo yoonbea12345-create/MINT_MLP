@@ -164,9 +164,12 @@ export default function MemberInput() {
           vibe_budget: budget,
           vibe_keywords: (() => {
             // 편식은 DB 컬럼 추가 없이 접두사로 키워드에 실어 보냄 — 호스트가 집계 시 분리
+            // 장르 선택(한식/와인 등)은 일반 키워드로 실어 검색·프롬프트에 자연 반영
             const all = [
               ...keywords,
               ...Object.values(vibeCustom).filter(Boolean),
+              ...(purpose.firstGenre ? [purpose.firstGenre] : []),
+              ...(purpose.secondGenre && purpose.second !== '없음' ? [purpose.secondGenre] : []),
               ...excludeFoods.map((f) => `${EXCLUDE_FOOD_PREFIX}${f}`),
             ];
             return all.length > 0 ? all : null;

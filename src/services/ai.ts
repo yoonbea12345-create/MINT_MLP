@@ -4,7 +4,7 @@ import type { Coordinates } from './midpoint';
 export interface UserInput {
   locations: { name: string; coords?: Coordinates }[];
   groupSize: '2명' | '3~4명' | '5명 이상';
-  purpose: { first: string; second: string | null };
+  purpose: { first: string; second: string | null; firstGenre?: string | null; secondGenre?: string | null };
   vibe: { first: string[]; second: string[] };
   relation?: string | null;
   occasion?: string | null;

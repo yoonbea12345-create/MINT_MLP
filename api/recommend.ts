@@ -69,6 +69,20 @@ const PURPOSE_KEYWORDS: Record<string, string[]> = {
   '기타':  ['맛집', '음식점', '식당', '카페', '바', '이자카야', '포차', '브런치', '고깃집', '커피'],
 };
 
+// 장르 좁히기 — 사용자가 밥/술의 장르를 지정하면 검색 키워드 풀을 통째로 교체한다.
+// 키(라벨)는 클라이언트 PURPOSE_GENRES와 반드시 일치.
+const GENRE_KEYWORDS: Record<string, string[]> = {
+  '한식':      ['한식', '한식 맛집', '국밥', '고깃집', '삼겹살', '한정식', '찌개', '백반', '족발', '갈비'],
+  '중식':      ['중식당', '중국집', '짬뽕', '마라탕', '딤섬', '양꼬치', '중화요리', '탕수육'],
+  '일식':      ['일식당', '스시', '초밥', '라멘', '돈카츠', '우동', '텐동', '오마카세', '덮밥'],
+  '양식':      ['파스타', '이탈리안', '스테이크', '피자', '수제버거', '브런치', '비스트로', '프렌치'],
+  '아시안':    ['쌀국수', '베트남 음식', '태국 음식', '팟타이', '커리', '아시안 음식', '분짜'],
+  '소주·맥주': ['술집', '포차', '호프', '맥주집', '소주방', '펍', '노포 술집', '수제맥주'],
+  '와인':      ['와인바', '내추럴와인', '와인 비스트로', '보틀샵', '와인'],
+  '칵테일':    ['칵테일바', '라운지바', '스피크이지', '루프탑바', '바'],
+  '이자카야':  ['이자카야', '사케바', '일본식 주점', '오뎅바', '하이볼바', '야키토리'],
+};
+
 // 편식 필터 — 사용자가 입력한 못 먹는 음식명 → 가게명/카테고리에서 걸러낼 확장 토큰.
 // 입력 텍스트가 키를 포함하면 확장 토큰을 적용하고, 입력 자체(2자 이상)도 토큰으로 쓴다.
 // '회'처럼 1글자 음식은 그대로 매칭하면 오탐('회식', '회관')이 나므로 확장 토큰으로만 거른다.
@@ -219,6 +233,7 @@ async function searchNaverMulti(
   relation?: string | null,
   budget?: string | null,
   userKeywords: string[] = [],
+  genre?: string | null,
 ): Promise<NaverPlace[]> {
   const clientId     = process.env.NAVER_CLIENT_ID;
   const clientSecret = process.env.NAVER_CLIENT_SECRET;
@@ -229,7 +244,9 @@ async function searchNaverMulti(
   const budgetPrefix = budget === '~2만원' ? '가성비 ' : budget === '4만원+' ? '고급 ' : '';
   // 기타(직접 입력) 목적은 입력 텍스트 자체가 최우선 검색 키워드 — 안 넣으면 원하는 업종이 후보에 아예 없음
   const isCustomPurpose = !PURPOSE_KEYWORDS[purpose];
-  const baseKeywords = isCustomPurpose ? [purpose, ...PURPOSE_KEYWORDS['기타']] : PURPOSE_KEYWORDS[purpose];
+  // 장르가 지정되면 키워드 풀을 통째로 해당 장르로 교체 — "밥인데 한식만" 스코프 좁히기
+  const genrePool = genre ? GENRE_KEYWORDS[genre] : undefined;
+  const baseKeywords = genrePool ?? (isCustomPurpose ? [purpose, ...PURPOSE_KEYWORDS['기타']] : PURPOSE_KEYWORDS[purpose]);
 
   // 행사/관계 추가 키워드 병합
   const extraKeywords = [
@@ -248,9 +265,11 @@ async function searchNaverMulti(
 
   // 사용자 지정 키워드(편의시설 칩·직접 입력)를 목적 힌트와 결합해 후보 검색에 직접 반영
   // — 프롬프트의 "필수 키워드"는 후보 풀에 해당 장소가 있어야만 작동하기 때문
-  const categoryHint = isCustomPurpose
-    ? purpose
-    : ({ '밥': '맛집', '술': '술집', '카페': '카페' } as Record<string, string>)[purpose] ?? '맛집';
+  const categoryHint = genre && GENRE_KEYWORDS[genre]
+    ? genre
+    : isCustomPurpose
+      ? purpose
+      : ({ '밥': '맛집', '술': '술집', '카페': '카페' } as Record<string, string>)[purpose] ?? '맛집';
   for (const kw of userKeywords.slice(0, 5)) {
     if (searchAreas[0]) queries.push(`${searchAreas[0]} ${kw} ${categoryHint}`);
     if (searchAreas[1]) queries.push(`${searchAreas[1]} ${kw} ${categoryHint}`);
@@ -451,8 +470,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const now = new Date();
     const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
 
-    const purpose = input.purpose as { first: string; second: string | null };
+    const purpose = input.purpose as {
+      first: string; second: string | null; firstGenre?: string | null; secondGenre?: string | null;
+    };
     const hasTwoPurposes = !!(purpose.second && purpose.second !== '없음');
+    // 장르 좁히기 — 알려진 장르만 인정 (임의 문자열로 프롬프트/검색 오염 방지)
+    const firstGenre = purpose.firstGenre && GENRE_KEYWORDS[purpose.firstGenre] ? purpose.firstGenre : null;
+    const secondGenre = purpose.secondGenre && GENRE_KEYWORDS[purpose.secondGenre] ? purpose.secondGenre : null;
+    const purposeFirstLabel = firstGenre ? `${purpose.first}·${firstGenre}` : purpose.first;
+    const purposeSecondLabel = secondGenre && purpose.second ? `${purpose.second}·${secondGenre}` : purpose.second;
     const vibe = input.vibe as { first?: string[]; second?: string[] } | undefined;
     const vibeFirstStr = vibe?.first?.length ? vibe.first.join(', ') : '자유롭게';
     const vibeSecondStr = vibe?.second?.length ? vibe.second.join(', ') : '';
@@ -495,9 +521,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const [weather, naverFirstRaw, naverSecondRaw, publicStores, congestionResolved] = await Promise.all([
       fetchWeather(midLat, midLng),
-      searchNaverMulti(purpose.first, searchAreas, groupSize, midLat, midLng, occasion, relation, budget, keywords),
+      searchNaverMulti(purpose.first, searchAreas, groupSize, midLat, midLng, occasion, relation, budget, keywords, firstGenre),
       hasTwoPurposes && purpose.second
-        ? searchNaverMulti(purpose.second, searchAreas, groupSize, midLat, midLng, occasion, relation, budget, keywords)
+        ? searchNaverMulti(purpose.second, searchAreas, groupSize, midLat, midLng, occasion, relation, budget, keywords, secondGenre)
         : Promise.resolve([]),
       fetchStoresInRadius(midLat, midLng, MIDPOINT_RADIUS_KM * 1000).catch((e) => {
         console.error('[recommend] L0 public data fetch failed', e);
@@ -590,10 +616,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // 네이버 데이터 있을 때 전용 규칙
     const naverSection = hasNaverData ? `
 ## 네이버 검색으로 확인된 실존 장소 목록 (총 ${naverFirstPlaces.length}개 중 최적 선택)
-### 1차 목적 "${purpose.first}" 후보
+### 1차 목적 "${purposeFirstLabel}" 후보
 ${formatNaverPlaces(naverFirstPlaces)}
 ${effectiveTwoPurposes ? `
-### 2차 목적 "${purpose.second}" 후보
+### 2차 목적 "${purposeSecondLabel}" 후보
 ${formatNaverPlaces(naverSecondPlaces)}` : ''}
 
 ⚠️ 반드시 위 목록의 번호(1~N)에서만 선택. 목록 외 장소 생성 절대 금지.
@@ -620,6 +646,12 @@ ${formatNaverPlaces(naverSecondPlaces)}` : ''}
     const excludeFoodsLine = excludeFoods.length > 0
       ? `\n- 🚫 못 먹는 음식(절대 제외): ${excludeFoods.join(', ')} ← 이 음식/재료가 주력 메뉴이거나 피하기 어려운 장소는 fitScore와 무관하게 절대 선택 금지 (편식·알레르기 하드 제약)`
       : '';
+    const genreLine = firstGenre || secondGenre
+      ? `\n- 장르 지정: ${[
+          firstGenre ? `1차(${purpose.first})는 ${firstGenre}` : null,
+          secondGenre ? `2차(${purpose.second})는 ${secondGenre}` : null,
+        ].filter(Boolean).join(', ')} ← 지정 장르에 해당하는 장소만 선택`
+      : '';
 
     const WEIGHT_DESC: Record<number, string> = { 1: '거의 무시', 2: '낮음', 3: '보통', 4: '중요', 5: '최우선 반영' };
     const vibeWeights: Record<string, number> = input.vibeWeights ?? {};
@@ -631,7 +663,7 @@ ${formatNaverPlaces(naverSecondPlaces)}` : ''}
 ## 모임 정보
 - 출발지: ${locationStr || `미입력 (${areaNames} 일대에서 모임)`}
 - 추천 지역: ${areaNames}
-- 인원: ${groupSize}명${groupSize >= 5 ? ' (단체석 또는 넓은 공간 필수)' : ''}${relationLine}${occasionLine}${budgetLine}${keywordsLine}${excludeFoodsLine}
+- 인원: ${groupSize}명${groupSize >= 5 ? ' (단체석 또는 넓은 공간 필수)' : ''}${relationLine}${occasionLine}${budgetLine}${keywordsLine}${excludeFoodsLine}${genreLine}
 - 분위기: ${vibeFirstStr}${vibeSecondStr ? ` / 2차: ${vibeSecondStr}` : ''}
 - 현재 시각: ${currentTime}
 - 혼잡도: ${congestionSummary || '정보 없음'}
@@ -646,7 +678,7 @@ ${weatherSection}${weightsSection}
     const fitScoreGuide = `
 ## 적합도 점수 (fitScore) 산정 기준 — 각 장소마다 0~100 정수 기재
 - 취향/분위기 일치도 (35점): 사용자 선택 vibe와 얼마나 잘 맞는가
-- 목적 적합도 (20점): "${purpose.first}" 목적에 얼마나 적합한가${vibeWeights && Object.keys(vibeWeights).length > 0 ? '\n- 가중치 반영 (추가 +10점 풀): 위 재추천 가중치가 높은 항목일수록 더 높게' : ''}
+- 목적 적합도 (20점): "${purposeFirstLabel}" 목적에 얼마나 적합한가${vibeWeights && Object.keys(vibeWeights).length > 0 ? '\n- 가중치 반영 (추가 +10점 풀): 위 재추천 가중치가 높은 항목일수록 더 높게' : ''}
 - 예산 적합도 (15점): 예산 조건 충족 여부 (예산 없으면 만점)
 - 혼잡도/시간 적합도 (10점): 현재 시각 기준 혼잡도와 영업 여부
 - 진짜 맛집 신뢰도 (20점): 다음 신호로 판단 —
@@ -700,8 +732,8 @@ ${commonInfo}
 ${fitScoreGuide}
 
 ## 응답 구성 (${hasNaverData ? `1차 목록에서 ${FINALIST_COUNT_PER_PURPOSE}곳 + 2차 목록에서 ${FINALIST_COUNT_PER_PURPOSE}곳, ` : ''}총 ${FINALIST_COUNT_PER_PURPOSE * 2}곳)
-- purposeSlot 1(1차 "${purpose.first}") ${FINALIST_COUNT_PER_PURPOSE}곳: slotRank 1이 가장 적합, 내림차순. 같은 슬롯 내 ${hasNaverData ? 'sourceIndex' : '장소'} 중복 금지
-- purposeSlot 2(2차 "${purpose.second}") ${FINALIST_COUNT_PER_PURPOSE}곳: slotRank 1이 가장 적합, 내림차순. 같은 슬롯 내 ${hasNaverData ? 'sourceIndex' : '장소'} 중복 금지
+- purposeSlot 1(1차 "${purposeFirstLabel}") ${FINALIST_COUNT_PER_PURPOSE}곳: slotRank 1이 가장 적합, 내림차순. 같은 슬롯 내 ${hasNaverData ? 'sourceIndex' : '장소'} 중복 금지
+- purposeSlot 2(2차 "${purposeSecondLabel}") ${FINALIST_COUNT_PER_PURPOSE}곳: slotRank 1이 가장 적합, 내림차순. 같은 슬롯 내 ${hasNaverData ? 'sourceIndex' : '장소'} 중복 금지
 - 각 슬롯의 slotRank 1은 서로 도보 15분 이내로 이어질 수 있는 조합을 우선 고려
 
 ## 응답 형식 (JSON만, 다른 텍스트 없이)
@@ -709,7 +741,7 @@ ${fitScoreGuide}
   ${Array.from({ length: FINALIST_COUNT_PER_PURPOSE }, (_, i) => finalistSchema(i + 1, 1)).join(',\n  ')},
   ${Array.from({ length: FINALIST_COUNT_PER_PURPOSE }, (_, i) => finalistSchema(i + 1, 2)).join(',\n  ')}
 ]}`
-      : `당신은 한국 모임 장소 큐레이터입니다. "${purpose.first}" 장소 후보를 선호 순서대로 ${FINALIST_COUNT_SINGLE}곳 추천해주세요.
+      : `당신은 한국 모임 장소 큐레이터입니다. "${purposeFirstLabel}" 장소 후보를 선호 순서대로 ${FINALIST_COUNT_SINGLE}곳 추천해주세요.
 ${naverSection}
 ${commonInfo}
 ${fitScoreGuide}

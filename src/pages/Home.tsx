@@ -444,7 +444,13 @@ export default function Home() {
         // 서버 검증 통과를 위해 이름 없는 항목 제외 (지역 직접 선택 시 빈 배열)
         locations: locations.filter((l) => l.name?.trim()),
         groupSize: appMode === 'group-ready' ? (locations.length >= 5 ? '5명 이상' : locations.length >= 3 ? '3~4명' : '2명') : groupSize,
-        purpose: { first: purpose!.first!, second: purpose!.second ?? null },
+        purpose: {
+          first: purpose!.first!,
+          second: purpose!.second ?? null,
+          // 장르 좁히기 — 서버가 검색 키워드 풀을 해당 장르로 좁히고 AI에도 제약 전달
+          ...(purpose?.firstGenre ? { firstGenre: purpose.firstGenre } : {}),
+          ...(purpose?.secondGenre && purpose.second && purpose.second !== '없음' ? { secondGenre: purpose.secondGenre } : {}),
+        },
         vibe: { first: vibeFirst, second: vibeSecond },
         relation: purpose?.relation ?? null,
         occasion: purpose?.occasion?.trim().slice(0, 40) || null,
