@@ -362,7 +362,7 @@ export default function Landing() {
                 { e: '🚦', t: '실시간 혼잡도', d: '지금 웨이팅인지 미리 확인' },
                 { e: '🚶', t: '2차 코스 연결', d: '도보 시간까지 계산된 동선' },
               ].map(({ e, t, d }) => (
-                <div key={t} className="bg-white border border-gray-100 rounded-2xl p-3 lg:p-4">
+                <div key={t} className="bg-white border border-gray-100 rounded-2xl p-3 lg:p-4 text-left">
                   <div className="text-xl lg:text-2xl mb-1">{e}</div>
                   <p className="text-xs lg:text-sm font-bold text-gray-800 mb-0.5">{t}</p>
                   <p className="text-[10px] lg:text-xs text-gray-400 leading-relaxed">{d}</p>
