@@ -5,7 +5,8 @@
 import { supabase } from './supabase';
 
 type EventType = 'landing_view' | 'cta_click' | 'reservation_attempt' | 'session_duration' | 'kakao_share' | 'pwa_install_click' | 'landing_demo_place_click'
-  | 'retry_fresh' | 'retry_adjust' | 'reject_expensive' | 'reject_far' | 'reject_vibe';
+  | 'retry_fresh' | 'retry_adjust' | 'reject_expensive' | 'reject_far' | 'reject_vibe'
+  | 'history_open' | 'reserve_deeplink_catchtable' | 'reserve_deeplink_naver';
 
 const PAUSE_KEY = 'mint_tracking_paused';
 

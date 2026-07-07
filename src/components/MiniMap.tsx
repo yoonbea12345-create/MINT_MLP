@@ -51,6 +51,7 @@ export default function MiniMap({ lat, lng, placeName, pins }: Props) {
       mapInstance.current = new kakao.maps.Map(mapRef.current, { center, level: 4 });
     }
     const map = mapInstance.current;
+    if (!map) return;
 
     // 이전 오버레이 정리
     overlaysRef.current.forEach((o) => o.setMap(null));

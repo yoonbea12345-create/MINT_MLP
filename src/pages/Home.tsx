@@ -17,7 +17,7 @@ import { PRESET_REGIONS, findNearestAreas, findBalancedAreas } from '../services
 import type { PresetRegion, Coordinates } from '../services/midpoint';
 import { getAIRecommendation } from '../services/ai';
 import type { PlaceRecommendation, UserInput, WeatherSummary } from '../services/ai';
-import { RESULT_STORAGE_KEY, saveHistory } from '../utils/history';
+import { saveResultSnapshot, loadResultSnapshot, clearResultSnapshot, saveHistory } from '../utils/history';
 import { computeTravelTimes } from '../services/travelTime';
 import { trackSessionDuration, trackEvent } from '../utils/analytics';
 import { aggregatePurpose, aggregateVibe, aggregateBudget } from '../utils/groupAggregate';
@@ -37,6 +37,11 @@ interface TravelResult {
   error?: boolean;
 }
 
+interface ResultTravelTimes {
+  first: { transit: TravelResult[]; driving: TravelResult[] };
+  second: { transit: TravelResult[]; driving: TravelResult[] } | null;
+}
+
 const LOADING_MESSAGES = [
   '🗺️ 서울 구석구석 탐색 중...',
   '👥 우리 팀 취향 분석 중...',
@@ -45,9 +50,10 @@ const LOADING_MESSAGES = [
   '✨ 오늘의 코스 완성 직전!',
 ];
 
-// 새로고침해도 마지막 추천 결과가 증발하지 않도록 sessionStorage에 보관 (키는 history 유틸과 공유)
-// 입력 진행 중(solo 모드) 새로고침 대비 초안 저장
+// 결과·입력초안 모두 localStorage에 보관 — 홈버튼·공유로 앱을 벗어나 웹뷰가 재시작돼도 유지
+// (sessionStorage는 모바일에서 프로세스 재시작 시 통째로 사라짐)
 const INPUT_DRAFT_KEY = 'mint_input_draft_v1';
+const INPUT_DRAFT_TTL_MS = 6 * 60 * 60 * 1000; // 입력하다 만 초안은 6시간까지만 복원
 
 // 공유 투표용 ID (세션 아님 — 공유 클릭마다 새로 발급)
 const SHARE_ID_CHARS = 'abcdefghijkmnpqrstuvwxyz23456789';
@@ -131,10 +137,7 @@ export default function Home() {
     areaName: string;
     nearestAreas: string[];
   } | null>(null);
-  const [resultTravelTimes, setResultTravelTimes] = useState<{
-    first: { transit: TravelResult[]; driving: TravelResult[] };
-    second: { transit: TravelResult[]; driving: TravelResult[] } | null;
-  } | null>(null);
+  const [resultTravelTimes, setResultTravelTimes] = useState<ResultTravelTimes | null>(null);
   const [treasurer, setTreasurer] = useState<string | null>(null);
   const [resultWeather, setResultWeather] = useState<WeatherSummary | null>(null);
   const [changeNote, setChangeNote] = useState<string | null>(null);
@@ -149,13 +152,21 @@ export default function Home() {
     }
   }, []);
 
-  // 마지막 추천 결과 복원 (새로고침 시 ~100원짜리 추천이 증발하지 않게)
+  // 마지막 추천 결과 복원 (새로고침·홈 이탈·앱 전환 후 재진입 시 추천이 증발하지 않게)
   useEffect(() => {
     try {
-      const raw = sessionStorage.getItem(RESULT_STORAGE_KEY);
-      if (!raw) return;
-      const saved = JSON.parse(raw);
-      if (!Array.isArray(saved.result) || saved.result.length === 0) return;
+      const saved = loadResultSnapshot() as {
+        result?: PlaceRecommendation[];
+        purpose?: PurposeValue;
+        midpointData?: { midpoint: Coordinates; areaName: string; nearestAreas: string[] };
+        treasurer?: string;
+        meetingLocation?: MeetingLocation;
+        resultTravelTimes?: ResultTravelTimes;
+        resultWeather?: WeatherSummary;
+        vibe?: VibeState;
+        keywords?: string[];
+      } | null;
+      if (!saved || !Array.isArray(saved.result) || saved.result.length === 0) return;
       setResult(saved.result);
       if (saved.purpose) setPurpose(saved.purpose);
       if (saved.midpointData) setMidpointData(saved.midpointData);
@@ -173,11 +184,17 @@ export default function Home() {
   // 입력 초안 복원 — 결과가 없을 때만, solo 모드 입력만 (그룹은 서버 세션이 소스)
   useEffect(() => {
     try {
-      if (sessionStorage.getItem(RESULT_STORAGE_KEY)) return; // 결과 복원이 우선
-      const raw = sessionStorage.getItem(INPUT_DRAFT_KEY);
+      if (loadResultSnapshot()) return; // 결과 복원이 우선
+      // 구버전(sessionStorage) 초안도 한 번은 읽어줌 — 배포 시점에 입력 중이던 세션 보호
+      const raw = localStorage.getItem(INPUT_DRAFT_KEY) ?? sessionStorage.getItem(INPUT_DRAFT_KEY);
       if (!raw) return;
       const d = JSON.parse(raw);
       if (d.appMode !== 'solo') return;
+      // 오래 방치된 초안은 복원하지 않음 (savedAt 없는 구버전 초안은 그대로 복원)
+      if (typeof d.savedAt === 'number' && Date.now() - d.savedAt > INPUT_DRAFT_TTL_MS) {
+        localStorage.removeItem(INPUT_DRAFT_KEY);
+        return;
+      }
       setAppMode('solo');
       if (typeof d.step === 'number') setStep(d.step as Step);
       if (d.groupSize) setGroupSize(d.groupSize);
@@ -197,7 +214,8 @@ export default function Home() {
   useEffect(() => {
     if (view !== 'steps' || appMode !== 'solo') return;
     try {
-      sessionStorage.setItem(INPUT_DRAFT_KEY, JSON.stringify({
+      localStorage.setItem(INPUT_DRAFT_KEY, JSON.stringify({
+        savedAt: Date.now(),
         appMode, step, groupSize, purpose, vibe, keywords, vibeCustom,
         meetingLocation, budget, customOccasion, locations,
       }));
@@ -211,9 +229,7 @@ export default function Home() {
     const snapshot = {
       result, purpose, midpointData, treasurer, meetingLocation, resultTravelTimes, resultWeather, vibe, keywords,
     };
-    try {
-      sessionStorage.setItem(RESULT_STORAGE_KEY, JSON.stringify(snapshot));
-    } catch { /* 저장 실패는 치명적이지 않음 */ }
+    saveResultSnapshot(snapshot);
     const hasSecondCourse = !!(purpose?.second && purpose.second !== '없음');
     saveHistory({
       savedAt: Date.now(),
@@ -722,7 +738,8 @@ export default function Home() {
           <div className="flex items-center justify-between mb-2">
             <button
               onClick={() => {
-                try { sessionStorage.removeItem(RESULT_STORAGE_KEY); sessionStorage.removeItem(INPUT_DRAFT_KEY); } catch { /* ignore */ }
+                clearResultSnapshot();
+                try { localStorage.removeItem(INPUT_DRAFT_KEY); sessionStorage.removeItem(INPUT_DRAFT_KEY); } catch { /* ignore */ }
                 setResult(null);
                 setView('steps');
                 setStep(0);

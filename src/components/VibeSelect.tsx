@@ -147,7 +147,6 @@ export default function VibeSelect({ value, onChange, purpose, keywords = [], on
               {group.options.map((opt) => {
                 const isFirst = g.first === opt.key;
                 const isSecond = g.second === opt.key;
-                const isActive = isFirst || isSecond;
                 return (
                   <button
                     key={opt.key}
