@@ -371,7 +371,7 @@ export default function Landing() {
             </div>
           </div>
           <div className="mt-8 lg:mt-0 lg:order-1">
-            <PhoneMockup src="/image/landing/result.webp" alt="MINT 추천 결과 — 1차 이자카야, 2차 와인바 코스" width="w-64" />
+            <PhoneMockup src="/image/landing/result.webp" alt="MINT 추천 결과 — 1차 일식 다이닝, 2차 와인바 코스" width="w-64" />
           </div>
         </div>
       </section>
@@ -394,9 +394,9 @@ export default function Landing() {
           {/* 모바일: 세로 스택 + 연결선 / PC: 4열 그리드 */}
           <div className="flex flex-col items-center gap-0 lg:grid lg:grid-cols-4 lg:gap-6 lg:items-start">
             {[
-              { badge: 'STEP 1', title: '어떤 모임인지 골라요', desc: <>인원수, 1차·2차 목적(밥/술/카페)까지<br />터치 몇 번이면 끝</>, img: '/image/landing/purpose.webp', highlight: false },
+              { badge: 'STEP 1', title: '어떤 모임인지 골라요', desc: <>인원수와 1차·2차 목적(밥/술/카페),<br />밥이면 한식·일식까지 골라 좁혀요</>, img: '/image/landing/purpose.webp', highlight: false },
               { badge: 'STEP 2', title: '누구와, 어디서', desc: <>기념일·소개팅 같은 특별한 날도,<br />중간지점 계산도 알아서 처리해요</>, img: '/image/landing/relation.webp', highlight: false },
-              { badge: 'STEP 3', title: '원하는 분위기를 고르면', desc: <>시끌벅적? 아늑한? 인스타감성?<br />1차·2차 분위기를 따로 고를 수 있어요</>, img: '/image/landing/vibe.webp', highlight: false },
+              { badge: 'STEP 3', title: '분위기와 못 먹는 음식까지', desc: <>1차·2차 분위기를 따로 고르고,<br />못 먹는 음식은 빼고 추천해요</>, img: '/image/landing/vibe.webp', highlight: false },
               { badge: '✨ RESULT', title: 'AI가 딱 하나 골라줍니다', desc: <>혼잡도·날씨·블로그 버즈까지 반영한 최종 1곳.<br />마음에 안 들면 다시 추천받으세요</>, img: '/image/landing/result.webp', highlight: true },
             ].map(({ badge, title, desc, img, highlight }, i) => (
               <div key={badge} className="contents lg:block">
