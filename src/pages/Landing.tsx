@@ -6,42 +6,64 @@ interface BeforeInstallPromptEvent extends Event {
   userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
 }
 
+type InstallGuide = 'ios' | 'android' | null;
+
+type MintWindow = Window & {
+  __mintInstallPrompt?: BeforeInstallPromptEvent | null;
+  MSStream?: unknown;
+};
+
 function useInstallPrompt() {
   const [prompt, setPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [isIOS, setIsIOS] = useState(false);
+  const [isAndroid, setIsAndroid] = useState(false);
   const [isInstalled, setIsInstalled] = useState(false);
-  const [showIOSGuide, setShowIOSGuide] = useState(false);
+  const [guide, setGuide] = useState<InstallGuide>(null);
 
   useEffect(() => {
-    if (window.matchMedia('(display-mode: standalone)').matches) {
+    const w = window as MintWindow;
+    if (w.matchMedia('(display-mode: standalone)').matches) {
       setIsInstalled(true);
       return;
     }
-    const ios = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as Window & { MSStream?: unknown }).MSStream;
-    setIsIOS(ios);
+    const ua = navigator.userAgent;
+    setIsIOS(/iPad|iPhone|iPod/.test(ua) && !w.MSStream);
+    setIsAndroid(/Android/.test(ua));
 
-    const handler = (e: Event) => {
-      e.preventDefault();
-      setPrompt(e as BeforeInstallPromptEvent);
+    // index.html이 리액트 마운트 전에 이미 잡아둔 프롬프트가 있으면 즉시 사용
+    if (w.__mintInstallPrompt) setPrompt(w.__mintInstallPrompt);
+
+    // 이후 발화분(또는 index.html이 잡은 뒤 쏜 커스텀 이벤트) 수신
+    const onReady = () => { if (w.__mintInstallPrompt) setPrompt(w.__mintInstallPrompt); };
+    const onPrompt = (e: Event) => { e.preventDefault(); setPrompt(e as BeforeInstallPromptEvent); };
+    const onInstalled = () => { setPrompt(null); setIsInstalled(true); };
+    window.addEventListener('mint:installready', onReady);
+    window.addEventListener('beforeinstallprompt', onPrompt);
+    window.addEventListener('mint:installed', onInstalled);
+    return () => {
+      window.removeEventListener('mint:installready', onReady);
+      window.removeEventListener('beforeinstallprompt', onPrompt);
+      window.removeEventListener('mint:installed', onInstalled);
     };
-    window.addEventListener('beforeinstallprompt', handler);
-    return () => window.removeEventListener('beforeinstallprompt', handler);
   }, []);
 
   async function triggerInstall() {
-    if (isIOS) {
-      setShowIOSGuide(true);
+    trackEvent('pwa_install_click');
+    // 네이티브 프롬프트가 잡혀 있으면 최우선 — 원탭 설치
+    if (prompt) {
+      await prompt.prompt();
+      const { outcome } = await prompt.userChoice;
+      if (outcome === 'accepted') setPrompt(null);
       return;
     }
-    if (!prompt) return;
-    trackEvent('pwa_install_click');
-    await prompt.prompt();
-    const { outcome } = await prompt.userChoice;
-    if (outcome === 'accepted') setPrompt(null);
+    // 프롬프트를 못 잡은 경우(크롬 휴리스틱 미충족·인앱 브라우저 등)엔 수동 안내
+    if (isIOS) setGuide('ios');
+    else setGuide('android');
   }
 
-  const canInstall = !isInstalled && (!!prompt || isIOS);
-  return { canInstall, triggerInstall, isIOS, showIOSGuide, setShowIOSGuide };
+  // 설치 안 된 모바일이면 항상 버튼 노출 — 프롬프트를 못 잡아도 수동 안내로 폴백
+  const canInstall = !isInstalled && (!!prompt || isIOS || isAndroid);
+  return { canInstall, triggerInstall, isIOS, guide, setGuide };
 }
 
 function goToApp() {
@@ -79,7 +101,7 @@ function KakaoTalkBubble({ className = 'w-6 h-6' }: { className?: string }) {
 
 export default function Landing() {
   useEffect(() => { trackEvent('landing_view'); }, []);
-  const { canInstall, triggerInstall, isIOS, showIOSGuide, setShowIOSGuide } = useInstallPrompt();
+  const { canInstall, triggerInstall, isIOS, guide, setGuide } = useInstallPrompt();
   const [comboIdx, setComboIdx] = useState(0);
   const [visitCount, setVisitCount] = useState(0);
   const [showPrivacy, setShowPrivacy] = useState(false);
@@ -214,19 +236,19 @@ export default function Landing() {
             )}
             {visitCount < 50 && <div className="mb-5" />}
 
-            <div className="flex justify-center lg:justify-start gap-8 items-end text-center lg:text-left">
-              <div>
-                <div className="text-2xl lg:text-3xl font-black text-[#3CDBC0] whitespace-nowrap">30초</div>
-                <div className="text-xs text-gray-400 mt-0.5">추천까지 걸리는 시간</div>
-              </div>
-              <div>
-                <div className="text-2xl lg:text-3xl font-black text-[#3CDBC0] whitespace-nowrap">딱 1곳</div>
-                <div className="text-xs text-gray-400 mt-0.5">선택 피로 제로</div>
-              </div>
-              <div>
-                <div className="text-2xl lg:text-3xl font-black text-[#3CDBC0] whitespace-nowrap">79만 곳</div>
-                <div className="text-xs text-gray-400 mt-0.5">전국 실존 장소 검증</div>
-              </div>
+            {/* 통계 3종 — CTA 버튼과 같은 폭에 가둬 균등 분배(양 끝이 버튼 좌우선에 정렬).
+                셀 사이 얇은 구분선으로 정돈된 인상을 준다. */}
+            <div className="max-w-xs mx-auto lg:mx-0 flex items-stretch text-center">
+              {[
+                { v: '30초', d: '추천까지 걸리는 시간' },
+                { v: '딱 1곳', d: '선택 피로 제로' },
+                { v: '79만 곳', d: '전국 실존 장소 검증' },
+              ].map((s, i) => (
+                <div key={s.v} className={`flex-1 flex flex-col items-center ${i > 0 ? 'border-l border-teal-100' : ''}`}>
+                  <div className="text-2xl lg:text-3xl font-black text-[#3CDBC0] whitespace-nowrap">{s.v}</div>
+                  <div className="text-[11px] lg:text-xs text-gray-400 mt-1 leading-tight">{s.d}</div>
+                </div>
+              ))}
             </div>
           </div>
 
@@ -766,11 +788,11 @@ export default function Landing() {
         </div>
       )}
 
-      {/* iOS 홈 화면 추가 가이드 모달 */}
-      {showIOSGuide && (
+      {/* 홈 화면 추가 가이드 모달 — 네이티브 프롬프트를 못 쓸 때 플랫폼별 수동 안내 */}
+      {guide && (
         <div
           className="fixed inset-0 z-50 bg-black/50 flex items-end justify-center"
-          onClick={() => setShowIOSGuide(false)}
+          onClick={() => setGuide(null)}
         >
           <div
             className="bg-white rounded-t-3xl w-full max-w-lg px-6 pt-6 pb-10"
@@ -778,13 +800,24 @@ export default function Landing() {
           >
             <div className="w-10 h-1 bg-gray-200 rounded-full mx-auto mb-5" />
             <h3 className="text-lg font-black text-gray-800 mb-2">홈 화면에 추가하기</h3>
-            <p className="text-sm text-gray-500 mb-5">Safari에서 아래 순서를 따라하면 앱처럼 사용할 수 있어요.</p>
+            <p className="text-sm text-gray-500 mb-5">
+              {guide === 'ios'
+                ? 'Safari에서 아래 순서를 따라하면 앱처럼 사용할 수 있어요.'
+                : '아래 순서를 따라하면 앱처럼 사용할 수 있어요.'}
+            </p>
             <div className="flex flex-col gap-3 mb-6">
-              {[
-                { n: 1, t: 'Safari 하단 공유 버튼 탭', d: '화면 하단 가운데 □↑ 아이콘' },
-                { n: 2, t: '홈 화면에 추가 선택', d: '스크롤해서 "홈 화면에 추가" 탭' },
-                { n: 3, t: '추가 탭', d: "오른쪽 상단 '추가'를 탭하면 완료!" },
-              ].map(({ n, t, d }) => (
+              {(guide === 'ios'
+                ? [
+                    { n: 1, t: 'Safari 하단 공유 버튼 탭', d: '화면 하단 가운데 □↑ 아이콘' },
+                    { n: 2, t: '홈 화면에 추가 선택', d: '스크롤해서 "홈 화면에 추가" 탭' },
+                    { n: 3, t: '추가 탭', d: "오른쪽 상단 '추가'를 탭하면 완료!" },
+                  ]
+                : [
+                    { n: 1, t: '우측 상단 ⋮ 메뉴 탭', d: '주소창 오른쪽의 점 3개 아이콘' },
+                    { n: 2, t: '"앱 설치" 또는 "홈 화면에 추가" 선택', d: '메뉴에서 해당 항목을 탭' },
+                    { n: 3, t: '"설치" 탭', d: '팝업에서 설치를 누르면 완료!' },
+                  ]
+              ).map(({ n, t, d }) => (
                 <div key={n} className="flex items-start gap-3">
                   <div className="w-7 h-7 rounded-full bg-[#3CDBC0] text-white text-xs font-black flex items-center justify-center flex-shrink-0">{n}</div>
                   <div>
@@ -794,8 +827,14 @@ export default function Landing() {
                 </div>
               ))}
             </div>
+            {guide === 'android' && (
+              <p className="text-[11px] text-gray-400 mb-4 leading-relaxed">
+                💡 카카오톡·인스타그램 등 인앱 브라우저에서는 설치가 안 돼요.
+                메뉴에서 <b>"다른 브라우저로 열기"</b>(Chrome)로 연 뒤 다시 시도해주세요.
+              </p>
+            )}
             <button
-              onClick={() => setShowIOSGuide(false)}
+              onClick={() => setGuide(null)}
               className="w-full py-3.5 rounded-2xl bg-[#3CDBC0] text-white font-black text-sm active:scale-95 transition-all"
             >
               확인
