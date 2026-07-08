@@ -248,11 +248,16 @@ async function searchNaverMulti(
   // 여러 메뉴는 쉼표로 결합돼 오므로(예: "보쌈,피자") 각각을 검색 키워드로 분리해 모두 반영한다.
   const isCustomPurpose = !PURPOSE_KEYWORDS[purpose];
   const customMenus = purpose.split(',').map((s) => s.trim()).filter(Boolean);
+  // "회&초밥"은 한 집에서 함께 파는 곳을 원한다는 뜻 → 파트를 공백으로 이어 하나의 검색어로.
+  // (예: "회 초밥" 검색 → 회·초밥 둘 다 취급하는 일식집이 후보로 잡힘). 쉼표로 나뉜 메뉴는 각각 별도 검색.
+  const customSearchKeywords = customMenus.map((m) =>
+    m.split('&').map((s) => s.trim()).filter(Boolean).join(' '),
+  );
   // (구버전 호환) 장르가 지정되면 키워드 풀을 통째로 해당 장르로 교체.
   const genrePool = genre
     ? (GENRE_KEYWORDS[genre] ?? genre.split(',').map((s) => s.trim()).filter(Boolean))
     : undefined;
-  const baseKeywords = genrePool ?? (isCustomPurpose ? customMenus : PURPOSE_KEYWORDS[purpose]);
+  const baseKeywords = genrePool ?? (isCustomPurpose ? customSearchKeywords : PURPOSE_KEYWORDS[purpose]);
 
   // 행사/관계 추가 키워드 병합
   const extraKeywords = [
@@ -274,7 +279,7 @@ async function searchNaverMulti(
   const categoryHint = genre && GENRE_KEYWORDS[genre]
     ? genre
     : isCustomPurpose
-      ? (customMenus[0] ?? '맛집')
+      ? (customSearchKeywords[0] ?? '맛집')
       : ({ '밥': '맛집', '술': '술집', '카페': '카페' } as Record<string, string>)[purpose] ?? '맛집';
   for (const kw of userKeywords.slice(0, 5)) {
     if (searchAreas[0]) queries.push(`${searchAreas[0]} ${kw} ${categoryHint}`);
@@ -658,6 +663,10 @@ ${formatNaverPlaces(naverSecondPlaces)}` : ''}
     const excludeFoodsLine = excludeFoods.length > 0
       ? `\n- 🚫 못 먹는 음식(절대 제외): ${excludeFoods.join(', ')} ← 이 음식/재료가 주력 메뉴이거나 피하기 어려운 장소는 fitScore와 무관하게 절대 선택 금지 (편식·알레르기 하드 제약)`
       : '';
+    const hasMenuCombo = /&/.test(purpose.first) || /&/.test(purpose.second ?? '');
+    const menuComboLine = hasMenuCombo
+      ? `\n- 🍽️ 메뉴 조합 규칙: "A&B" 표기는 A와 B를 한 곳에서 함께 즐길 수 있는 장소를 원한다는 뜻 → 그 메뉴들을 모두 취급하는 단일 장소를 하나의 후보로 우선 선택(각각 다른 집으로 분리 금지). 쉼표(,)로 나뉜 메뉴는 서로 다른 장소로 분산 추천.`
+      : '';
     const genreLine = firstGenre || secondGenre
       ? `\n- 장르 지정: ${[
           firstGenre ? `1차(${purpose.first})는 ${firstGenre}` : null,
@@ -675,7 +684,7 @@ ${formatNaverPlaces(naverSecondPlaces)}` : ''}
 ## 모임 정보
 - 출발지: ${locationStr || `미입력 (${areaNames} 일대에서 모임)`}
 - 추천 지역: ${areaNames}
-- 인원: ${groupSize}명${groupSize >= 5 ? ' (단체석 또는 넓은 공간 필수)' : ''}${relationLine}${occasionLine}${budgetLine}${keywordsLine}${keywordsSecondLine}${excludeFoodsLine}${genreLine}
+- 인원: ${groupSize}명${groupSize >= 5 ? ' (단체석 또는 넓은 공간 필수)' : ''}${relationLine}${occasionLine}${budgetLine}${keywordsLine}${keywordsSecondLine}${excludeFoodsLine}${genreLine}${menuComboLine}
 - 분위기: ${vibeFirstStr}${vibeSecondStr ? ` / 2차: ${vibeSecondStr}` : ''}
 - 현재 시각: ${currentTime}
 - 혼잡도: ${congestionSummary || '정보 없음'}

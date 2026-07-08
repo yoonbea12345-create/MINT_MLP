@@ -89,13 +89,13 @@ export default function PurposeSelect({ value, onChange }: Props) {
         {/* 메뉴 콕 모드: 세부 메뉴 태그 입력 */}
         {value.firstRaw === '기타' && (
           <div className="mt-2.5 animate-fade-in-up">
-            <p className="text-[10px] text-gray-400 mb-1.5">먹고 싶은 메뉴를 입력하세요 · 여러 개 추가 가능</p>
+            <p className="text-[10px] text-gray-400 mb-1.5 break-keep">먹고 싶은 메뉴 입력 · 한 집에서 다 먹고 싶으면 <span className="font-bold text-[#2AB5A0]">&amp;로 묶기</span>(예: 회&amp;초밥)</p>
             <MenuTagInput
               color="mint"
               menus={firstMenus}
               onAdd={addFirstMenu}
               onRemove={removeFirstMenu}
-              placeholder="🔎 예: 보쌈 (입력 후 Enter)"
+              placeholder="🔎 예: 보쌈 · 회&초밥 (입력 후 Enter)"
             />
           </div>
         )}
@@ -131,13 +131,13 @@ export default function PurposeSelect({ value, onChange }: Props) {
         {/* 2차 메뉴 콕 모드 */}
         {value.secondRaw === '기타' && (
           <div className="mb-2.5 animate-fade-in-up">
-            <p className="text-[10px] text-gray-400 mb-1.5">2차로 먹고 싶은 메뉴 · 여러 개 추가 가능</p>
+            <p className="text-[10px] text-gray-400 mb-1.5 break-keep">2차로 먹고 싶은 메뉴 · 한 집에서 다면 <span className="font-bold text-orange-500">&amp;로 묶기</span>(예: 치킨&amp;맥주)</p>
             <MenuTagInput
               color="orange"
               menus={secondMenus}
               onAdd={addSecondMenu}
               onRemove={removeSecondMenu}
-              placeholder="🔎 예: 하이볼 (입력 후 Enter)"
+              placeholder="🔎 예: 하이볼 · 치킨&맥주 (입력 후 Enter)"
             />
           </div>
         )}
@@ -161,7 +161,19 @@ export default function PurposeSelect({ value, onChange }: Props) {
 }
 
 // 세부 메뉴 태그 입력 — 키워드 UI와 동일. Enter/완료로 #태그 커밋, 여러 개(코스별 최대 4개).
+// "회&초밥"처럼 &로 묶으면 한 집에서 함께 파는 곳을 원한다는 뜻(하나의 조합 태그).
 const MENU_MAX = 4;
+const MENU_MAXLEN = 20;
+// 입력 연결자(+, /, ＆ 등)를 &로 통일하고 각 파트 공백을 정리해 "회&초밥" 형태로 표준화.
+function normalizeMenu(raw: string): string {
+  return raw
+    .replace(/[＋+／/＆]/g, '&')
+    .split('&')
+    .map((s) => s.trim())
+    .filter(Boolean)
+    .join('&')
+    .slice(0, MENU_MAXLEN);
+}
 function MenuTagInput({
   color,
   menus,
@@ -180,7 +192,7 @@ function MenuTagInput({
   const full = menus.length >= MENU_MAX;
 
   function commit() {
-    const t = text.trim().slice(0, 10);
+    const t = normalizeMenu(text);
     if (!t) { setText(''); return; }
     if (menus.includes(t) || full) { setText(''); return; }
     onAdd(t);
@@ -198,7 +210,7 @@ function MenuTagInput({
             onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); commit(); } }}
             onBlur={commit}
             placeholder={menus.length >= 1 ? '＋ 메뉴 더 입력 후 Enter' : placeholder}
-            maxLength={10}
+            maxLength={MENU_MAXLEN}
             className={`flex-1 min-w-0 border-2 rounded-xl px-3.5 py-2.5 text-xs font-bold placeholder:text-gray-400 placeholder:font-medium outline-none transition-colors ${
               isMint
                 ? 'text-[#2AB5A0] border-gray-200 focus:border-[#3CDBC0]'
