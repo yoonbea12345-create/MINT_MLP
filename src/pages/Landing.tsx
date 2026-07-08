@@ -146,7 +146,7 @@ export default function Landing() {
   const installButton = canInstall && (
     <button
       onClick={triggerInstall}
-      className="w-full flex items-center justify-center gap-2 bg-white border-2 border-[#3CDBC0] text-[#2AB5A0] font-black text-base py-4 rounded-2xl active:scale-95 transition-all hover:bg-teal-50"
+      className="w-full flex items-center justify-center gap-2 bg-white border-2 border-[#3CDBC0] text-[#2AB5A0] font-bold text-base py-4 rounded-2xl active:scale-95 transition-all hover:bg-teal-50"
     >
       <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
         <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
@@ -188,9 +188,9 @@ export default function Landing() {
               약속은 잡았는데<br />
               <span className="text-[#3CDBC0]">어디 가지?</span>
             </h1>
-            <p className="text-gray-500 text-base lg:text-lg leading-relaxed mb-7">
-              검색하지 마세요. 고르기만 하세요.<br />
-              <strong className="text-gray-700">30초 만에 딱 1곳</strong>, 이 모임에 맞는 장소가 나옵니다.
+            <p className="text-gray-600 text-base lg:text-lg leading-relaxed mb-7">
+              조건 몇 개만 고르세요.<br />
+              이 모임에 <strong className="text-gray-800">딱 맞는 장소 1곳</strong>, 30초 안에 나옵니다.
             </p>
 
             {/* 조건 → 결과 로테이션 데모 (모바일은 여기, PC는 우측 컬럼에 크게) */}
@@ -207,14 +207,14 @@ export default function Landing() {
                     target="_blank"
                     rel="noreferrer"
                     onClick={() => trackEvent('landing_demo_place_click')}
-                    className="flex items-center gap-1 font-black text-gray-800 underline decoration-[#3CDBC0] decoration-2 underline-offset-4 active:scale-95 transition-transform"
+                    className="flex items-center gap-1 font-bold text-gray-800 underline decoration-[#3CDBC0] decoration-2 underline-offset-4 active:scale-95 transition-transform"
                   >
                     <svg className="w-3.5 h-3.5 text-[#3CDBC0] flex-shrink-0" viewBox="0 0 24 24" fill="currentColor">
                       <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
                     </svg>
                     {combo.result}
                   </a>
-                  <span className="bg-[#3CDBC0] text-white text-[10px] font-black px-2 py-0.5 rounded-full">적합도 90+</span>
+                  <span className="bg-[#3CDBC0] text-white text-[10px] font-bold px-2 py-0.5 rounded-full">적합도 90+</span>
                 </div>
               </div>
             </div>
@@ -268,14 +268,14 @@ export default function Landing() {
                     target="_blank"
                     rel="noreferrer"
                     onClick={() => trackEvent('landing_demo_place_click')}
-                    className="flex items-center gap-1.5 font-black text-gray-800 underline decoration-[#3CDBC0] decoration-2 underline-offset-4 hover:text-[#2AB5A0] transition-colors"
+                    className="flex items-center gap-1.5 font-bold text-gray-800 underline decoration-[#3CDBC0] decoration-2 underline-offset-4 hover:text-[#2AB5A0] transition-colors"
                   >
                     <svg className="w-4 h-4 text-[#3CDBC0] flex-shrink-0" viewBox="0 0 24 24" fill="currentColor">
                       <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
                     </svg>
                     {combo.result}
                   </a>
-                  <span className="bg-[#3CDBC0] text-white text-xs font-black px-2.5 py-1 rounded-full">적합도 90+</span>
+                  <span className="bg-[#3CDBC0] text-white text-xs font-bold px-2.5 py-1 rounded-full">적합도 90+</span>
                 </div>
               </div>
             </div>
@@ -292,7 +292,7 @@ export default function Landing() {
         <div className="max-w-lg lg:max-w-7xl mx-auto px-6 py-14 lg:py-24 lg:grid lg:grid-cols-2 lg:gap-16 lg:items-center">
           <div>
             <p className="text-xs font-bold tracking-widest text-[#3CDBC0] mb-3">PROBLEM</p>
-            <h2 className="text-2xl lg:text-4xl font-black text-gray-800 leading-tight mb-3">
+            <h2 className="text-2xl lg:text-4xl font-bold text-gray-800 leading-tight mb-3">
               매번 반복되는 이 대화,<br />익숙하지 않나요?
             </h2>
             <p className="text-sm lg:text-base text-gray-400 mb-6 leading-relaxed">
@@ -350,7 +350,7 @@ export default function Landing() {
         <div className="max-w-lg lg:max-w-7xl mx-auto px-6 py-14 lg:py-24 text-center lg:text-left lg:grid lg:grid-cols-2 lg:gap-16 lg:items-center">
           <div className="lg:order-2">
             <p className="text-xs font-bold tracking-widest text-[#3CDBC0] mb-3">RESULT</p>
-            <h2 className="text-2xl lg:text-4xl font-black text-gray-800 leading-tight mb-3">
+            <h2 className="text-2xl lg:text-4xl font-bold text-gray-800 leading-tight mb-3">
               조건만 골랐을 뿐인데,<br />이런 결과가 나와요
             </h2>
             <p className="text-sm lg:text-base text-gray-400 mb-8 leading-relaxed">
@@ -383,7 +383,7 @@ export default function Landing() {
         <div className="max-w-lg lg:max-w-7xl mx-auto px-6 py-14 lg:py-24">
           <div className="lg:text-center">
             <p className="text-xs font-bold tracking-widest text-[#3CDBC0] mb-3">HOW IT WORKS</p>
-            <h2 className="text-2xl lg:text-4xl font-black text-gray-800 leading-tight mb-3">
+            <h2 className="text-2xl lg:text-4xl font-bold text-gray-800 leading-tight mb-3">
               고르기만 하면 <span className="lg:text-[#3CDBC0]">끝나는 4스텝</span>
             </h2>
             <p className="text-sm lg:text-base text-gray-400 mb-10 lg:mb-16 leading-relaxed">
@@ -404,10 +404,10 @@ export default function Landing() {
                   <div className="w-0.5 h-8 bg-gradient-to-b from-[#3CDBC0] to-transparent my-2 lg:hidden" />
                 )}
                 <div className="text-center w-full">
-                  <span className={`inline-block text-xs font-black px-3 py-1 rounded-full mb-3 ${
+                  <span className={`inline-block text-xs font-bold px-3 py-1 rounded-full mb-3 ${
                     highlight ? 'bg-white border-2 border-[#3CDBC0] text-[#2AB5A0]' : 'bg-[#3CDBC0] text-white font-bold'
                   }`}>{badge}</span>
-                  <h3 className="text-lg font-black text-gray-800 mb-1">{title}</h3>
+                  <h3 className="text-lg font-bold text-gray-800 mb-1">{title}</h3>
                   <p className="text-sm text-gray-400 mb-5 lg:min-h-[60px]">{desc}</p>
                   <PhoneMockup src={img} alt={`${badge} ${title}`} width="w-56 lg:w-full" />
                 </div>
@@ -423,7 +423,7 @@ export default function Landing() {
       <section className="py-14 lg:py-24 fade-section overflow-hidden">
         <div className="max-w-lg lg:max-w-7xl mx-auto px-6 lg:text-center">
           <p className="text-xs font-bold tracking-widest text-[#3CDBC0] mb-3">GROUP MODE</p>
-          <h2 className="text-2xl lg:text-4xl font-black text-gray-800 leading-tight mb-3">
+          <h2 className="text-2xl lg:text-4xl font-bold text-gray-800 leading-tight mb-3">
             다같이 정할 땐 <span className="text-[#3CDBC0]">링크 하나면 돼요</span>
           </h2>
           <p className="text-sm lg:text-base text-gray-400 mb-2 leading-relaxed">
@@ -447,7 +447,7 @@ export default function Landing() {
               {/* 텍스트(번호·제목·설명)를 이미지 위에 — 혼자정하기(HOW IT WORKS)와 위치 통일 */}
               <div className="flex items-center justify-center gap-2 mb-1.5">
                 <span className="w-6 h-6 rounded-full bg-[#3CDBC0] text-white text-xs font-black flex items-center justify-center flex-shrink-0">{n}</span>
-                <span className="text-sm font-black text-gray-800">{title}</span>
+                <span className="text-sm font-semibold text-gray-800">{title}</span>
               </div>
               <p className="text-xs text-gray-400 mb-4 leading-relaxed min-h-[40px] lg:min-h-[48px]">{desc}</p>
               <PhoneMockup src={img} alt={`그룹 모드 ${title}`} width="w-full" />
@@ -472,7 +472,7 @@ export default function Landing() {
         <div className="max-w-lg lg:max-w-5xl mx-auto px-6 py-14 lg:py-24">
           <div className="lg:text-center">
             <p className="text-xs font-bold tracking-widest text-[#3CDBC0] mb-3">WHY MINT?</p>
-            <h2 className="text-2xl lg:text-4xl font-black text-gray-800 leading-tight mb-3">
+            <h2 className="text-2xl lg:text-4xl font-bold text-gray-800 leading-tight mb-3">
               네이버 지도와 뭐가 다를까?
             </h2>
             <p className="text-sm lg:text-base text-gray-400 mb-6 lg:mb-12 leading-relaxed">
@@ -486,7 +486,7 @@ export default function Landing() {
                 <svg className="w-6 h-6 text-gray-400" viewBox="0 0 24 24" fill="currentColor">
                   <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
                 </svg>
-                <span className="font-black text-gray-400">기존 지도 앱</span>
+                <span className="font-bold text-gray-400">기존 지도 앱</span>
               </div>
               <ul className="flex flex-col gap-2 lg:gap-3">
                 {['검색어를 알아야 검색 가능', '결과 수십 개 → 또 고민', '중간 지점? 내가 계산해야 함', '광고성 상위 노출 — 진짜 맛집인지 모름'].map((t) => (
@@ -501,7 +501,7 @@ export default function Landing() {
                 <div className="w-6 h-6 rounded-md bg-[#3CDBC0] flex items-center justify-center flex-shrink-0">
                   <span className="text-white text-[10px] font-black leading-none">M</span>
                 </div>
-                <span className="font-black text-[#2AB5A0]">MINT</span>
+                <span className="font-bold text-[#2AB5A0]">MINT</span>
               </div>
               <ul className="flex flex-col gap-2 lg:gap-3">
                 {[
@@ -529,7 +529,7 @@ export default function Landing() {
           <div className="rounded-3xl overflow-hidden p-6 lg:p-12 result-gradient shadow-xl shadow-teal-200">
             <div className="lg:text-center">
               <p className="text-xs font-bold tracking-widest text-white/70 mb-3">REAL PICK</p>
-              <h2 className="text-2xl lg:text-4xl font-black text-white leading-tight mb-3">
+              <h2 className="text-2xl lg:text-4xl font-bold text-white leading-tight mb-3">
                 바이럴은 거르고, <span className="text-yellow-200">찐맛집</span>만 담았어요
               </h2>
               <p className="text-sm lg:text-base text-white/80 mb-6 lg:mb-10 leading-relaxed">
@@ -563,7 +563,7 @@ export default function Landing() {
                 <div key={t} className="bg-white/15 rounded-2xl p-4 lg:p-5 flex items-start gap-3">
                   <span className="text-2xl flex-shrink-0">{e}</span>
                   <div>
-                    <p className="text-sm lg:text-base font-black text-white mb-1">{t}</p>
+                    <p className="text-sm lg:text-base font-semibold text-white mb-1">{t}</p>
                     <p className="text-xs lg:text-sm text-white/80 leading-relaxed">{d}</p>
                   </div>
                 </div>
@@ -584,7 +584,7 @@ export default function Landing() {
       <section className="fade-section">
         <div className="max-w-lg lg:max-w-7xl mx-auto px-6 py-14 lg:py-24">
           <p className="text-xs font-bold tracking-widest text-[#3CDBC0] mb-3 text-center">FOR EVERY 모임</p>
-          <h2 className="text-2xl lg:text-4xl font-black text-gray-800 leading-tight mb-8 lg:mb-14 text-center">
+          <h2 className="text-2xl lg:text-4xl font-bold text-gray-800 leading-tight mb-8 lg:mb-14 text-center">
             지금 잡혀 있는 <span className="lg:text-[#3CDBC0]">바로 그 약속부터</span>
           </h2>
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-5">
@@ -597,7 +597,7 @@ export default function Landing() {
               <button key={t} onClick={goToApp}
                 className="vibe-card bg-white border border-gray-100 rounded-2xl p-5 lg:p-8 text-center shadow-sm hover:border-[#3CDBC0] hover:shadow-md">
                 <div className="text-3xl lg:text-5xl mb-2 lg:mb-4">{e}</div>
-                <p className="text-sm lg:text-lg font-black text-gray-800 mb-1">{t}</p>
+                <p className="text-sm lg:text-lg font-bold text-gray-800 mb-1">{t}</p>
                 <p className="text-[11px] lg:text-sm text-gray-400 leading-relaxed">{d}</p>
               </button>
             ))}
@@ -611,7 +611,7 @@ export default function Landing() {
       <section className="bg-white border-y border-gray-100 fade-section">
         <div className="max-w-lg lg:max-w-3xl mx-auto px-6 py-14 lg:py-24 lg:text-center">
           <p className="text-xs font-bold tracking-widest text-[#3CDBC0] mb-3">SHARE</p>
-          <h2 className="text-2xl lg:text-4xl font-black text-gray-800 leading-tight mb-3">
+          <h2 className="text-2xl lg:text-4xl font-bold text-gray-800 leading-tight mb-3">
             추천 받자마자 <span className="text-[#3CDBC0]">카카오톡으로 공유</span>
           </h2>
           <p className="text-sm lg:text-base text-gray-400 mb-6 lg:mb-10 leading-relaxed">
@@ -636,7 +636,7 @@ export default function Landing() {
       <section className="fade-section">
         <div className="max-w-lg lg:max-w-5xl mx-auto px-6 py-14 lg:py-24">
           <p className="text-xs font-bold tracking-widest text-[#3CDBC0] mb-3 text-center">FAQ</p>
-          <h2 className="text-2xl lg:text-4xl font-black text-gray-800 leading-tight mb-8 lg:mb-14 text-center">
+          <h2 className="text-2xl lg:text-4xl font-bold text-gray-800 leading-tight mb-8 lg:mb-14 text-center">
             자주 묻는 질문
           </h2>
           <div className="space-y-3 lg:space-y-0 lg:grid lg:grid-cols-2 lg:gap-4">
@@ -663,8 +663,8 @@ export default function Landing() {
               },
             ].map(({ q, a }) => (
               <div key={q} className="bg-white border border-gray-100 rounded-2xl p-5 lg:p-6">
-                <p className="text-sm lg:text-base font-black text-gray-800 mb-2">{q}</p>
-                <p className="text-sm lg:text-[15px] text-gray-500 leading-relaxed">{a}</p>
+                <p className="text-sm lg:text-base font-semibold text-gray-800 mb-2">{q}</p>
+                <p className="text-sm lg:text-[15px] text-gray-600 leading-relaxed">{a}</p>
               </div>
             ))}
           </div>
@@ -745,12 +745,12 @@ export default function Landing() {
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between mb-5">
-              <h3 className="text-lg font-black text-gray-800">개인정보처리방침</h3>
+              <h3 className="text-lg font-bold text-gray-800">개인정보처리방침</h3>
               <button onClick={() => setShowPrivacy(false)} className="text-gray-400 hover:text-gray-700 text-xl px-2">✕</button>
             </div>
             <div className="space-y-5 text-sm text-gray-600 leading-relaxed">
               <div>
-                <p className="text-xs font-black text-gray-800 mb-1.5 uppercase tracking-wider">수집하는 정보</p>
+                <p className="text-xs font-bold text-gray-800 mb-1.5 uppercase tracking-wider">수집하는 정보</p>
                 <p>
                   장소 추천을 위해 출발지(지역명·좌표), 모임 조건(인원·목적·분위기·예산)을 입력받습니다.
                   그룹 모드에서는 참여자가 입력한 이름과 출발지가, 예약 요청 시에는 이름과 인원수가 저장됩니다.
@@ -758,21 +758,21 @@ export default function Landing() {
                 </p>
               </div>
               <div>
-                <p className="text-xs font-black text-gray-800 mb-1.5 uppercase tracking-wider">이용 목적</p>
+                <p className="text-xs font-bold text-gray-800 mb-1.5 uppercase tracking-wider">이용 목적</p>
                 <p>
                   입력된 정보는 장소 추천 생성과 서비스 개선을 위한 통계(방문·클릭 수 집계)에만 사용됩니다.
                   마케팅이나 제3자 제공 목적으로 사용하지 않습니다.
                 </p>
               </div>
               <div>
-                <p className="text-xs font-black text-gray-800 mb-1.5 uppercase tracking-wider">AI 처리</p>
+                <p className="text-xs font-bold text-gray-800 mb-1.5 uppercase tracking-wider">AI 처리</p>
                 <p>
                   추천 생성 시 모임 조건이 Anthropic API(Claude)로 전송되며, Anthropic의
                   개인정보처리방침을 따릅니다. 이름 등 식별 정보는 AI에 전송되지 않습니다.
                 </p>
               </div>
               <div>
-                <p className="text-xs font-black text-gray-800 mb-1.5 uppercase tracking-wider">보관 및 파기</p>
+                <p className="text-xs font-bold text-gray-800 mb-1.5 uppercase tracking-wider">보관 및 파기</p>
                 <p>
                   데이터는 Supabase(클라우드 DB)에 저장되며, 삭제를 원하시면 문의 채널로 요청해주세요.
                   그룹 세션 데이터는 모임 종료 후 별도 활용 없이 보관 기간 경과 시 삭제됩니다.
@@ -781,7 +781,7 @@ export default function Landing() {
             </div>
             <button
               onClick={() => setShowPrivacy(false)}
-              className="w-full mt-6 py-3.5 rounded-2xl bg-[#3CDBC0] text-white font-black text-sm active:scale-95 transition-all"
+              className="w-full mt-6 py-3.5 rounded-2xl bg-[#3CDBC0] text-white font-bold text-sm active:scale-95 transition-all"
             >
               확인
             </button>
@@ -800,7 +800,7 @@ export default function Landing() {
             onClick={(e) => e.stopPropagation()}
           >
             <div className="w-10 h-1 bg-gray-200 rounded-full mx-auto mb-5" />
-            <h3 className="text-lg font-black text-gray-800 mb-2">홈 화면에 추가하기</h3>
+            <h3 className="text-lg font-bold text-gray-800 mb-2">홈 화면에 추가하기</h3>
             <p className="text-sm text-gray-500 mb-5">
               {guide === 'ios'
                 ? 'Safari에서 아래 순서를 따라하면 앱처럼 사용할 수 있어요.'
@@ -836,7 +836,7 @@ export default function Landing() {
             )}
             <button
               onClick={() => setGuide(null)}
-              className="w-full py-3.5 rounded-2xl bg-[#3CDBC0] text-white font-black text-sm active:scale-95 transition-all"
+              className="w-full py-3.5 rounded-2xl bg-[#3CDBC0] text-white font-bold text-sm active:scale-95 transition-all"
             >
               확인
             </button>
