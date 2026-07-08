@@ -443,11 +443,12 @@ export default function Landing() {
           </div>
           <p className="text-xs lg:text-sm text-gray-400 mb-2 lg:mb-10 lg:text-center leading-relaxed">코스·지역만 정하고 링크 공유. 딱 한 번만.</p>
           <p className="text-xs text-[#2AB5A0] font-bold mb-8 lg:hidden">옆으로 넘겨보세요 →</p>
-          <div className="flex gap-4 overflow-x-auto snap-x snap-mandatory scrollbar-hide pb-2 lg:grid lg:grid-cols-3 lg:gap-6 lg:overflow-visible">
+          <div className="flex gap-4 overflow-x-auto snap-x snap-mandatory scrollbar-hide pb-2 lg:grid lg:grid-cols-4 lg:gap-5 lg:overflow-visible">
             {[
               { n: '1', title: '코스·인원 정하기', desc: '밥·술·카페 코스와 참여 인원을 호스트가 선점', img: '/image/landing/host-course.webp' },
               { n: '2', title: '만날 지역 정하기', desc: '중간지점 자동, 또는 만날 동네 직접 선택', img: '/image/landing/host-region.webp' },
-              { n: '3', title: '링크 공유 + 나도 참여', desc: '단톡방에 링크 던지고, 호스트도 분위기만 입력', img: '/image/landing/host-share.webp' },
+              { n: '3', title: '링크 공유하기', desc: '단톡방에 링크만 던지면 초대 끝', img: '/image/landing/host-share.webp' },
+              { n: '4', title: '나도 분위기 선택', desc: '호스트도 참여해서 원하는 분위기만 쓱', img: '/image/landing/host-vibe.webp' },
             ].map(({ n, title, desc, img }) => (
               <div key={n} className="snap-center flex-shrink-0 w-60 lg:w-full text-center">
                 <div className="flex items-center justify-center gap-2 mb-1.5">

@@ -72,6 +72,20 @@ async function run() {
   await wait(page, 400);
   await save(page, 'host-share');
 
+  // host-vibe: 호스트도 '나도 참여'로 분위기 입력 (게스트 카드와 시각 구분 위해 다른 분위기 선택)
+  const hvLink = `${BASE}/join?id=demo1234&c1=%EB%B0%A5&c2=%EC%88%A0&rt=manual&rn=${encodeURIComponent('성수/건대')}`;
+  await page.goto(hvLink, { waitUntil: 'networkidle' });
+  await wait(page, 700);
+  await page.getByPlaceholder('이름을 입력해주세요').fill('호스트');
+  await wait(page, 300);
+  await page.getByRole('button', { name: '다음', exact: true }).click();
+  await wait(page, 600);
+  await page.locator('button', { hasText: '시끌벅적' }).first().click().catch(() => {});
+  await page.locator('button', { hasText: '힙한' }).first().click().catch(() => {});
+  await page.locator('button', { hasText: '새로운 곳' }).first().click().catch(() => {});
+  await wait(page, 400);
+  await save(page, 'host-vibe');
+
   // ─── GUEST (임의 지역 링크: 출발지 생략) ──────────────────
   console.log('GUEST');
   const jlink = `${BASE}/join?id=demo1234&c1=%EB%B0%A5&c2=%EC%88%A0&rt=manual&rn=${encodeURIComponent('성수/건대')}`;
