@@ -185,7 +185,7 @@ export default function Landing() {
           {/* 좌: 카피 + CTA + 통계 */}
           <div className="text-center lg:text-left">
             <div className="inline-flex items-center gap-1.5 bg-teal-50 border border-teal-200 text-[#2AB5A0] text-xs font-bold px-4 py-1.5 rounded-full mb-6">
-              ✦ AI 만남 장소 큐레이션
+              ✦ 그룹 만남 장소 큐레이션
             </div>
             <h1 className="text-4xl lg:text-6xl font-black text-gray-800 leading-tight mb-3">
               약속은 잡았는데<br />
@@ -451,7 +451,7 @@ export default function Landing() {
                   <p className="text-base font-bold text-gray-800">뭘 먹을지 모르겠어요</p>
                 </div>
                 <p className="text-sm text-gray-500 leading-relaxed mb-3">
-                  <strong className="text-gray-700">밥 · 술 · 카페</strong>만 누르세요. 그 동네 찐맛집을 AI가 알아서 골라줘요.
+                  <strong className="text-gray-700">밥 · 술 · 카페</strong>만 누르세요. 그 동네 찐맛집을 알아서 골라줘요.
                 </p>
                 <div className="flex flex-wrap gap-2">
                   {['🍽️ 밥', '🍻 술', '☕ 카페'].map((t) => (

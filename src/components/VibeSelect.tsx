@@ -225,7 +225,13 @@ export default function VibeSelect({ value, onChange, purpose, budget = null, on
         <div className="rounded-2xl border-2 border-[#3CDBC0]/40 bg-[#F0FDF9] p-4">
           <p className="text-sm font-black text-[#2AB5A0] mb-1 break-keep">🔎 원하는 키워드는 뭐든지!</p>
           <p className="text-[11px] text-gray-500 mb-3 leading-relaxed break-keep">
-            편의시설·분위기·조건 뭐든 자유롭게. 예: 단체룸, 주차, 루프탑, 노포, 뷰맛집
+            편의시설·분위기·조건 뭐든 자유롭게. 예:{' '}
+            {['단체룸', '주차', '루프탑', '노포', '뷰맛집'].map((w, i) => (
+              <span key={w} className="whitespace-nowrap">
+                {w}
+                {i < 4 ? ', ' : ''}
+              </span>
+            ))}
           </p>
           <KeywordTagInput
             badge={hasSecond ? `1차${purpose?.first ? ` · ${purpose.first}` : ''}` : undefined}
