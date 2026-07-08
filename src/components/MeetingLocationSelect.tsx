@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { searchAddress } from '../services/kakaoMap';
+import { searchAddress, resolveNeighborhood } from '../services/kakaoMap';
 import type { KakaoPlace } from '../services/kakaoMap';
 
 export type MeetingLocation =
@@ -91,18 +91,15 @@ export default function MeetingLocationSelect({ value, onSelect }: Props) {
     }, 200);
   }
 
-  // 자동완성에서 실제 장소 선택 → 좌표까지 담아 확정 (출발지 검색과 동일)
-  function pickPlace(place: KakaoPlace) {
+  // 자동완성에서 실제 장소 선택 → 시/구/동 동네 단위로 완화해 좌표까지 담아 확정
+  async function pickPlace(place: KakaoPlace) {
     setSearch(place.place_name);
     setSuggestions([]);
+    setSearching(true); // 동네 변환 동안 스피너
+    const nb = await resolveNeighborhood(parseFloat(place.y), parseFloat(place.x), place.place_name);
+    setSearch(nb.area);
     setSearching(false);
-    onSelect({
-      type: 'manual',
-      regionId: '',
-      area: place.place_name,
-      lat: parseFloat(place.y),
-      lng: parseFloat(place.x),
-    });
+    onSelect({ type: 'manual', regionId: '', area: nb.area, lat: nb.lat, lng: nb.lng });
   }
 
   function isManualSelected(regionId: string) {

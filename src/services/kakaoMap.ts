@@ -55,3 +55,50 @@ export async function searchKakaoKeyword(
 export async function searchAddress(keyword: string): Promise<KakaoPlace[]> {
   return searchKakaoKeyword(keyword);
 }
+
+export interface Neighborhood {
+  area: string;   // "서울 마포구 서교동" 형태 (시 구 동)
+  lat: number;
+  lng: number;
+}
+
+// 정확한 건물/장소 좌표를 '시 구 동' 행정동 단위로 완화한다.
+// 거주지(집) 등 정확 위치 노출을 막고, 만남 지점 계산엔 대략적 동네 좌표만 사용하기 위함.
+// 실패하면 원래 이름/좌표로 안전하게 폴백한다.
+export async function resolveNeighborhood(lat: number, lng: number, fallbackName = ''): Promise<Neighborhood> {
+  try {
+    await ensureKakaoMaps();
+    const geocoder = new window.kakao.maps.services.Geocoder();
+    const OK = window.kakao.maps.services.Status.OK;
+
+    // 1) 좌표 → 행정구역(시/구/동) 이름
+    const addr = await new Promise<any | null>((resolve) => {
+      geocoder.coord2Address(lng, lat, (res: any[], status: string) => {
+        resolve(status === OK && res[0] ? res[0].address : null);
+      });
+    });
+    if (!addr) return { area: fallbackName, lat, lng };
+
+    const si = addr.region_1depth_name || '';
+    const gu = addr.region_2depth_name || '';
+    const dong = addr.region_3depth_name || '';
+    const area = [si, gu, dong].filter(Boolean).join(' ') || fallbackName;
+
+    // 2) 동 대표 좌표로 스냅 (구+동 주소 검색) — 정확 건물 좌표 대신 동네 중심을 쓴다.
+    //    실패하면 원좌표 유지(어차피 해당 동 내부라 충분히 대략적).
+    const query = [gu, dong].filter(Boolean).join(' ');
+    let snapLat = lat;
+    let snapLng = lng;
+    if (query) {
+      const centroid = await new Promise<{ x: string; y: string } | null>((resolve) => {
+        geocoder.addressSearch(query, (res: any[], status: string) => {
+          resolve(status === OK && res[0] ? res[0] : null);
+        });
+      });
+      if (centroid) { snapLat = parseFloat(centroid.y); snapLng = parseFloat(centroid.x); }
+    }
+    return { area, lat: snapLat, lng: snapLng };
+  } catch {
+    return { area: fallbackName, lat, lng };
+  }
+}

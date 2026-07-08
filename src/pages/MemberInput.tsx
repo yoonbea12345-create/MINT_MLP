@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { searchAddress } from '../services/kakaoMap';
+import { searchAddress, resolveNeighborhood } from '../services/kakaoMap';
 import type { KakaoPlace } from '../services/kakaoMap';
 import VibeSelect, { VIBE_KEY_TO_LABEL } from '../components/VibeSelect';
 import type { VibeState } from '../components/VibeSelect';
@@ -155,12 +155,16 @@ export default function MemberInput() {
     }, 200);
   }
 
-  function selectPlace(place: KakaoPlace) {
+  async function selectPlace(place: KakaoPlace) {
+    // 시/구/동 동네 단위로 완화 (정확 거주지 대신 대략적 동네 좌표)
     setLocValue(place.place_name);
-    setLocLat(parseFloat(place.y));
-    setLocLng(parseFloat(place.x));
-    setLocSelected(true);
     setSuggestions([]);
+    setSearching(true);
+    const nb = await resolveNeighborhood(parseFloat(place.y), parseFloat(place.x), place.place_name);
+    setLocValue(nb.area);
+    setLocLat(nb.lat);
+    setLocLng(nb.lng);
+    setLocSelected(true);
     setSearching(false);
   }
 
