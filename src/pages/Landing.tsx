@@ -431,7 +431,7 @@ export default function Landing() {
               뭘 먹을지 몰라도, <span className="text-[#3CDBC0]">정해졌어도 OK</span>
             </h2>
             <p className="text-sm lg:text-base text-gray-400 leading-relaxed">
-              <span className="block lg:inline">1차 목적만 고르면 끝 — </span>
+              <span className="block lg:inline">1차 목적만 고르면 끝 </span>
               <span className="block lg:inline">고민하는 사람도, 확실한 사람도 딱 맞게</span>
             </p>
           </div>
