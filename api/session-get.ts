@@ -36,19 +36,25 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     // 멤버 조회 (purpose + keywords 포함 시도, 없으면 fallback)
-    let { data: members, error: mErr } = await supabase
+    // members는 두 쿼리(컬럼 수 다름) 결과를 모두 받으므로 넓은 타입으로 선언한다.
+    const primary = await supabase
       .from('mint_session_members')
       .select('member_name, location_name, location_lat, location_lng, vibe_atmosphere, vibe_budget, vibe_keywords, purpose_first, purpose_second')
       .eq('session_id', id)
       .order('submitted_at', { ascending: true });
 
+    let members: Record<string, unknown>[] | null = primary.data;
+    let mErr = primary.error;
+
     if (mErr?.code === '42703') {
       // 일부 컬럼 없을 수 있음, 기본 필드만 조회
-      ({ data: members, error: mErr } = await supabase
+      const fallback = await supabase
         .from('mint_session_members')
         .select('member_name, location_name, location_lat, location_lng, vibe_atmosphere, vibe_budget')
         .eq('session_id', id)
-        .order('submitted_at', { ascending: true }));
+        .order('submitted_at', { ascending: true });
+      members = fallback.data;
+      mErr = fallback.error;
     }
 
     if (mErr) {

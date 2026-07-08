@@ -839,8 +839,9 @@ ${fitScoreGuide}
 
         // sourceIndex가 잘못됐거나 중복이면 이름 매칭으로 대체
         if (idx < 0 || idx >= naverList.length || used.has(idx)) {
+          const pName = typeof place.placeName === 'string' ? place.placeName : '';
           const nameIdx = naverList.findIndex(
-            (p) => p.name.includes(place.placeName ?? '') || (place.placeName ?? '').includes(p.name)
+            (p) => p.name.includes(pName) || pName.includes(p.name)
           );
           idx = nameIdx >= 0 && !used.has(nameIdx)
             ? nameIdx
@@ -909,9 +910,12 @@ ${fitScoreGuide}
         }[] = finalists
           .filter((f) => f.purposeSlot === slot)
           .map((f) => ({
-            ...f,
-            fitScore: f.fitScore ?? 0,
-            bubbleScore: f.bubbleScore ?? 0,
+            placeName: typeof f.placeName === 'string' ? f.placeName : '',
+            address: typeof f.address === 'string' ? f.address : '',
+            fitScore: typeof f.fitScore === 'number' ? f.fitScore : 0,
+            bubbleScore: typeof f.bubbleScore === 'number' ? f.bubbleScore : 0,
+            naverRank: typeof f.naverRank === 'number' ? f.naverRank : null,
+            isPublicGem: f.isPublicGem === true,
             keywordHits: countKeywordHits(f),
           }));
         return computeFinalScores(input);
@@ -929,8 +933,11 @@ ${fitScoreGuide}
     }
 
     // 최종 표시 개수로 슬라이스 — finalScore(L3 재정렬) 내림차순
+    const numScore = (p: Record<string, unknown>) =>
+      typeof p.finalScore === 'number' ? p.finalScore
+      : typeof p.fitScore === 'number' ? p.fitScore : 0;
     const bySlot = (slot: number) =>
-      finalists.filter((p) => p.purposeSlot === slot).sort((a, b) => (b.finalScore ?? b.fitScore ?? 0) - (a.finalScore ?? a.fitScore ?? 0));
+      finalists.filter((p) => p.purposeSlot === slot).sort((a, b) => numScore(b) - numScore(a));
 
     let places;
     if (effectiveTwoPurposes) {
