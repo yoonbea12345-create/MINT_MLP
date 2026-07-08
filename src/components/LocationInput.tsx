@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { searchAddress, resolveNeighborhood } from '../services/kakaoMap';
+import { searchAddress } from '../services/kakaoMap';
 import type { KakaoPlace } from '../services/kakaoMap';
 
 export interface LocationEntry {
@@ -104,11 +104,16 @@ export default function LocationInput({ locations, onChange }: Props) {
     }, 200);
   }
 
-  async function selectPlace(index: number, place: KakaoPlace) {
-    // 선택 즉시 낙관적 표시 후, 시/구/동 동네 단위로 완화 (정확 거주지 대신 대략적 동네 좌표)
-    update(index, { value: place.place_name, suggestions: [], selected: false, loading: true });
-    const nb = await resolveNeighborhood(parseFloat(place.y), parseFloat(place.x), place.place_name);
-    update(index, { value: nb.area, suggestions: [], selected: true, loading: false, lat: nb.lat, lng: nb.lng });
+  function selectPlace(index: number, place: KakaoPlace) {
+    // 출발지는 사용자가 고른 정확한 좌표를 그대로 사용 (중간지점 계산 정확도)
+    update(index, {
+      value: place.place_name,
+      suggestions: [],
+      selected: true,
+      loading: false,
+      lat: parseFloat(place.y),
+      lng: parseFloat(place.x),
+    });
   }
 
   useEffect(() => {
