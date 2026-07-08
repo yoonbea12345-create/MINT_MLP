@@ -919,15 +919,16 @@ ${fitScoreGuide}
       }
 
       // 사용자 지정 키워드가 장소의 태그/설명에 실제로 매칭된 개수 — 객관 순위 신호
-      const countKeywordHits = (f: { placeName?: string; vibeTags?: string[]; description?: string; category?: string }): number => {
-        if (keywords.length === 0) return 0;
+      const countKeywordHits = (f: { placeName?: string; vibeTags?: string[]; description?: string; category?: string }, slot: number): number => {
+        const slotKeywords = slot === 2 && keywordsSecond.length > 0 ? keywordsSecond : keywords;
+        if (slotKeywords.length === 0) return 0;
         const haystack = [
           f.placeName ?? '',
           ...(Array.isArray(f.vibeTags) ? f.vibeTags : []),
           f.description ?? '',
           f.category ?? '',
         ].join(' ').replace(/\s/g, '');
-        return keywords.filter((k) => haystack.includes(k.replace(/\s/g, ''))).length;
+        return slotKeywords.filter((k) => haystack.includes(k.replace(/\s/g, ''))).length;
       };
 
       const scoreSlot = (slot: number) => {
@@ -943,7 +944,7 @@ ${fitScoreGuide}
             bubbleScore: typeof f.bubbleScore === 'number' ? f.bubbleScore : 0,
             naverRank: typeof f.naverRank === 'number' ? f.naverRank : null,
             isPublicGem: f.isPublicGem === true,
-            keywordHits: countKeywordHits(f),
+            keywordHits: countKeywordHits(f, slot),
           }));
         return computeFinalScores(input);
       };

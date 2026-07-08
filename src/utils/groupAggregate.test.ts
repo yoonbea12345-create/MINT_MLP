@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { splitMemberKeywords, EXCLUDE_FOOD_PREFIX } from './groupAggregate';
+import { aggregateVibe, splitMemberKeywords, EXCLUDE_FOOD_PREFIX, SECOND_VIBE_PREFIX } from './groupAggregate';
 import type { GroupMember } from './groupAggregate';
 
 function member(keywords: string[]): GroupMember {
@@ -33,5 +33,23 @@ describe('splitMemberKeywords', () => {
     const { keywords, excludeFoods } = splitMemberKeywords([noKw, member([EXCLUDE_FOOD_PREFIX])]);
     expect(keywords).toEqual([]);
     expect(excludeFoods).toEqual([]);
+  });
+
+  it('2차 분위기 접두사 항목은 일반 키워드에서 제외한다', () => {
+    const { keywords } = splitMemberKeywords([
+      member(['단체룸', `${SECOND_VIBE_PREFIX}atm_quiet`]),
+    ]);
+    expect(keywords).toEqual(['단체룸']);
+  });
+});
+
+describe('aggregateVibe', () => {
+  it('1차와 2차 분위기를 따로 집계한다', () => {
+    const vibe = aggregateVibe([
+      { ...member([`${SECOND_VIBE_PREFIX}atm_quiet`]), vibe_atmosphere: 'atm_loud' },
+      { ...member([`${SECOND_VIBE_PREFIX}atm_quiet`]), vibe_atmosphere: 'atm_cozy' },
+      { ...member([`${SECOND_VIBE_PREFIX}atm_hip`]), vibe_atmosphere: 'atm_loud' },
+    ]);
+    expect(vibe).toEqual({ 분위기: { first: 'atm_loud', second: 'atm_quiet' } });
   });
 });

@@ -105,6 +105,7 @@ export default function Landing() {
   const [comboIdx, setComboIdx] = useState(0);
   const [visitCount, setVisitCount] = useState(0);
   const [showPrivacy, setShowPrivacy] = useState(false);
+  const [groupRole, setGroupRole] = useState<'host' | 'guest'>('host');
 
   // 소셜 프루프 카운터 (localStorage 캐시로 깜빡임 방지)
   useEffect(() => {
@@ -508,58 +509,82 @@ export default function Landing() {
           </p>
         </div>
 
-        {/* HOST — 링크 만드는 사람 */}
-        <div className="max-w-7xl mx-auto px-6 mb-12 lg:mb-20">
-          <div className="flex items-center gap-2.5 mb-1 lg:justify-center">
-            <span className="inline-flex items-center gap-1.5 bg-[#3CDBC0] text-white text-xs font-bold px-3 py-1.5 rounded-full">🧑‍💼 링크 만드는 사람</span>
-            <span className="text-sm font-bold text-gray-700">호스트</span>
-          </div>
-          <p className="text-xs lg:text-sm text-gray-400 mb-2 lg:mb-10 lg:text-center leading-relaxed">코스·지역만 정하고 링크 공유. 딱 한 번만.</p>
-          <p className="text-xs text-[#2AB5A0] font-bold mb-8 lg:hidden">옆으로 넘겨보세요 →</p>
-          <div className="flex gap-4 overflow-x-auto snap-x snap-mandatory scrollbar-hide pb-2 lg:grid lg:grid-cols-4 lg:gap-5 lg:overflow-visible">
-            {[
-              { n: '1', title: '코스·인원 정하기', desc: '밥·술·카페 코스와 참여 인원을 호스트가 선점', img: '/image/landing/host-course.webp' },
-              { n: '2', title: '만날 지역 정하기', desc: '중간지점 자동, 또는 만날 동네 직접 선택', img: '/image/landing/host-region.webp' },
-              { n: '3', title: '링크 공유하기', desc: '단톡방에 링크만 던지면 초대 끝', img: '/image/landing/host-share.webp' },
-              { n: '4', title: '나도 분위기 선택', desc: '호스트도 참여해서 원하는 분위기만 쓱', img: '/image/landing/host-vibe.webp' },
-            ].map(({ n, title, desc, img }) => (
-              <div key={n} className="snap-center flex-shrink-0 w-60 lg:w-full text-center">
-                <div className="flex items-center justify-center gap-2 mb-1.5">
-                  <span className="w-6 h-6 rounded-full bg-[#3CDBC0] text-white text-xs font-black flex items-center justify-center flex-shrink-0">{n}</span>
-                  <span className="text-sm font-semibold text-gray-800">{title}</span>
-                </div>
-                <p className="text-xs text-gray-400 mb-4 leading-relaxed min-h-[40px] lg:min-h-[48px]">{desc}</p>
-                <PhoneMockup src={img} alt={`호스트 ${title}`} width="w-full" />
+        {(() => {
+          const roleSteps = {
+            host: {
+              label: '호스트',
+              badge: '🧑‍💼 링크 만드는 사람',
+              desc: '코스·지역만 정하고 링크 공유. 딱 한 번만.',
+              cols: 'lg:grid-cols-4',
+              max: 'lg:max-w-none',
+              steps: [
+                { n: '1', title: '코스·인원 정하기', desc: '밥·술·카페 코스와 참여 인원을 호스트가 선점', img: '/image/landing/host-course.webp' },
+                { n: '2', title: '만날 지역 정하기', desc: '중간지점 자동, 또는 만날 동네 직접 선택', img: '/image/landing/host-region.webp' },
+                { n: '3', title: '링크 공유하기', desc: '단톡방에 링크만 던지면 초대 끝', img: '/image/landing/host-share.webp' },
+                { n: '4', title: '나도 분위기 선택', desc: '호스트도 참여해서 원하는 분위기만 쓱', img: '/image/landing/host-vibe.webp' },
+              ],
+            },
+            guest: {
+              label: '친구들',
+              badge: '🙋 링크 받는 사람',
+              desc: '가입도, 출발지 고민도 없이 — 링크 열고 분위기만.',
+              cols: 'lg:grid-cols-3',
+              max: 'lg:max-w-3xl lg:mx-auto',
+              steps: [
+                { n: '1', title: '분위기만 몰래 선택', desc: '눈치 안 보고 각자 원하는 분위기·취향', img: '/image/landing/guest-vibe.webp' },
+                { n: '2', title: '못 먹는 음식·편의시설', desc: '못 먹는 음식은 빼고, 필요한 시설만 콕', img: '/image/landing/guest-extra.webp' },
+                { n: '3', title: '제출 완료', desc: '호스트가 정한 코스·지역과 내 취향 확인', img: '/image/landing/guest-done.webp' },
+              ],
+            },
+          };
+          const active = roleSteps[groupRole];
+          const allImgs = [...roleSteps.host.steps, ...roleSteps.guest.steps].map((s) => s.img);
+          return (
+            <div className="max-w-7xl mx-auto px-6">
+              <div className="flex gap-2 rounded-2xl bg-white border border-gray-100 p-1.5 shadow-sm mb-4 lg:max-w-md lg:mx-auto">
+                {(['host', 'guest'] as const).map((role) => {
+                  const selected = groupRole === role;
+                  return (
+                    <button
+                      key={role}
+                      onClick={() => setGroupRole(role)}
+                      className={`flex-1 rounded-xl px-3 py-2.5 text-xs font-black transition-all active:scale-[0.98] ${
+                        selected
+                          ? 'bg-[#3CDBC0] text-white shadow-md shadow-[#3CDBC0]/25'
+                          : 'bg-transparent text-gray-500'
+                      }`}
+                    >
+                      {roleSteps[role].badge}
+                    </button>
+                  );
+                })}
               </div>
-            ))}
-          </div>
-        </div>
 
-        {/* GUEST — 링크 받는 사람 */}
-        <div className="max-w-7xl mx-auto px-6">
-          <div className="flex items-center gap-2.5 mb-1 lg:justify-center">
-            <span className="inline-flex items-center gap-1.5 bg-[#E8F8F5] text-[#2AB5A0] border border-[#3CDBC0]/40 text-xs font-bold px-3 py-1.5 rounded-full">🙋 링크 받는 사람</span>
-            <span className="text-sm font-bold text-gray-700">친구들</span>
-          </div>
-          <p className="text-xs lg:text-sm text-gray-400 mb-2 lg:mb-10 lg:text-center leading-relaxed">가입도, 출발지 고민도 없이 — 링크 열고 분위기만.</p>
-          <p className="text-xs text-[#2AB5A0] font-bold mb-8 lg:hidden">옆으로 넘겨보세요 →</p>
-          <div className="flex gap-4 overflow-x-auto snap-x snap-mandatory scrollbar-hide pb-2 lg:grid lg:grid-cols-3 lg:gap-6 lg:overflow-visible lg:max-w-3xl lg:mx-auto">
-            {[
-              { n: '1', title: '분위기만 몰래 선택', desc: '눈치 안 보고 각자 원하는 분위기·취향', img: '/image/landing/guest-vibe.webp' },
-              { n: '2', title: '못 먹는 음식·편의시설', desc: '못 먹는 음식은 빼고, 필요한 시설만 콕', img: '/image/landing/guest-extra.webp' },
-              { n: '3', title: '제출 완료', desc: '호스트가 정한 코스·지역과 내 취향 확인', img: '/image/landing/guest-done.webp' },
-            ].map(({ n, title, desc, img }) => (
-              <div key={n} className="snap-center flex-shrink-0 w-60 lg:w-full text-center">
-                <div className="flex items-center justify-center gap-2 mb-1.5">
-                  <span className="w-6 h-6 rounded-full bg-[#2AB5A0] text-white text-xs font-black flex items-center justify-center flex-shrink-0">{n}</span>
-                  <span className="text-sm font-semibold text-gray-800">{title}</span>
-                </div>
-                <p className="text-xs text-gray-400 mb-4 leading-relaxed min-h-[40px] lg:min-h-[48px]">{desc}</p>
-                <PhoneMockup src={img} alt={`게스트 ${title}`} width="w-full" />
+              <div className="flex items-center gap-2.5 mb-1 lg:justify-center">
+                <span className="inline-flex items-center gap-1.5 bg-[#E8F8F5] text-[#2AB5A0] border border-[#3CDBC0]/40 text-xs font-bold px-3 py-1.5 rounded-full">{active.badge}</span>
+                <span className="text-sm font-bold text-gray-700">{active.label}</span>
               </div>
-            ))}
-          </div>
-        </div>
+              <p className="text-xs lg:text-sm text-gray-400 mb-2 lg:mb-10 lg:text-center leading-relaxed">{active.desc}</p>
+              <p className="text-xs text-[#2AB5A0] font-bold mb-8 lg:hidden">옆으로 넘겨보세요 →</p>
+
+              <div className={`flex gap-4 overflow-x-auto snap-x snap-mandatory scrollbar-hide pb-2 lg:grid ${active.cols} lg:gap-5 lg:overflow-visible ${active.max}`}>
+                {active.steps.map(({ n, title, desc, img }) => (
+                  <div key={`${groupRole}-${n}`} className="snap-center flex-shrink-0 w-60 lg:w-full text-center">
+                    <div className="flex items-center justify-center gap-2 mb-1.5">
+                      <span className="w-6 h-6 rounded-full bg-[#3CDBC0] text-white text-xs font-black flex items-center justify-center flex-shrink-0">{n}</span>
+                      <span className="text-sm font-semibold text-gray-800">{title}</span>
+                    </div>
+                    <p className="text-xs text-gray-400 mb-4 leading-relaxed min-h-[40px] lg:min-h-[48px]">{desc}</p>
+                    <PhoneMockup src={img} alt={`${active.label} ${title}`} width="w-full" />
+                  </div>
+                ))}
+              </div>
+              <div className="hidden" aria-hidden="true">
+                {allImgs.map((img) => <img key={img} src={img} alt="" loading="eager" />)}
+              </div>
+            </div>
+          );
+        })()}
 
         <div className="max-w-lg lg:max-w-2xl mx-auto px-6 mt-10 lg:mt-16">
           <div className="bg-teal-50 border border-teal-100 rounded-2xl p-4 lg:p-6 text-center">
@@ -639,7 +664,8 @@ export default function Landing() {
                 바이럴은 거르고, <span className="text-yellow-200">찐맛집</span>만 담았어요
               </h2>
               <p className="text-sm lg:text-base text-white/80 mb-6 lg:mb-10 leading-relaxed">
-                협찬으로 뜬 가게와 진짜 사랑받는 가게. MINT는 <strong className="text-yellow-200">데이터로 구분</strong>합니다.
+                협찬으로 뜬 가게와 진짜 사랑받는 가게.<br />
+                MINT는 데이터로 구분합니다.
               </p>
             </div>
 

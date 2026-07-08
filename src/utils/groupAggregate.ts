@@ -16,17 +16,19 @@ export interface GroupMember {
   vibe_keywords?: string[];
 }
 
-// 편식·2차키워드 항목은 DB 스키마 변경 없이 vibe_keywords에 접두사로 실어 보낸다 (MemberInput에서 인코딩)
+// 편식·2차키워드·2차분위기 항목은 DB 스키마 변경 없이 vibe_keywords에 접두사로 실어 보낸다.
 export const EXCLUDE_FOOD_PREFIX = '안먹:';
 export const SECOND_KEYWORD_PREFIX = '2차:';
+export const SECOND_VIBE_PREFIX = '2차분위기:';
 
 // 멤버 키워드에서 1차 키워드·2차 키워드·편식을 분리 — 편식은 전원 합집합(한 명이라도 못 먹으면 제외)
 export function splitMemberKeywords(members: GroupMember[]): { keywords: string[]; keywordsSecond: string[]; excludeFoods: string[] } {
   const all = members.flatMap((m) => m.vibe_keywords ?? []);
   const isExclude = (k: string) => k.startsWith(EXCLUDE_FOOD_PREFIX);
   const isSecond = (k: string) => k.startsWith(SECOND_KEYWORD_PREFIX);
+  const isSecondVibe = (k: string) => k.startsWith(SECOND_VIBE_PREFIX);
   return {
-    keywords: Array.from(new Set(all.filter((k) => !isExclude(k) && !isSecond(k)))),
+    keywords: Array.from(new Set(all.filter((k) => !isExclude(k) && !isSecond(k) && !isSecondVibe(k)))),
     keywordsSecond: Array.from(new Set(
       all.filter(isSecond).map((k) => k.slice(SECOND_KEYWORD_PREFIX.length).trim()).filter(Boolean),
     )),
@@ -59,12 +61,19 @@ export function aggregatePurpose(members: GroupMember[]): PurposeValue | null {
 }
 
 export function aggregateVibe(members: GroupMember[]): VibeState {
-  const counts: Record<string, number> = {};
+  const firstCounts: Record<string, number> = {};
+  const secondCounts: Record<string, number> = {};
   members.forEach((m) => {
-    if (m.vibe_atmosphere) counts[m.vibe_atmosphere] = (counts[m.vibe_atmosphere] || 0) + 1;
+    if (m.vibe_atmosphere) firstCounts[m.vibe_atmosphere] = (firstCounts[m.vibe_atmosphere] || 0) + 1;
+    (m.vibe_keywords ?? []).forEach((k) => {
+      if (!k.startsWith(SECOND_VIBE_PREFIX)) return;
+      const second = k.slice(SECOND_VIBE_PREFIX.length).trim();
+      if (second) secondCounts[second] = (secondCounts[second] || 0) + 1;
+    });
   });
-  const topAtm = Object.entries(counts).sort((a, b) => b[1] - a[1])[0]?.[0] ?? null;
-  return topAtm ? { 분위기: { first: topAtm, second: null } } : {};
+  const topFirst = Object.entries(firstCounts).sort((a, b) => b[1] - a[1])[0]?.[0] ?? null;
+  const topSecond = Object.entries(secondCounts).sort((a, b) => b[1] - a[1])[0]?.[0] ?? null;
+  return topFirst || topSecond ? { 분위기: { first: topFirst, second: topSecond } } : {};
 }
 
 // 멤버들이 각자 고른 예산을 하나로 집계 — 최빈값, 동률이면 낮은 예산 우선(보수적).

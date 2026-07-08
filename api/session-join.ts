@@ -88,25 +88,40 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // 출발지 없는(임의 지역) 멤버 삽입 헬퍼 — location 컬럼이 아직 NOT NULL이면(마이그레이션 전)
     // 좌표 자리에 서울 중심을 넣어 삽입만 성공시킨다. 임의 지역 모드에선 이 좌표를 추천에 쓰지 않는다.
     async function insertWithFallback(data: Record<string, unknown>) {
-      const { error } = await supabase.from('mint_session_members').insert(data);
-      if (!error) return null;
+      const { data: inserted, error } = await supabase
+        .from('mint_session_members')
+        .insert(data)
+        .select('id')
+        .single();
+      if (!error) return { error: null, insertedId: (inserted as { id?: number } | null)?.id ?? null };
       // NOT NULL 위반 → 좌표 자리에 서울 중심 채워 재시도
       if (error.code === '23502' && data.location_lat == null) {
         return insertWithFallback({ ...data, location_lat: 37.5665, location_lng: 126.978 });
       }
-      return error;
+      return { error, insertedId: null };
     }
 
-    let error = await insertWithFallback(fullData);
+    let insertResult = await insertWithFallback(fullData);
 
     // 아직 없는 컬럼(purpose/vibe_keywords) 때문이면 기본 데이터로 재시도
-    if (error && error.code === '42703') {
-      error = await insertWithFallback(baseData);
+    if (insertResult.error && insertResult.error.code === '42703') {
+      insertResult = await insertWithFallback(baseData);
     }
 
-    if (error) {
-      console.error('[session-join] insert failed', error);
+    if (insertResult.error) {
+      console.error('[session-join] insert failed', insertResult.error);
       return res.status(500).json({ error: '제출에 실패했어요. 잠시 후 다시 시도해주세요.' });
+    }
+
+    const { count: afterCount } = await supabase
+      .from('mint_session_members')
+      .select('*', { count: 'exact', head: true })
+      .eq('session_id', session_id);
+    if ((afterCount ?? 0) > (session.expected_count ?? 6)) {
+      if (insertResult.insertedId != null) {
+        await supabase.from('mint_session_members').delete().eq('id', insertResult.insertedId);
+      }
+      return res.status(409).json({ error: '방금 모든 인원이 입력을 마친 세션이에요.' });
     }
 
     return res.status(200).json({ ok: true });

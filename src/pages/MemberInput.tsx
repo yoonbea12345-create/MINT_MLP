@@ -5,7 +5,7 @@ import type { KakaoPlace } from '../services/kakaoMap';
 import VibeSelect, { VIBE_KEY_TO_LABEL } from '../components/VibeSelect';
 import type { VibeState } from '../components/VibeSelect';
 import StepProgress from '../components/StepProgress';
-import { EXCLUDE_FOOD_PREFIX, SECOND_KEYWORD_PREFIX } from '../utils/groupAggregate';
+import { EXCLUDE_FOOD_PREFIX, SECOND_KEYWORD_PREFIX, SECOND_VIBE_PREFIX } from '../utils/groupAggregate';
 import { decodeHostContext } from '../utils/groupLink';
 import type { HostContext } from '../utils/groupLink';
 
@@ -184,6 +184,9 @@ export default function MemberInput() {
       const extraVibeLabels = allVibeKeys
         .filter((k) => k !== primaryAtm)
         .map((k) => VIBE_KEY_TO_LABEL[k] ?? k);
+      const secondVibeKeys = Object.values(vibe)
+        .map((g) => g.second)
+        .filter((k): k is string => !!k);
 
       const res = await fetch('/api/session-join', {
         method: 'POST',
@@ -204,6 +207,7 @@ export default function MemberInput() {
             // 대표 외 vibe + 편의시설 키워드 + 편식(접두사) 모두 합쳐 전송. 편식은 호스트가 집계 시 분리.
             const all = [
               ...extraVibeLabels,
+              ...secondVibeKeys.map((k) => `${SECOND_VIBE_PREFIX}${k}`),
               ...keywords,
               ...keywordsSecond.map((k) => `${SECOND_KEYWORD_PREFIX}${k}`),
               ...excludeFoods.map((f) => `${EXCLUDE_FOOD_PREFIX}${f}`),
