@@ -39,25 +39,18 @@ export default function PurposeSelect({ value, onChange }: Props) {
   const [secondText, setSecondText] = useState<string>(
     value.secondRaw === '기타' && value.second ? value.second : ''
   );
-  // 장르 자리에 직접 입력하는 특정 메뉴(예: 두루치기) — 프리셋 장르에 없는 firstGenre/secondGenre 값
-  const [firstGenreText, setFirstGenreText] = useState<string>(
-    value.firstGenre && !PURPOSE_GENRES[value.firstRaw ?? '']?.includes(value.firstGenre) ? value.firstGenre : ''
-  );
-  const [secondGenreText, setSecondGenreText] = useState<string>(
-    value.secondGenre && !PURPOSE_GENRES[value.secondRaw ?? '']?.includes(value.secondGenre) ? value.secondGenre : ''
-  );
+  // 장르 자리에 직접 입력한 특정 메뉴(예: 두루치기) — 프리셋 장르에 없으면 커스텀. 쉼표로 최대 2개.
+  const firstGenreIsCustom = value.firstGenre != null && !PURPOSE_GENRES[value.firstRaw ?? '']?.includes(value.firstGenre);
+  const firstMenus = firstGenreIsCustom ? value.firstGenre!.split(',').map((s) => s.trim()).filter(Boolean) : [];
+  const secondGenreIsCustom = value.secondGenre != null && !PURPOSE_GENRES[value.secondRaw ?? '']?.includes(value.secondGenre);
+  const secondMenus = secondGenreIsCustom ? value.secondGenre!.split(',').map((s) => s.trim()).filter(Boolean) : [];
 
-  function handleFirstGenreText(text: string) {
-    setFirstGenreText(text);
-    onChange({ ...value, firstGenre: text.trim() || null });
-  }
-  function handleSecondGenreText(text: string) {
-    setSecondGenreText(text);
-    onChange({ ...value, secondGenre: text.trim() || null });
-  }
+  function addFirstMenu(m: string) { onChange({ ...value, firstGenre: [...firstMenus, m].join(',') }); }
+  function removeFirstMenu(m: string) { const r = firstMenus.filter((x) => x !== m); onChange({ ...value, firstGenre: r.length ? r.join(',') : null }); }
+  function addSecondMenu(m: string) { onChange({ ...value, secondGenre: [...secondMenus, m].join(',') }); }
+  function removeSecondMenu(m: string) { const r = secondMenus.filter((x) => x !== m); onChange({ ...value, secondGenre: r.length ? r.join(',') : null }); }
 
   function selectFirst(opt: '밥' | '술' | '카페' | '기타') {
-    if (opt !== value.firstRaw) setFirstGenreText(''); // 목적 바뀌면 직접입력 메뉴도 초기화
     if (opt === '기타') {
       onChange({ ...value, first: firstText.trim() || null, firstRaw: '기타', firstGenre: null });
     } else {
@@ -72,7 +65,6 @@ export default function PurposeSelect({ value, onChange }: Props) {
   }
 
   function selectSecond(opt: '밥' | '술' | '카페' | '기타' | '없음') {
-    if (opt !== value.secondRaw) setSecondGenreText(''); // 목적 바뀌면 직접입력 메뉴 초기화
     if (opt === '없음') {
       onChange({ ...value, second: '없음', secondRaw: '없음', secondGenre: null });
     } else if (opt === '기타') {
@@ -83,11 +75,10 @@ export default function PurposeSelect({ value, onChange }: Props) {
   }
 
   function toggleGenre(slot: 'first' | 'second', genre: string) {
+    // 프리셋 장르를 고르면 직접입력 메뉴는 자동 해제됨(firstGenre가 프리셋 값으로 바뀌어 커스텀이 아니게 됨)
     if (slot === 'first') {
-      setFirstGenreText(''); // 프리셋 장르 선택 시 직접입력 메뉴는 해제
       onChange({ ...value, firstGenre: value.firstGenre === genre ? null : genre });
     } else {
-      setSecondGenreText('');
       onChange({ ...value, secondGenre: value.secondGenre === genre ? null : genre });
     }
   }
@@ -168,15 +159,14 @@ export default function PurposeSelect({ value, onChange }: Props) {
                 </div>
               </>
             )}
-            <input
-              type="text"
-              value={firstGenreText}
-              onChange={(e) => handleFirstGenreText(e.target.value)}
+            <MenuTagInput
+              key={`first-${value.firstRaw}`}
+              courseLabel="1차"
+              color="mint"
+              menus={firstMenus}
+              onAdd={addFirstMenu}
+              onRemove={removeFirstMenu}
               placeholder={PURPOSE_GENRES[value.firstRaw] ? '🔎 또는 특정 메뉴 콕 집기 (예: 두루치기)' : '🔎 특정 메뉴 콕 집기 (예: 빙수)'}
-              maxLength={10}
-              className={`mt-2 w-full border-2 rounded-xl px-3.5 py-2.5 text-xs font-bold text-[#2AB5A0] placeholder:text-gray-400 placeholder:font-medium outline-none transition-colors ${
-                firstGenreText.trim() ? 'border-[#3CDBC0] bg-[#E8F8F5]' : 'border-gray-200 focus:border-[#3CDBC0]'
-              }`}
             />
           </div>
         )}
@@ -249,15 +239,14 @@ export default function PurposeSelect({ value, onChange }: Props) {
                 </div>
               </>
             )}
-            <input
-              type="text"
-              value={secondGenreText}
-              onChange={(e) => handleSecondGenreText(e.target.value)}
+            <MenuTagInput
+              key={`second-${value.secondRaw}`}
+              courseLabel="2차"
+              color="orange"
+              menus={secondMenus}
+              onAdd={addSecondMenu}
+              onRemove={removeSecondMenu}
               placeholder={PURPOSE_GENRES[value.secondRaw] ? '🔎 또는 특정 메뉴 콕 집기 (예: 하이볼)' : '🔎 특정 메뉴 콕 집기 (예: 빙수)'}
-              maxLength={10}
-              className={`mt-2 w-full border-2 rounded-xl px-3.5 py-2.5 text-xs font-bold text-orange-500 placeholder:text-gray-400 placeholder:font-medium outline-none transition-colors ${
-                secondGenreText.trim() ? 'border-orange-400 bg-orange-50' : 'border-gray-200 focus:border-orange-300'
-              }`}
             />
           </div>
         )}
@@ -276,6 +265,88 @@ export default function PurposeSelect({ value, onChange }: Props) {
         </button>
       </div>
 
+    </div>
+  );
+}
+
+// 특정 메뉴 태그 입력 — 코스별 최대 2개. 두 번째 메뉴 추가 시 확인창(예=둘 다 검색 / 아니오=삭제).
+function MenuTagInput({
+  courseLabel,
+  color,
+  menus,
+  onAdd,
+  onRemove,
+  placeholder,
+}: {
+  courseLabel: '1차' | '2차';
+  color: 'mint' | 'orange';
+  menus: string[];
+  onAdd: (m: string) => void;
+  onRemove: (m: string) => void;
+  placeholder: string;
+}) {
+  const [text, setText] = useState('');
+  const isMint = color === 'mint';
+  const full = menus.length >= 2;
+
+  function commit() {
+    const t = text.trim().slice(0, 10);
+    if (!t) { setText(''); return; }
+    if (menus.includes(t) || full) { setText(''); return; }
+    if (menus.length >= 1) {
+      const ok = window.confirm(`앞에서 ${courseLabel} 메뉴를 '${menus[0]}'로 설정했어요.\n'${t}'도 추가할까요?\n\n확인 = 둘 다 검색 · 취소 = 삭제`);
+      if (!ok) { setText(''); return; }
+    }
+    onAdd(t);
+    setText('');
+  }
+
+  return (
+    <div className="mt-2">
+      {!full && (
+        <div className="flex gap-2">
+          <input
+            type="text"
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); commit(); } }}
+            onBlur={commit}
+            placeholder={menus.length >= 1 ? '＋ 메뉴 하나 더 (최대 2개)' : placeholder}
+            maxLength={10}
+            className={`flex-1 border-2 rounded-xl px-3.5 py-2.5 text-xs font-bold placeholder:text-gray-400 placeholder:font-medium outline-none transition-colors ${
+              isMint
+                ? 'text-[#2AB5A0] border-gray-200 focus:border-[#3CDBC0]'
+                : 'text-orange-500 border-gray-200 focus:border-orange-300'
+            }`}
+          />
+          <button
+            onClick={commit}
+            className={`flex-shrink-0 px-3.5 rounded-xl text-white text-xs font-bold transition-all active:scale-95 ${
+              isMint ? 'bg-[#3CDBC0] hover:bg-[#2AB5A0]' : 'bg-orange-400 hover:bg-orange-500'
+            }`}
+          >
+            추가
+          </button>
+        </div>
+      )}
+      {menus.length > 0 && (
+        <div className="flex flex-wrap gap-1.5 mt-2">
+          {menus.map((m) => (
+            <button
+              key={m}
+              onClick={() => onRemove(m)}
+              className={`flex items-center gap-1 px-3 py-1.5 rounded-full border text-xs font-bold transition-all active:scale-95 ${
+                isMint
+                  ? 'bg-[#E8F8F5] border-[#3CDBC0]/50 text-[#2AB5A0]'
+                  : 'bg-orange-50 border-orange-300 text-orange-500'
+              }`}
+            >
+              <span>🔎 {m}</span>
+              <span className="opacity-60">×</span>
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

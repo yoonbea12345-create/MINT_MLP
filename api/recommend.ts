@@ -245,8 +245,11 @@ async function searchNaverMulti(
   // 기타(직접 입력) 목적은 입력 텍스트 자체가 최우선 검색 키워드 — 안 넣으면 원하는 업종이 후보에 아예 없음
   const isCustomPurpose = !PURPOSE_KEYWORDS[purpose];
   // 장르가 지정되면 키워드 풀을 통째로 해당 장르로 교체 — "밥인데 한식만" 스코프 좁히기.
-  // 프리셋에 없는 직접 입력 메뉴(예: 두루치기)는 그 메뉴 자체를 검색 키워드로 써서 후보 풀을 그 메뉴로 좁힌다.
-  const genrePool = genre ? (GENRE_KEYWORDS[genre] ?? [genre]) : undefined;
+  // 프리셋에 없는 직접 입력 메뉴(예: 두루치기)는 그 메뉴 자체를 검색 키워드로 사용.
+  // 쉼표로 결합된 복수 메뉴(예: "두루치기,김치찌개")는 각각을 검색 키워드로 분리해 둘 다 반영한다.
+  const genrePool = genre
+    ? (GENRE_KEYWORDS[genre] ?? genre.split(',').map((s) => s.trim()).filter(Boolean))
+    : undefined;
   const baseKeywords = genrePool ?? (isCustomPurpose ? [purpose, ...PURPOSE_KEYWORDS['기타']] : PURPOSE_KEYWORDS[purpose]);
 
   // 행사/관계 추가 키워드 병합
