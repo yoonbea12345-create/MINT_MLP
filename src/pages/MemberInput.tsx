@@ -248,14 +248,8 @@ export default function MemberInput() {
 
   return (
     <div className="h-[100dvh] bg-[#F5FBF8] flex flex-col overflow-hidden">
-      {/* 헤더 */}
-      <div className="flex-shrink-0 text-center pt-4 px-4 relative">
-        <button
-          onClick={() => window.location.href = '/'}
-          className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-[#2AB5A0] transition-colors p-1 text-lg"
-        >
-          ←
-        </button>
+      {/* 헤더 — 뒤로가기는 혼자정하기 모드와 동일하게 하단 좌측 버튼으로 통일 */}
+      <div className="flex-shrink-0 text-center pt-4 px-4">
         <h1 className="text-2xl font-black text-[#2AB5A0] tracking-tight">MINT</h1>
       </div>
 
@@ -359,14 +353,16 @@ export default function MemberInput() {
       {/* 하단 버튼 */}
       <div className="flex-shrink-0 px-5 pt-2 pb-8 flex flex-col gap-2">
         <div className="flex gap-3">
-          {stepIndex > 0 && (
-            <button
-              onClick={() => setPhase((['step0', 'step1', 'step2'] as const)[stepIndex - 1])}
-              className="w-14 py-4 rounded-2xl border-2 border-gray-200 bg-white text-gray-500 font-bold text-lg hover:border-gray-300 transition-all active:scale-95"
-            >
-              ←
-            </button>
-          )}
+          {/* 뒤로가기 — 모든 단계에 하단 좌측(step0은 홈으로), 혼자정하기 모드와 크기·디자인 동일 */}
+          <button
+            onClick={() => {
+              if (stepIndex === 0) window.location.href = '/';
+              else setPhase((['step0', 'step1', 'step2'] as const)[stepIndex - 1]);
+            }}
+            className="w-14 py-4 rounded-2xl border-2 border-gray-200 bg-white text-gray-500 font-bold text-lg hover:border-gray-300 transition-all active:scale-95"
+          >
+            ←
+          </button>
 
           {phase === 'step0' && (
             <button
