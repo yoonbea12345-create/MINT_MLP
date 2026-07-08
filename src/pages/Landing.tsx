@@ -193,7 +193,7 @@ export default function Landing() {
             </h1>
             <p className="text-gray-600 text-base lg:text-lg leading-relaxed mb-7">
               조건 몇 개만 고르세요.<br />
-              이 모임에 <strong className="text-gray-800">딱 맞는 장소 1곳</strong>, 30초 안에 나옵니다.
+              이 모임에 <strong className="text-gray-800">딱 맞는 장소 3곳</strong>, 30초 안에 나옵니다.
             </p>
 
             {/* 조건 → 결과 로테이션 데모 (모바일은 여기, PC는 우측 컬럼에 크게) */}
@@ -244,7 +244,7 @@ export default function Landing() {
             <div className="max-w-xs mx-auto lg:mx-0 flex items-stretch text-center">
               {[
                 { v: '30초', d: '추천까지 걸리는 시간' },
-                { v: '딱 1곳', d: '선택 피로 제로' },
+                { v: '딱 3곳', d: '선택 피로 제로' },
                 { v: '79만 곳', d: '전국 실존 장소 검증' },
               ].map((s, i) => (
                 <div key={s.v} className={`flex-1 flex flex-col items-center ${i > 0 ? 'border-l border-teal-100' : ''}`}>
@@ -481,7 +481,7 @@ export default function Landing() {
                   <div className="flex flex-wrap items-center gap-1.5">
                     <span className="bg-white border border-[#3CDBC0]/50 text-[#2AB5A0] text-xs font-bold px-3 py-1.5 rounded-full whitespace-nowrap">#회&초밥</span>
                     <span className="text-[#3CDBC0] font-bold text-sm">→</span>
-                    <span className="bg-[#3CDBC0] text-white text-xs font-bold px-3 py-1.5 rounded-full whitespace-nowrap">회·초밥 다 되는 한 집</span>
+                    <span className="bg-[#3CDBC0] text-white text-xs font-bold px-3 py-1.5 rounded-full whitespace-nowrap">회·초밥 다 되는 맛집</span>
                   </div>
                 </div>
                 <p className="text-[11px] text-gray-400 mt-2.5 break-keep">
@@ -612,7 +612,7 @@ export default function Landing() {
               <ul className="flex flex-col gap-2 lg:gap-3">
                 {[
                   '검색어 없이 조건만 선택하면 끝',
-                  'AI가 딱 1곳만 추천 — 선택 피로 제로',
+                  'AI가 엄선한 3곳 추천 — 선택 피로 제로',
                   '원하는 동네 직접 선택도, 중간지점 자동 계산도',
                   '전국 79만 실존 장소 · 혼잡도 · 날씨 · 버즈 반영',
                   '카카오톡 한 번이면 공유 완료',
@@ -753,7 +753,7 @@ export default function Landing() {
               },
               {
                 q: '추천 장소는 믿을 수 있나요?',
-                a: '네이버에 등록된 실존 장소만 추천합니다. 여기에 실시간 혼잡도, 날씨, 블로그 버즈, 오래된 가게 가산점까지 반영해 AI가 최종 1곳을 고릅니다.',
+                a: '네이버에 등록된 실존 장소만 추천합니다. 여기에 실시간 혼잡도, 날씨, 블로그 버즈, 오래된 가게 가산점까지 반영해 AI가 최종 3곳을 골라줍니다.',
               },
               {
                 q: '친구들과 어떻게 같이 정하나요?',
