@@ -163,7 +163,10 @@ export default function Landing() {
       {/* ── NAV ── */}
       <nav className="sticky top-0 z-50 bg-[#F0FDF9]/90 backdrop-blur border-b border-teal-100">
         <div className="max-w-lg lg:max-w-7xl mx-auto px-5 lg:px-8 py-3 flex items-center justify-between">
-          <span className="text-xl lg:text-2xl font-black text-[#3CDBC0] tracking-tight">MINT</span>
+          <span className="flex items-baseline gap-1.5">
+            <span className="text-xl lg:text-2xl font-black text-[#3CDBC0] tracking-tight">MINT</span>
+            <span className="hidden sm:inline text-[10px] lg:text-[11px] font-semibold text-[#8BD3C7] tracking-tight">Meet in one tap</span>
+          </span>
           <button
             onClick={goToApp}
             className="bg-[#3CDBC0] text-white text-sm font-bold px-5 lg:px-6 lg:py-2.5 py-2 rounded-full transition-all active:scale-95 hover:bg-[#2AB5A0]"
@@ -677,7 +680,12 @@ export default function Landing() {
       <section className="bg-gradient-to-b from-[#F0FDF9] to-[#E8FBF3] fade-section">
         <div className="max-w-lg lg:max-w-3xl mx-auto px-6 py-16 lg:py-28 text-center">
           <h2 className="text-3xl lg:text-6xl font-black text-gray-800 leading-tight mb-1">어디 가지?</h2>
-          <h2 className="text-3xl lg:text-6xl font-black text-[#3CDBC0] leading-tight mb-4 lg:mb-6">MINT 하지, 뭐.</h2>
+          <h2 className="text-3xl lg:text-6xl font-black text-[#3CDBC0] leading-tight mb-3 lg:mb-4">MINT 하지, 뭐.</h2>
+          <div className="flex items-center justify-center gap-2.5 mb-4 lg:mb-6">
+            <span className="h-px w-6 bg-teal-200" />
+            <span className="text-xs lg:text-sm font-bold text-[#2AB5A0] tracking-wide">MINT · Meet In one Tap</span>
+            <span className="h-px w-6 bg-teal-200" />
+          </div>
           <p className="text-sm lg:text-lg text-gray-400 mb-8">무료로 시작하세요. 회원가입도 없어요.</p>
           <div className="flex flex-col gap-3 w-full max-w-xs mb-6 mx-auto">
             <button
