@@ -314,9 +314,9 @@ export default function Home() {
     }
   }, [view]);
 
-  // 그룹 대기 화면 폴링
+  // 그룹 대기 화면 폴링 — 입력 플로우(steps)에서만. 결과 화면에선 중단(불필요한 3초 폴링 낭비 방지)
   useEffect(() => {
-    if (appMode !== 'group' || !sessionId) return;
+    if (appMode !== 'group' || !sessionId || view !== 'steps') return;
     let active = true;
 
     async function poll() {
@@ -342,7 +342,7 @@ export default function Home() {
       clearInterval(interval);
       document.removeEventListener('visibilitychange', onVisible);
     };
-  }, [appMode, sessionId]);
+  }, [appMode, sessionId, view]);
 
   async function handleCreateSession() {
     setCreatingSession(true);
@@ -421,6 +421,17 @@ export default function Home() {
   }
 
   function handleBack() {
+    // 그룹: 링크 생성 후 코스·지역을 바꾸면 이미 공유된 링크의 파라미터와 어긋난다.
+    // 공유(step2)에서 뒤로가기는 '링크 취소 후 재설정'으로 처리해 항상 링크=설정이 일치하게 유지.
+    if (isGroup && step === 2 && sessionId) {
+      const ok = window.confirm('코스·지역을 바꾸려면 지금 링크를 취소하고 다시 설정해야 해요.\n계속할까요? (이미 공유한 링크는 무효가 됩니다)');
+      if (!ok) return;
+      setSessionId(null);
+      setGroupMembers([]);
+      try { localStorage.removeItem(GROUP_SESSION_KEY); } catch { /* ignore */ }
+      setStep(0); // 코스·지역은 유지 — 수정 후 다시 링크 생성
+      return;
+    }
     if (step > 0) setStep((s) => (s - 1) as Step);
   }
 

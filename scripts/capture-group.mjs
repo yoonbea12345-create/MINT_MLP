@@ -64,7 +64,12 @@ async function run() {
   await page.getByRole('button', { name: /링크 생성하기/ }).click();
   await page.getByText('공유 링크').waitFor({ timeout: 6000 }); // 세션 생성 후 공유 UI 대기
   await page.getByText('민준').waitFor({ timeout: 6000 }).catch(() => {}); // 첫 폴링으로 멤버 표시
-  await wait(page, 600);
+  // 표시용 링크를 로컬(127.0.0.1) 대신 실제 배포 도메인으로 치환 — 마케팅 목업 품질
+  await page.evaluate(() => {
+    const el = Array.from(document.querySelectorAll('p')).find((p) => p.textContent?.includes('/join?id='));
+    if (el) el.textContent = 'https://mint-mlp-4vm9.vercel.app/join?id=demo1234';
+  });
+  await wait(page, 400);
   await save(page, 'host-share');
 
   // ─── GUEST (임의 지역 링크: 출발지 생략) ──────────────────
