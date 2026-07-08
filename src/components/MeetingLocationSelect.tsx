@@ -1,7 +1,7 @@
 import { useState, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { searchAddress, resolveNeighborhood } from '../services/kakaoMap';
-import type { KakaoPlace } from '../services/kakaoMap';
+import { searchNeighborhoods, geocodeArea } from '../services/kakaoMap';
+import type { Neighborhood } from '../services/kakaoMap';
 
 export type MeetingLocation =
   | { type: 'auto' }
@@ -29,15 +29,15 @@ const MORE_REGIONS = [
   { id: 'jamsil',   label: '잠실/송파',   desc: '잠실역·롯데월드'       },
 ];
 
-// 출발지 검색과 동일한 자동완성 드롭다운 (body 포털 + fixed 위치)
+// 동네(시/구/동) 자동완성 드롭다운 (body 포털 + fixed 위치)
 function SuggestionDropdown({
   suggestions,
   anchorEl,
   onPick,
 }: {
-  suggestions: KakaoPlace[];
+  suggestions: Neighborhood[];
   anchorEl: HTMLDivElement | null;
-  onPick: (place: KakaoPlace) => void;
+  onPick: (nb: Neighborhood) => void;
 }) {
   if (!suggestions.length || !anchorEl) return null;
   const rect = anchorEl.getBoundingClientRect();
@@ -46,14 +46,14 @@ function SuggestionDropdown({
       style={{ position: 'fixed', top: rect.bottom + 4, left: rect.left, width: rect.width, zIndex: 9999 }}
       className="bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden"
     >
-      {suggestions.map((place) => (
+      {suggestions.map((nb) => (
         <button
-          key={place.id}
-          onMouseDown={() => onPick(place)}
-          className="w-full text-left px-4 py-3 hover:bg-[#E8F8F5] transition-colors border-b border-gray-100 last:border-0"
+          key={nb.area}
+          onMouseDown={() => onPick(nb)}
+          className="w-full text-left px-4 py-3 hover:bg-[#E8F8F5] transition-colors border-b border-gray-100 last:border-0 flex items-center gap-2"
         >
-          <div className="text-sm font-medium text-gray-800">{place.place_name}</div>
-          <div className="text-xs text-gray-400 mt-0.5">{place.road_address_name || place.address_name}</div>
+          <span className="text-sm">📍</span>
+          <span className="text-sm font-medium text-gray-800">{nb.area}</span>
         </button>
       ))}
     </div>,
@@ -65,7 +65,7 @@ export default function MeetingLocationSelect({ value, onSelect }: Props) {
   const [search, setSearch] = useState(
     value?.type === 'manual' && value.regionId === '' ? value.area : ''
   );
-  const [suggestions, setSuggestions] = useState<KakaoPlace[]>([]);
+  const [suggestions, setSuggestions] = useState<Neighborhood[]>([]);
   const [searching, setSearching] = useState(false);
   const [showMore, setShowMore] = useState(false);
 
@@ -84,22 +84,21 @@ export default function MeetingLocationSelect({ value, onSelect }: Props) {
     setSearching(true);
     searchTimer.current = setTimeout(async () => {
       try {
-        const results = await searchAddress(v.trim());
-        setSuggestions(results.slice(0, 5));
+        const results = await searchNeighborhoods(v.trim());
+        setSuggestions(results);
       } catch { /* ignore */ }
       finally { setSearching(false); }
     }, 200);
   }
 
-  // 자동완성에서 실제 장소 선택 → 시/구/동 동네 단위로 완화해 좌표까지 담아 확정
-  async function pickPlace(place: KakaoPlace) {
-    setSearch(place.place_name);
-    setSuggestions([]);
-    setSearching(true); // 동네 변환 동안 스피너
-    const nb = await resolveNeighborhood(parseFloat(place.y), parseFloat(place.x), place.place_name);
+  // 동네(시/구/동) 선택 → 동 대표 좌표로 스냅해 확정 (스냅 실패 시 제안 좌표 사용)
+  async function pickPlace(nb: Neighborhood) {
     setSearch(nb.area);
+    setSuggestions([]);
+    setSearching(true);
+    const c = await geocodeArea(nb.area);
     setSearching(false);
-    onSelect({ type: 'manual', regionId: '', area: nb.area, lat: nb.lat, lng: nb.lng });
+    onSelect({ type: 'manual', regionId: '', area: nb.area, lat: c?.lat ?? nb.lat, lng: c?.lng ?? nb.lng });
   }
 
   function isManualSelected(regionId: string) {
@@ -155,7 +154,7 @@ export default function MeetingLocationSelect({ value, onSelect }: Props) {
             type="text"
             value={search}
             onChange={(e) => handleSearchChange(e.target.value)}
-            placeholder="예: 홍대입구역, 강남역, 성수동..."
+            placeholder="예: 대흥동, 홍대, 강남, 성수동..."
             className={`w-full pl-4 pr-9 py-3 rounded-xl border-2 text-sm text-gray-700 placeholder-gray-400 focus:outline-none transition-colors bg-white ${
               customSelected ? 'border-[#3CDBC0] bg-[#E8F8F5]' : 'border-[#3CDBC0] focus:ring-2 focus:ring-[#3CDBC0]/20'
             }`}

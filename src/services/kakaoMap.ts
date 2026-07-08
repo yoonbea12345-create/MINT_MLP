@@ -57,48 +57,49 @@ export async function searchAddress(keyword: string): Promise<KakaoPlace[]> {
 }
 
 export interface Neighborhood {
-  area: string;   // "서울 마포구 서교동" 형태 (시 구 동)
+  area: string;   // "대구 수성구 대흥동" 형태 (시 구 동)
   lat: number;
   lng: number;
 }
 
-// 정확한 건물/장소 좌표를 '시 구 동' 행정동 단위로 완화한다.
-// 거주지(집) 등 정확 위치 노출을 막고, 만남 지점 계산엔 대략적 동네 좌표만 사용하기 위함.
-// 실패하면 원래 이름/좌표로 안전하게 폴백한다.
-export async function resolveNeighborhood(lat: number, lng: number, fallbackName = ''): Promise<Neighborhood> {
+// 지번 주소(address_name)에서 '시 [구...] 동' 부분만 뽑는다.
+// 동/읍/면/가/리로 끝나는 첫 토큰까지 포함 → 성남시 분당구처럼 구가 여러 토큰이어도 안전.
+function toDongLabel(addressName: string): string | null {
+  if (!addressName) return null;
+  const tokens = addressName.trim().split(/\s+/);
+  const idx = tokens.findIndex((t) => /(동|읍|면|가|리)$/.test(t));
+  if (idx < 0) return null;
+  return tokens.slice(0, idx + 1).join(' ');
+}
+
+// 만날 '지역' 검색 전용 — POI가 아니라 시/구/동 동네 단위 제안 목록을 돌려준다.
+// keywordSearch 결과의 지번 주소에서 동네를 뽑아 중복 제거.
+export async function searchNeighborhoods(keyword: string): Promise<Neighborhood[]> {
+  const places = await searchKakaoKeyword(keyword);
+  const seen = new Set<string>();
+  const out: Neighborhood[] = [];
+  for (const p of places) {
+    const area = toDongLabel(p.address_name);
+    if (!area || seen.has(area)) continue;
+    seen.add(area);
+    out.push({ area, lat: parseFloat(p.y), lng: parseFloat(p.x) });
+    if (out.length >= 6) break;
+  }
+  return out;
+}
+
+// 동네 이름("대구 수성구 대흥동") → 동 대표 좌표. 실패 시 null.
+export async function geocodeArea(area: string): Promise<{ lat: number; lng: number } | null> {
   try {
     await ensureKakaoMaps();
     const geocoder = new window.kakao.maps.services.Geocoder();
     const OK = window.kakao.maps.services.Status.OK;
-
-    // 1) 좌표 → 행정구역(시/구/동) 이름
-    const addr = await new Promise<any | null>((resolve) => {
-      geocoder.coord2Address(lng, lat, (res: any[], status: string) => {
-        resolve(status === OK && res[0] ? res[0].address : null);
+    return await new Promise((resolve) => {
+      geocoder.addressSearch(area, (res: any[], status: string) => {
+        resolve(status === OK && res[0] ? { lat: parseFloat(res[0].y), lng: parseFloat(res[0].x) } : null);
       });
     });
-    if (!addr) return { area: fallbackName, lat, lng };
-
-    const si = addr.region_1depth_name || '';
-    const gu = addr.region_2depth_name || '';
-    const dong = addr.region_3depth_name || '';
-    const area = [si, gu, dong].filter(Boolean).join(' ') || fallbackName;
-
-    // 2) 동 대표 좌표로 스냅 (구+동 주소 검색) — 정확 건물 좌표 대신 동네 중심을 쓴다.
-    //    실패하면 원좌표 유지(어차피 해당 동 내부라 충분히 대략적).
-    const query = [gu, dong].filter(Boolean).join(' ');
-    let snapLat = lat;
-    let snapLng = lng;
-    if (query) {
-      const centroid = await new Promise<{ x: string; y: string } | null>((resolve) => {
-        geocoder.addressSearch(query, (res: any[], status: string) => {
-          resolve(status === OK && res[0] ? res[0] : null);
-        });
-      });
-      if (centroid) { snapLat = parseFloat(centroid.y); snapLng = parseFloat(centroid.x); }
-    }
-    return { area, lat: snapLat, lng: snapLng };
   } catch {
-    return { area: fallbackName, lat, lng };
+    return null;
   }
 }
