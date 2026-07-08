@@ -42,17 +42,17 @@ export default function StepProgress({ current, total, labels }: Props) {
             style={{ width: `${progress * 100}%` }}
           />
         </div>
-        {/* 마스코트 — 진행 직선 위, 현재 진행 지점에 서서 다음 스텝으로 이동.
-            고정 너비(w-8)로 잡아 가장자리에서 찌그러지지 않게 한다. */}
+        {/* 마스코트 — 진행 직선의 세로 중앙에 얹혀(슬라이더 손잡이처럼) 진행 지점을 따라 이동.
+            라벨을 가리지 않도록 선 가운데 정렬 + 고정 너비(w-6)로 가장자리 찌그러짐 방지. */}
         <div
-          className="absolute bottom-0 w-8 z-10 pointer-events-none transition-[left] duration-500 ease-in-out"
-          style={{ left: `${progress * 100}%`, transform: 'translateX(-50%)' }}
+          className="absolute w-6 z-10 pointer-events-none transition-[left] duration-500 ease-in-out"
+          style={{ left: `${progress * 100}%`, bottom: '3px', transform: 'translate(-50%, 50%)' }}
         >
           <img
             src="/image/mascot-bird.webp"
             alt=""
             aria-hidden="true"
-            className="w-8 h-8 select-none drop-shadow-sm animate-mascot-bob"
+            className="w-6 h-6 select-none drop-shadow-sm animate-mascot-bob"
           />
         </div>
       </div>

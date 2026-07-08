@@ -6,6 +6,8 @@ const Landing = lazy(() => import('./pages/Landing'));
 const SharedResult = lazy(() => import('./pages/SharedResult'));
 const Admin = lazy(() => import('./pages/Admin'));
 const MemberInput = lazy(() => import('./pages/MemberInput'));
+const Pilot = lazy(() => import('./pages/Pilot'));
+const PilotAdmin = lazy(() => import('./pages/PilotAdmin'));
 
 class ErrorBoundary extends Component<{ children: ReactNode }, { error: Error | null }> {
   state = { error: null };
@@ -38,6 +40,8 @@ function PageLoading() {
 function Router() {
   const path = window.location.pathname;
   if (path === '/admin') return <Admin />;
+  if (path === '/pilot-admin') return <PilotAdmin />;
+  if (path === '/pilot') return <Pilot />;
   if (path === '/join') return <MemberInput />;
   if (path === '/shared' || window.location.search.includes('data=')) return <SharedResult />;
   if (path === '/app') return <Home />;
