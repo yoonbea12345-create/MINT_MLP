@@ -20,15 +20,16 @@ import type { PlaceRecommendation, UserInput, WeatherSummary } from '../services
 import { saveResultSnapshot, loadResultSnapshot, clearResultSnapshot, saveHistory } from '../utils/history';
 import { computeTravelTimes } from '../services/travelTime';
 import { trackSessionDuration, trackEvent } from '../utils/analytics';
-import { aggregatePurpose, aggregateVibe, aggregateBudget, splitMemberKeywords } from '../utils/groupAggregate';
+import { aggregateVibe, aggregateBudget, splitMemberKeywords } from '../utils/groupAggregate';
 import type { GroupMember } from '../utils/groupAggregate';
 import LoadingScreen from '../components/home/LoadingScreen';
-import GroupSetup from '../components/home/GroupSetup';
 import GroupWaiting from '../components/home/GroupWaiting';
+import { encodeHostContext } from '../utils/groupLink';
 
 type Step = 0 | 1 | 2 | 3;
 type View = 'steps' | 'result' | 'reserve';
-type AppMode = 'mode-select' | 'solo' | 'group-setup' | 'group-waiting' | 'group-ready'; // 'mode-select' = step 0 of flow
+// 'mode-select' = 유형 미선택 상태(step 0), 'solo' = 혼자, 'group' = 다같이(호스트)
+type AppMode = 'mode-select' | 'solo' | 'group';
 
 interface TravelResult {
   label: string;
@@ -116,7 +117,6 @@ export default function Home() {
   const [customOccasion, setCustomOccasion] = useState('');
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [expectedCount, setExpectedCount] = useState<number>(3);
-  const [groupHasSecond, setGroupHasSecond] = useState(false);
   const [groupMembers, setGroupMembers] = useState<GroupMember[]>([]);
   const [creatingSession, setCreatingSession] = useState(false);
   const [groupError, setGroupError] = useState<string | null>(null);
@@ -150,6 +150,24 @@ export default function Home() {
   const [showCompromiseToast, setShowCompromiseToast] = useState(false);
 
   const travelReqRef = useRef(0);
+  const isGroup = appMode === 'group';
+
+  // 그룹 참여 링크 — 호스트가 정한 코스·지역을 쿼리에 실어 게스트에게 전달
+  function groupShareLink(): string {
+    if (!sessionId) return '';
+    const ctx = encodeHostContext({
+      purposeFirst: purpose?.first ?? null,
+      firstGenre: purpose?.firstGenre ?? null,
+      purposeSecond: purpose?.second ?? null,
+      secondGenre: purpose?.secondGenre ?? null,
+      relation: purpose?.relation ?? null,
+      occasion: purpose?.occasion ?? null,
+      regionType: meetingLocation?.type === 'auto' ? 'auto' : 'manual',
+      regionName: meetingLocation?.type === 'manual' ? meetingLocation.area : null,
+      regionId: meetingLocation?.type === 'manual' ? meetingLocation.regionId : null,
+    });
+    return `${window.location.origin}/join?id=${sessionId}&${ctx}`;
+  }
 
   useEffect(() => {
     if (!sessionStorage.getItem('mintSessionStart')) {
@@ -224,7 +242,10 @@ export default function Home() {
       if (loadResultSnapshot()) return;
       const raw = localStorage.getItem(GROUP_SESSION_KEY);
       if (!raw) return;
-      const g = JSON.parse(raw) as { savedAt?: number; sessionId?: string; expectedCount?: number; groupHasSecond?: boolean };
+      const g = JSON.parse(raw) as {
+        savedAt?: number; sessionId?: string; expectedCount?: number;
+        purpose?: PurposeValue; meetingLocation?: MeetingLocation;
+      };
       if (!g.sessionId) return;
       if (typeof g.savedAt === 'number' && Date.now() - g.savedAt > GROUP_SESSION_TTL_MS) {
         localStorage.removeItem(GROUP_SESSION_KEY);
@@ -232,22 +253,23 @@ export default function Home() {
       }
       setSessionId(g.sessionId);
       if (typeof g.expectedCount === 'number') setExpectedCount(g.expectedCount);
-      if (typeof g.groupHasSecond === 'boolean') setGroupHasSecond(g.groupHasSecond);
-      setStep(0);                 // solo 초안이 남긴 step을 덮어 대기 화면(step 0)으로 되돌린다
-      setAppMode('group-waiting'); // 폴링이 다시 붙어 멤버 현황을 서버에서 재수화한다
+      if (g.purpose) setPurpose(g.purpose);              // 호스트가 정한 코스 복원
+      if (g.meetingLocation) setMeetingLocation(g.meetingLocation); // 호스트가 정한 지역 복원
+      setStep(2);                 // 공유·대기 화면(step 2)으로 되돌린다
+      setAppMode('group');        // 폴링이 다시 붙어 멤버 현황을 서버에서 재수화한다
     } catch { /* 손상된 그룹 세션 무시 */ }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // 그룹 호스트 세션 저장 — 대기·준비 단계에서 sessionId가 살아있는 동안
+  // 그룹 호스트 세션 저장 — sessionId가 살아있는 동안 코스·지역까지 함께 보존(새로고침 복원용)
   useEffect(() => {
-    if ((appMode !== 'group-waiting' && appMode !== 'group-ready') || !sessionId) return;
+    if (appMode !== 'group' || !sessionId) return;
     try {
       localStorage.setItem(GROUP_SESSION_KEY, JSON.stringify({
-        savedAt: Date.now(), sessionId, expectedCount, groupHasSecond,
+        savedAt: Date.now(), sessionId, expectedCount, purpose, meetingLocation,
       }));
     } catch { /* 저장 실패는 치명적이지 않음 */ }
-  }, [appMode, sessionId, expectedCount, groupHasSecond]);
+  }, [appMode, sessionId, expectedCount, purpose, meetingLocation]);
 
   // 입력 초안 저장 — solo 모드로 입력 진행 중일 때만
   useEffect(() => {
@@ -294,7 +316,7 @@ export default function Home() {
 
   // 그룹 대기 화면 폴링
   useEffect(() => {
-    if (appMode !== 'group-waiting' || !sessionId) return;
+    if (appMode !== 'group' || !sessionId) return;
     let active = true;
 
     async function poll() {
@@ -326,10 +348,11 @@ export default function Home() {
     setCreatingSession(true);
     setGroupError(null);
     try {
+      const hasSecond = !!(purpose?.second && purpose.second !== '없음');
       const res = await fetch('/api/session-create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ expected_count: expectedCount, has_second: groupHasSecond }),
+        body: JSON.stringify({ expected_count: expectedCount, has_second: hasSecond }),
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
@@ -338,7 +361,7 @@ export default function Home() {
       const data = await res.json();
       setSessionId(data.id);
       setGroupMembers([]);
-      setAppMode('group-waiting');
+      // appMode/step은 그대로(step 2 공유 화면) — 링크가 생기면 같은 화면이 공유 UI로 전환된다
     } catch (e) {
       setGroupError((e as Error).message);
     } finally {
@@ -347,8 +370,8 @@ export default function Home() {
   }
 
   function handleCopyLink() {
-    if (!sessionId) return;
-    const link = `${window.location.origin}/join?id=${sessionId}`;
+    const link = groupShareLink();
+    if (!link) return;
     navigator.clipboard?.writeText(link).then(() => {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
@@ -357,33 +380,42 @@ export default function Home() {
 
   function canNext(): boolean {
     if (step === 0) {
-      if (appMode === 'solo') return !!purpose?.first;
-      if (appMode === 'group-waiting' || appMode === 'group-ready') return groupMembers.length >= 2;
-      return false;
+      // 혼자·그룹 모두 1차 목적(코스)을 골라야 다음으로
+      if (appMode === 'solo' || appMode === 'group') return !!purpose?.first;
+      return false; // mode-select
     }
-    if (step === 1) return true; // 관계·특별한날은 선택사항
-    if (step === 2) return meetingLocation !== null && (meetingLocation.type === 'manual' || locations.length >= 2);
-    return false;
+    if (step === 1) {
+      if (isGroup) return meetingLocation !== null; // 그룹: 지역 선택
+      return true; // 혼자: 관계·특별한날은 선택사항
+    }
+    if (step === 2) {
+      // 그룹: 링크 생성 + 최소 2명 참여해야 확정으로
+      if (isGroup) return !!sessionId && groupMembers.length >= 2;
+      // 혼자: 지역·장소
+      return meetingLocation !== null && (meetingLocation.type === 'manual' || locations.length >= 2);
+    }
+    return true; // step 3
+  }
+
+  // 그룹 확정 진입 직전: 멤버들이 각자 낸 출발지·분위기·취향을 하나로 집계.
+  // 코스·지역은 호스트가 정한 state(purpose·meetingLocation)를 그대로 쓴다(재집계하지 않음).
+  function aggregateGroupMembers() {
+    const groupLocations: LocationEntry[] = groupMembers
+      .filter((m) => m.location_lat != null && m.location_lng != null)
+      .map((m) => ({ name: m.member_name, lat: m.location_lat!, lng: m.location_lng! }));
+    setLocations(groupLocations);
+    setVibe(aggregateVibe(groupMembers));
+    // 편식은 전원 합집합 — 한 명이라도 못 먹으면 그 음식은 제외
+    const { keywords: memberKeywords, excludeFoods: memberExcludes } = splitMemberKeywords(groupMembers);
+    setKeywords(memberKeywords);
+    setExcludeFoods(memberExcludes);
+    setBudget(aggregateBudget(groupMembers));
   }
 
   function handleNext() {
-    // 그룹 모드에서 step 0 → 1 진행 시 멤버 데이터 집계
-    if (step === 0 && (appMode === 'group-waiting' || appMode === 'group-ready')) {
-      const groupLocations: LocationEntry[] = groupMembers.map((m) => ({
-        name: m.member_name,
-        lat: m.location_lat,
-        lng: m.location_lng,
-      }));
-      setLocations(groupLocations);
-      setVibe(aggregateVibe(groupMembers));
-      const aggregated = aggregatePurpose(groupMembers);
-      if (aggregated) setPurpose(aggregated);
-      // 편식은 전원 합집합 — 한 명이라도 못 먹으면 그 음식은 제외
-      const { keywords: memberKeywords, excludeFoods: memberExcludes } = splitMemberKeywords(groupMembers);
-      setKeywords(memberKeywords);
-      setExcludeFoods(memberExcludes);
-      setBudget(aggregateBudget(groupMembers)); // 멤버 예산도 결과에 반영
-      setAppMode('group-ready');
+    // 그룹: 공유(step 2) → 확정(step 3) 진입 시 멤버 데이터 집계
+    if (step === 2 && isGroup) {
+      aggregateGroupMembers();
     }
     setStep((s) => (s + 1) as Step);
   }
@@ -478,7 +510,7 @@ export default function Home() {
       const input: UserInput = {
         // 서버 검증 통과를 위해 이름 없는 항목 제외 (지역 직접 선택 시 빈 배열)
         locations: locations.filter((l) => l.name?.trim()),
-        groupSize: appMode === 'group-ready' ? (locations.length >= 5 ? '5명 이상' : locations.length >= 3 ? '3~4명' : '2명') : groupSize,
+        groupSize: isGroup ? (expectedCount >= 5 ? '5명 이상' : expectedCount >= 3 ? '3~4명' : '2명') : groupSize,
         purpose: {
           first: purpose!.first!,
           second: purpose!.second ?? null,
@@ -900,27 +932,36 @@ export default function Home() {
           </h1>
         </div>
 
-        {/* 스텝 프로그레스 */}
+        {/* 스텝 프로그레스 — 전 화면 4단계 고정 (그룹은 라벨만 교체) */}
         <div className="flex-shrink-0">
-          <StepProgress current={step} total={4} />
+          <StepProgress current={step} total={4} labels={isGroup ? ['코스', '지역', '공유', '확정'] : undefined} />
         </div>
 
         {/* 스텝 제목 */}
         <div className="flex-shrink-0 text-center px-4 pt-2 pb-0">
           <h2 className="text-xl font-black text-gray-800">
-            {step === 0 && '어떤 모임인가요?'}
-            {step === 1 && '누구와 함께하나요?'}
-            {step === 2 && '어디서 만날까요?'}
-            {step === 3 && '원하는 분위기를 골라봐요'}
+            {step === 0 && (isGroup ? '무슨 코스로 모일까요?' : '어떤 모임인가요?')}
+            {step === 1 && (isGroup ? '어디서 만날까요?' : '누구와 함께하나요?')}
+            {step === 2 && (isGroup ? '친구들을 초대하세요' : '어디서 만날까요?')}
+            {step === 3 && (isGroup ? '다 모였어요!' : '원하는 분위기를 골라봐요')}
           </h2>
-          {step === 1 && (
+          {step === 1 && !isGroup && (
             <p className="text-xs text-[#2AB5A0] font-medium mt-1">모두 선택사항 · 선택할수록 추천이 정확해져요</p>
           )}
-          {step === 2 && (
+          {step === 1 && isGroup && (
+            <p className="text-xs text-[#2AB5A0] font-medium mt-1">중간지점 자동 · 또는 만날 동네 직접 선택</p>
+          )}
+          {step === 2 && !isGroup && (
             <p className="text-xs text-[#2AB5A0] font-medium mt-1">원하는 동네 선택 · 또는 중간지점을 AI에게 맡겨요</p>
           )}
-          {step === 3 && (
+          {step === 2 && isGroup && (
+            <p className="text-xs text-[#2AB5A0] font-medium mt-1">링크를 공유하고 각자 입력을 기다려요</p>
+          )}
+          {step === 3 && !isGroup && (
             <p className="text-xs text-[#2AB5A0] font-medium mt-1">최소 1개 이상 선택 · 많이 고를수록 추천이 정확해져요</p>
+          )}
+          {step === 3 && isGroup && (
+            <p className="text-xs text-[#2AB5A0] font-medium mt-1">모두의 취향이 모였어요 · 추천을 받아보세요</p>
           )}
         </div>
 
@@ -945,16 +986,16 @@ export default function Home() {
                   <span className="text-[10px] text-gray-400">내가 직접 입력</span>
                 </button>
                 <button
-                  onClick={() => { if (!['group-setup', 'group-waiting', 'group-ready'].includes(appMode)) setAppMode('group-setup'); }}
+                  onClick={() => { if (appMode !== 'group') setAppMode('group'); }}
                   className={`flex flex-col items-center justify-center gap-1.5 py-5 rounded-2xl border-2 transition-all active:scale-[0.97] ${
-                    ['group-setup', 'group-waiting', 'group-ready'].includes(appMode)
+                    isGroup
                       ? 'border-[#3CDBC0] bg-[#E8F8F5] shadow-md shadow-[#3CDBC0]/20'
                       : 'border-gray-200 bg-white hover:border-[#3CDBC0]/50'
                   }`}
                 >
                   <span className="text-2xl">👥</span>
-                  <span className={`text-sm font-black ${['group-setup', 'group-waiting', 'group-ready'].includes(appMode) ? 'text-[#2AB5A0]' : 'text-gray-700'}`}>다같이 정할게요</span>
-                  <span className="text-[10px] text-gray-400">링크로 각자 입력 →</span>
+                  <span className={`text-sm font-black ${isGroup ? 'text-[#2AB5A0]' : 'text-gray-700'}`}>다같이 정할게요</span>
+                  <span className="text-[10px] text-gray-400">호스트가 코스·지역 선점 →</span>
                 </button>
               </div>
 
@@ -986,34 +1027,52 @@ export default function Home() {
                 </>
               )}
 
-              {/* Group setup: 인원수 + 코스 + 링크 생성 */}
-              {appMode === 'group-setup' && (
-                <GroupSetup
-                  expectedCount={expectedCount}
-                  onExpectedCount={setExpectedCount}
-                  hasSecond={groupHasSecond}
-                  onHasSecond={setGroupHasSecond}
-                  error={groupError}
-                  creating={creatingSession}
-                  onCreate={handleCreateSession}
-                />
-              )}
-
-              {/* Group waiting/ready: 링크 공유 + 멤버 슬롯 */}
-              {(appMode === 'group-waiting' || appMode === 'group-ready') && (
-                <GroupWaiting
-                  shareLink={sessionId ? `${window.location.origin}/join?id=${sessionId}` : ''}
-                  copied={copied}
-                  onCopy={handleCopyLink}
-                  members={groupMembers}
-                  expectedCount={expectedCount}
-                />
+              {/* Group: 참여 인원수 + 코스(목적) — 호스트가 여기서 코스를 선점 */}
+              {isGroup && (
+                <>
+                  <div>
+                    <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-2.5">참여 인원수 (호스트 포함)</p>
+                    <div className="grid grid-cols-5 gap-2">
+                      {[2, 3, 4, 5, 6].map((n) => (
+                        <button
+                          key={n}
+                          onClick={() => setExpectedCount(n)}
+                          className={`flex items-center justify-center h-12 rounded-xl border-2 text-sm font-black transition-all active:scale-[0.97] ${
+                            expectedCount === n
+                              ? 'border-[#3CDBC0] bg-[#E8F8F5] text-[#2AB5A0] shadow-md shadow-[#3CDBC0]/20'
+                              : 'border-gray-200 bg-white text-gray-700 hover:border-[#3CDBC0]/50'
+                          }`}
+                        >
+                          {n === 6 ? '6+' : n}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <PurposeSelect
+                    value={purpose ?? { first: null, firstRaw: null, second: '없음', secondRaw: '없음', relation: null, occasion: null }}
+                    onChange={setPurpose}
+                  />
+                </>
               )}
             </div>
           )}
 
-          {/* Step 1: 관계 + 특별한날 */}
-          {step === 1 && (() => {
+          {/* Step 1 (그룹): 만날 지역 — 중간지점 자동 or 임의 지역. 출발지는 게스트가 각자 입력 */}
+          {step === 1 && isGroup && (
+            <div className="pb-4">
+              <MeetingLocationSelect value={meetingLocation} onSelect={setMeetingLocation} />
+              <p className="px-5 -mt-1 text-xs text-gray-400 leading-relaxed">
+                {meetingLocation?.type === 'auto'
+                  ? '참여자들이 각자 출발지를 입력하면 전원 기준 중간지점을 계산해요.'
+                  : meetingLocation?.type === 'manual'
+                    ? '참여자는 출발지 없이 분위기만 고르면 돼요.'
+                    : '중간지점을 맡기거나, 만날 동네를 직접 골라주세요.'}
+              </p>
+            </div>
+          )}
+
+          {/* Step 1 (혼자): 관계 + 특별한날 */}
+          {step === 1 && !isGroup && (() => {
             const RELATION_OPTIONS = [
               { value: '친구들', emoji: '👥' },
               { value: '연인', emoji: '💑' },
@@ -1089,8 +1148,8 @@ export default function Home() {
             );
           })()}
 
-          {/* Step 2: 만날 장소 선택 */}
-          {step === 2 && (
+          {/* Step 2 (혼자): 만날 장소 선택 */}
+          {step === 2 && !isGroup && (
             <div className="pb-4 flex flex-col gap-3">
               <MeetingLocationSelect value={meetingLocation} onSelect={setMeetingLocation} />
 
@@ -1103,8 +1162,48 @@ export default function Home() {
             </div>
           )}
 
-          {/* Step 3: 분위기 */}
-          {step === 3 && (
+          {/* Step 2 (그룹): 링크 생성 → 공유 → 실시간 참여 현황 */}
+          {step === 2 && isGroup && (
+            <div className="px-4 py-3">
+              {!sessionId ? (
+                <div className="flex flex-col gap-4">
+                  <div className="bg-white rounded-2xl border-2 border-gray-100 shadow-sm p-5 text-center">
+                    <div className="text-3xl mb-2">🔗</div>
+                    <p className="font-black text-gray-800 mb-1">참여 링크를 만들어요</p>
+                    <p className="text-xs text-gray-400 leading-relaxed">
+                      친구들은 가입 없이 링크만 열면 분위기만 고르면 끝.<br />
+                      코스·지역은 이미 골라뒀으니 링크에 담겨 전달돼요.
+                    </p>
+                  </div>
+                  {groupError && (
+                    <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-600 text-center">{groupError}</div>
+                  )}
+                  <button
+                    onClick={handleCreateSession}
+                    disabled={creatingSession}
+                    className={`w-full py-4 rounded-2xl font-black text-base transition-all active:scale-95 ${
+                      creatingSession
+                        ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                        : 'bg-[#3CDBC0] text-white shadow-lg shadow-[#3CDBC0]/30 hover:bg-[#2AB5A0]'
+                    }`}
+                  >
+                    {creatingSession ? '생성 중...' : '링크 생성하기 →'}
+                  </button>
+                </div>
+              ) : (
+                <GroupWaiting
+                  shareLink={groupShareLink()}
+                  copied={copied}
+                  onCopy={handleCopyLink}
+                  members={groupMembers}
+                  expectedCount={expectedCount}
+                />
+              )}
+            </div>
+          )}
+
+          {/* Step 3 (혼자): 분위기 */}
+          {step === 3 && !isGroup && (
             <VibeSelect
               value={vibe}
               onChange={setVibe}
@@ -1116,6 +1215,43 @@ export default function Home() {
               excludeFoods={excludeFoods}
               onExcludeFoodsChange={setExcludeFoods}
             />
+          )}
+
+          {/* Step 3 (그룹): 확정 요약 */}
+          {step === 3 && isGroup && (
+            <div className="px-4 py-3 flex flex-col gap-3">
+              <div className="bg-white rounded-2xl border-2 border-[#3CDBC0]/30 shadow-sm p-5">
+                <p className="text-[10px] font-bold text-[#2AB5A0] uppercase tracking-widest mb-3">모임 요약</p>
+                <div className="flex flex-col gap-2.5 text-sm">
+                  <div className="flex gap-2"><span className="text-gray-400 w-12 flex-shrink-0">코스</span>
+                    <span className="font-bold text-gray-800">🍀 {purpose?.first ?? '-'}{purpose?.firstGenre ? `(${purpose.firstGenre})` : ''}{purpose?.second && purpose.second !== '없음' ? ` → ${purpose.second}${purpose?.secondGenre ? `(${purpose.secondGenre})` : ''}` : ''}</span>
+                  </div>
+                  <div className="flex gap-2"><span className="text-gray-400 w-12 flex-shrink-0">지역</span>
+                    <span className="font-bold text-gray-800">📍 {meetingLocation?.type === 'auto' ? '중간지점 자동' : meetingLocation?.type === 'manual' ? meetingLocation.area : '-'}</span>
+                  </div>
+                  <div className="flex gap-2"><span className="text-gray-400 w-12 flex-shrink-0">인원</span>
+                    <span className="font-bold text-gray-800">👥 {groupMembers.length}명 참여</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* 모인 취향 */}
+              {(() => {
+                const vibeLabels = Object.values(vibe).flatMap((g) => [g.first, g.second]).filter((k): k is string => !!k).map((k) => VIBE_KEY_TO_LABEL[k] ?? k);
+                if (vibeLabels.length === 0 && !budget && keywords.length === 0 && excludeFoods.length === 0) return null;
+                return (
+                  <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+                    <p className="text-[10px] font-bold text-[#2AB5A0] uppercase tracking-widest mb-2.5">모두의 취향 (자동 종합)</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {vibeLabels.map((l) => <span key={l} className="bg-[#E8F8F5] text-[#2AB5A0] text-xs font-bold px-2.5 py-1 rounded-full">{l}</span>)}
+                      {budget && <span className="bg-[#E8F8F5] text-[#2AB5A0] text-xs font-bold px-2.5 py-1 rounded-full">💰 {budget}</span>}
+                      {keywords.map((k) => <span key={k} className="bg-[#E8F8F5] text-[#2AB5A0] text-xs font-bold px-2.5 py-1 rounded-full">{k}</span>)}
+                      {excludeFoods.map((f) => <span key={f} className="bg-red-50 text-red-500 text-xs font-bold px-2.5 py-1 rounded-full">🚫 {f}</span>)}
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
           )}
         </div>
 
@@ -1151,12 +1287,14 @@ export default function Home() {
                   다음
                 </button>
               </div>
-              {step === 0 && !canNext() && (
+              {!canNext() && (
                 <p className="text-xs text-gray-400 text-center">
-                  {appMode === 'mode-select' && '혼자 정하기 또는 다같이 정하기를 선택해주세요'}
-                  {appMode === 'solo' && '1차 목적을 선택해주세요'}
-                  {appMode === 'group-setup' && '인원수와 코스를 선택한 뒤 링크를 생성해주세요'}
-                  {appMode === 'group-waiting' && `최소 2명이 입력하면 다음으로 진행할 수 있어요 (현재 ${groupMembers.length}명)`}
+                  {step === 0 && appMode === 'mode-select' && '혼자 정하기 또는 다같이 정하기를 선택해주세요'}
+                  {step === 0 && appMode === 'solo' && '1차 목적을 선택해주세요'}
+                  {step === 0 && isGroup && '참여 인원과 1차 코스를 골라주세요'}
+                  {step === 1 && isGroup && '만날 지역을 선택해주세요'}
+                  {step === 2 && isGroup && !sessionId && '링크를 생성해 친구들에게 공유해주세요'}
+                  {step === 2 && isGroup && sessionId && `최소 2명이 입력하면 추천으로 진행할 수 있어요 (현재 ${groupMembers.length}명)`}
                 </p>
               )}
             </>

@@ -5,9 +5,10 @@ import type { VibeState } from '../components/VibeSelect';
 
 export interface GroupMember {
   member_name: string;
-  location_name: string;
-  location_lat: number;
-  location_lng: number;
+  location_name: string | null;
+  // 임의 지역 모드 게스트는 출발지를 입력하지 않으므로 좌표가 null일 수 있다
+  location_lat: number | null;
+  location_lng: number | null;
   purpose_first?: string | null;
   purpose_second?: string | null;
   vibe_atmosphere: string | null;

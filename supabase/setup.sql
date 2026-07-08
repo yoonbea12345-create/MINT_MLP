@@ -100,6 +100,10 @@ ALTER TABLE mint_sessions ADD COLUMN IF NOT EXISTS has_second BOOLEAN NOT NULL D
 ALTER TABLE mint_session_members ADD COLUMN IF NOT EXISTS purpose_first TEXT;
 ALTER TABLE mint_session_members ADD COLUMN IF NOT EXISTS purpose_second TEXT;
 ALTER TABLE mint_session_members ADD COLUMN IF NOT EXISTS vibe_keywords TEXT;
+-- 임의 지역 모드 게스트는 출발지를 입력하지 않으므로 좌표를 NULL 허용으로 완화
+ALTER TABLE mint_session_members ALTER COLUMN location_name DROP NOT NULL;
+ALTER TABLE mint_session_members ALTER COLUMN location_lat DROP NOT NULL;
+ALTER TABLE mint_session_members ALTER COLUMN location_lng DROP NOT NULL;
 
 -- RLS
 ALTER TABLE mint_sessions ENABLE ROW LEVEL SECURITY;

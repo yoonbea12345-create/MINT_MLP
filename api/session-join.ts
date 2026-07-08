@@ -24,16 +24,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       vibe_keywords?: string[] | null;
     };
 
-    const { session_id, member_name, location_name } = body;
-    const location_lat = Number(body.location_lat);
-    const location_lng = Number(body.location_lng);
+    const { session_id, member_name } = body;
+    // 출발지는 '중간지점 자동' 모드에서만 필요 — 임의 지역 모드 게스트는 미입력이므로 선택적으로 처리
+    const location_name = body.location_name ?? '';
+    const hasCoords = body.location_lat != null && body.location_lng != null
+      && !Number.isNaN(Number(body.location_lat)) && !Number.isNaN(Number(body.location_lng));
+    const location_lat = hasCoords ? Number(body.location_lat) : null;
+    const location_lng = hasCoords ? Number(body.location_lng) : null;
 
-    if (!session_id || !member_name || !location_name || Number.isNaN(location_lat) || Number.isNaN(location_lng)) {
+    if (!session_id || !member_name) {
       return res.status(400).json({ error: '필수 항목이 누락되었어요.' });
     }
-    if (member_name.length > 20 || location_name.length > 80 ||
-        location_lat < 33 || location_lat > 39 || location_lng < 124 || location_lng > 132) {
+    if (member_name.length > 20 || location_name.length > 80) {
       return res.status(400).json({ error: '입력값이 올바르지 않아요.' });
+    }
+    if (hasCoords && (location_lat! < 33 || location_lat! > 39 || location_lng! < 124 || location_lng! > 132)) {
+      return res.status(400).json({ error: '출발지 좌표가 올바르지 않아요.' });
     }
 
     const supabase = createClient(url, key);
@@ -79,18 +85,26 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       ...(keywords ? { vibe_keywords: JSON.stringify(keywords) } : {}),
     };
 
-    const { error } = await supabase.from('mint_session_members').insert(fullData);
+    // 출발지 없는(임의 지역) 멤버 삽입 헬퍼 — location 컬럼이 아직 NOT NULL이면(마이그레이션 전)
+    // 좌표 자리에 서울 중심을 넣어 삽입만 성공시킨다. 임의 지역 모드에선 이 좌표를 추천에 쓰지 않는다.
+    async function insertWithFallback(data: Record<string, unknown>) {
+      const { error } = await supabase.from('mint_session_members').insert(data);
+      if (!error) return null;
+      // NOT NULL 위반 → 좌표 자리에 서울 중심 채워 재시도
+      if (error.code === '23502' && data.location_lat == null) {
+        return insertWithFallback({ ...data, location_lat: 37.5665, location_lng: 126.978 });
+      }
+      return error;
+    }
+
+    let error = await insertWithFallback(fullData);
+
+    // 아직 없는 컬럼(purpose/vibe_keywords) 때문이면 기본 데이터로 재시도
+    if (error && error.code === '42703') {
+      error = await insertWithFallback(baseData);
+    }
 
     if (error) {
-      // 컬럼 없으면 기본 데이터로 fallback
-      if (error.code === '42703') {
-        const { error: e2 } = await supabase.from('mint_session_members').insert(baseData);
-        if (e2) {
-          console.error('[session-join] fallback insert failed', e2);
-          return res.status(500).json({ error: '제출에 실패했어요. 잠시 후 다시 시도해주세요.' });
-        }
-        return res.status(200).json({ ok: true });
-      }
       console.error('[session-join] insert failed', error);
       return res.status(500).json({ error: '제출에 실패했어요. 잠시 후 다시 시도해주세요.' });
     }

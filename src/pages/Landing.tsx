@@ -421,44 +421,71 @@ export default function Landing() {
       </section>
 
       {/* ══════════════════════════════════════
-          GROUP MODE — 모바일 가로 스와이프 / PC 5열 그리드
+          GROUP MODE — 역할 분리: 호스트(세팅) / 게스트(분위기만)
       ══════════════════════════════════════ */}
       <section className="py-14 lg:py-24 fade-section overflow-hidden">
-        <div className="max-w-lg lg:max-w-7xl mx-auto px-6 lg:text-center">
+        <div className="max-w-lg lg:max-w-5xl mx-auto px-6 lg:text-center mb-8 lg:mb-14">
           <p className="text-xs font-bold tracking-widest text-[#3CDBC0] mb-3">GROUP MODE</p>
           <h2 className="text-2xl lg:text-4xl font-bold text-gray-800 leading-tight mb-3">
-            다같이 정할 땐 <span className="text-[#3CDBC0]">링크 하나면 돼요</span>
+            역할은 딱 둘, <span className="text-[#3CDBC0]">한 명이 세팅하면 끝</span>
           </h2>
-          <p className="text-sm lg:text-base text-gray-400 mb-2 leading-relaxed">
-            <span className="block lg:inline">총대 멜 필요 없이 </span>
-            <span className="block lg:inline">각자 30초씩만 입력하면 </span>
-            <span className="block lg:inline"><strong className="text-gray-600">모두의 중간지점과 취향</strong>이 종합돼 나옵니다</span>
+          <p className="text-sm lg:text-base text-gray-400 leading-relaxed">
+            <span className="block lg:inline">호스트가 코스·지역을 미리 정하니까, </span>
+            <span className="block lg:inline"><strong className="text-gray-600">친구들은 분위기만 30초</strong> 고르면 끝나요</span>
           </p>
-          <p className="text-xs text-[#2AB5A0] font-bold mb-6 lg:hidden">옆으로 넘겨보세요 →</p>
         </div>
 
-        {/* 모바일: 가로 스와이프 / PC: 5열 그리드 */}
-        <div className="max-w-7xl mx-auto flex gap-4 overflow-x-auto snap-x snap-mandatory scrollbar-hide px-6 pb-2 lg:grid lg:grid-cols-5 lg:gap-5 lg:overflow-visible lg:mt-10">
-          {[
-            { n: '1', title: '링크 만들기', desc: '인원수·코스만 고르면 3초 완성', img: '/image/landing/group-create.webp' },
-            { n: '2', title: '단톡방에 공유', desc: '입력 현황이 실시간으로 보여요', img: '/image/landing/group-share.webp' },
-            { n: '3', title: '각자 이름·출발지', desc: '멤버는 회원가입 없이 링크만 열면 끝', img: '/image/landing/join-start.webp' },
-            { n: '4', title: '중간지점이든 동네든', desc: '전원 모이면 중간지점 자동 계산, 또는 원하는 동네 직접 선택', img: '/image/landing/region.webp' },
-            { n: '5', title: '취향은 몰래', desc: '눈치 안 보고 각자 원하는 분위기 선택', img: '/image/landing/join-vibe.webp' },
-          ].map(({ n, title, desc, img }) => (
-            <div key={n} className="snap-center flex-shrink-0 w-60 lg:w-full text-center">
-              {/* 텍스트(번호·제목·설명)를 이미지 위에 — 혼자정하기(HOW IT WORKS)와 위치 통일 */}
-              <div className="flex items-center justify-center gap-2 mb-1.5">
-                <span className="w-6 h-6 rounded-full bg-[#3CDBC0] text-white text-xs font-black flex items-center justify-center flex-shrink-0">{n}</span>
-                <span className="text-sm font-semibold text-gray-800">{title}</span>
+        {/* HOST — 링크 만드는 사람 */}
+        <div className="max-w-7xl mx-auto px-6 mb-12 lg:mb-20">
+          <div className="flex items-center gap-2.5 mb-1 lg:justify-center">
+            <span className="inline-flex items-center gap-1.5 bg-[#3CDBC0] text-white text-xs font-bold px-3 py-1.5 rounded-full">🧑‍💼 링크 만드는 사람</span>
+            <span className="text-sm font-bold text-gray-700">호스트</span>
+          </div>
+          <p className="text-xs lg:text-sm text-gray-400 mb-5 lg:mb-8 lg:text-center leading-relaxed">코스·지역만 정하고 링크 공유. 딱 한 번만.</p>
+          <div className="flex gap-4 overflow-x-auto snap-x snap-mandatory scrollbar-hide pb-2 lg:grid lg:grid-cols-3 lg:gap-6 lg:overflow-visible">
+            {[
+              { n: '1', title: '코스·인원 정하기', desc: '밥·술·카페 코스와 참여 인원을 호스트가 선점', img: '/image/landing/host-course.webp' },
+              { n: '2', title: '만날 지역 정하기', desc: '중간지점 자동, 또는 만날 동네 직접 선택', img: '/image/landing/host-region.webp' },
+              { n: '3', title: '링크 공유 + 나도 참여', desc: '단톡방에 링크 던지고, 호스트도 분위기만 입력', img: '/image/landing/host-share.webp' },
+            ].map(({ n, title, desc, img }) => (
+              <div key={n} className="snap-center flex-shrink-0 w-60 lg:w-full text-center">
+                <div className="flex items-center justify-center gap-2 mb-1.5">
+                  <span className="w-6 h-6 rounded-full bg-[#3CDBC0] text-white text-xs font-black flex items-center justify-center flex-shrink-0">{n}</span>
+                  <span className="text-sm font-semibold text-gray-800">{title}</span>
+                </div>
+                <p className="text-xs text-gray-400 mb-4 leading-relaxed min-h-[40px] lg:min-h-[48px]">{desc}</p>
+                <PhoneMockup src={img} alt={`호스트 ${title}`} width="w-full" />
               </div>
-              <p className="text-xs text-gray-400 mb-4 leading-relaxed min-h-[40px] lg:min-h-[48px]">{desc}</p>
-              <PhoneMockup src={img} alt={`그룹 모드 ${title}`} width="w-full" />
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
 
-        <div className="max-w-lg lg:max-w-2xl mx-auto px-6 mt-6 lg:mt-10">
+        {/* GUEST — 링크 받는 사람 */}
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="flex items-center gap-2.5 mb-1 lg:justify-center">
+            <span className="inline-flex items-center gap-1.5 bg-[#E8F8F5] text-[#2AB5A0] border border-[#3CDBC0]/40 text-xs font-bold px-3 py-1.5 rounded-full">🙋 링크 받는 사람</span>
+            <span className="text-sm font-bold text-gray-700">친구들</span>
+          </div>
+          <p className="text-xs lg:text-sm text-gray-400 mb-5 lg:mb-8 lg:text-center leading-relaxed">가입도, 출발지 고민도 없이 — 링크 열고 분위기만.</p>
+          <div className="flex gap-4 overflow-x-auto snap-x snap-mandatory scrollbar-hide pb-2 lg:grid lg:grid-cols-3 lg:gap-6 lg:overflow-visible lg:max-w-3xl lg:mx-auto">
+            {[
+              { n: '1', title: '분위기만 몰래 선택', desc: '눈치 안 보고 각자 원하는 분위기·취향', img: '/image/landing/guest-vibe.webp' },
+              { n: '2', title: '못 먹는 음식·편의시설', desc: '못 먹는 음식은 빼고, 필요한 시설만 콕', img: '/image/landing/guest-extra.webp' },
+              { n: '3', title: '제출 완료', desc: '호스트가 정한 코스·지역과 내 취향 확인', img: '/image/landing/guest-done.webp' },
+            ].map(({ n, title, desc, img }) => (
+              <div key={n} className="snap-center flex-shrink-0 w-60 lg:w-full text-center">
+                <div className="flex items-center justify-center gap-2 mb-1.5">
+                  <span className="w-6 h-6 rounded-full bg-[#2AB5A0] text-white text-xs font-black flex items-center justify-center flex-shrink-0">{n}</span>
+                  <span className="text-sm font-semibold text-gray-800">{title}</span>
+                </div>
+                <p className="text-xs text-gray-400 mb-4 leading-relaxed min-h-[40px] lg:min-h-[48px]">{desc}</p>
+                <PhoneMockup src={img} alt={`게스트 ${title}`} width="w-full" />
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="max-w-lg lg:max-w-2xl mx-auto px-6 mt-10 lg:mt-16">
           <div className="bg-teal-50 border border-teal-100 rounded-2xl p-4 lg:p-6 text-center">
             <p className="text-sm lg:text-base text-gray-600 leading-relaxed">
               "난 아무데나 괜찮아"가 진짜였는지,<br />
