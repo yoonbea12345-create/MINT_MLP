@@ -24,6 +24,33 @@ interface WeatherInfo {
   isCold: boolean;
 }
 
+interface FinalistPlace extends Record<string, unknown> {
+  slotRank?: number;
+  purposeSlot?: number;
+  sourceIndex?: number;
+  placeName: string;
+  category?: string;
+  description?: string;
+  priceRange?: string;
+  vibeTags?: string[];
+  address: string;
+  area?: string;
+  fitScore?: number;
+  finalScore?: number;
+  bubbleScore?: number;
+  buzzCount?: number;
+  naverRank?: number | null;
+  isPublicGem?: boolean;
+  rank?: number;
+  lat?: number;
+  lng?: number;
+  congestionLevel?: string;
+  openingHours?: string;
+  kakaoPlaceUrl?: string;
+  imageUrl?: string;
+  walkingToNext?: number;
+}
+
 // 중간지점 반경 (1차: 1.5km, 부족하면 3km로 확장)
 const MIDPOINT_RADIUS_KM = 1.5;
 
@@ -401,13 +428,13 @@ async function searchKakaoPlaceUrl(
 // Claude 응답에서 places 배열을 추출한다. 정상이면 JSON.parse 한 방에 되지만,
 // max_tokens로 응답이 잘리면 마지막 객체가 불완전해 parse가 실패한다. 그럴 때
 // 균형 잡힌 중괄호로 "완전한 객체만" 골라 복구한다(장소 몇 곳이라도 건지는 게 500보다 낫다).
-function extractPlaces(text: string): Record<string, unknown>[] | null {
+function extractPlaces(text: string): FinalistPlace[] | null {
   const jsonMatch = text.match(/\{[\s\S]*\}/);
   if (jsonMatch) {
     try {
       const parsed = JSON.parse(jsonMatch[0]);
-      if (Array.isArray(parsed.places)) return parsed.places;
-      if (parsed.placeName) return [parsed];
+      if (Array.isArray(parsed.places)) return parsed.places as FinalistPlace[];
+      if (parsed.placeName) return [parsed as FinalistPlace];
     } catch { /* 잘린 JSON → 아래 부분 복구로 폴백 */ }
   }
 
@@ -416,7 +443,7 @@ function extractPlaces(text: string): Record<string, unknown>[] | null {
   const arrStart = placesIdx >= 0 ? text.indexOf('[', placesIdx) : text.indexOf('[');
   if (arrStart < 0) return null;
 
-  const objects: Record<string, unknown>[] = [];
+  const objects: FinalistPlace[] = [];
   let depth = 0;
   let start = -1;
   let inStr = false;
@@ -434,7 +461,7 @@ function extractPlaces(text: string): Record<string, unknown>[] | null {
     else if (c === '}') {
       depth--;
       if (depth === 0 && start >= 0) {
-        try { objects.push(JSON.parse(text.slice(start, i + 1))); } catch { /* 이 조각은 버림 */ }
+        try { objects.push(JSON.parse(text.slice(start, i + 1)) as FinalistPlace); } catch { /* 이 조각은 버림 */ }
         start = -1;
       }
     }
@@ -813,8 +840,8 @@ ${fitScoreGuide}
     }
 
     const text = message.content
-      .filter((b): b is { type: 'text'; text: string } => b.type === 'text')
-      .map((b) => b.text)
+      .filter((b) => b.type === 'text')
+      .map((b) => 'text' in b ? b.text : '')
       .join('');
 
     const finalists = extractPlaces(text);
@@ -870,7 +897,7 @@ ${fitScoreGuide}
     // L1: 파이널리스트 전체에 대해 블로그 버즈 분석 (캐시 우선, 실패 시 개별 0점 폴백)
     try {
       await Promise.all(
-        finalists.map(async (place: { placeName: string; address: string; bubbleScore?: number; buzzCount?: number }) => {
+        finalists.map(async (place) => {
           const buzz = await getBubbleScoreCached(place.placeName, place.address, primaryArea);
           place.bubbleScore = buzz.bubbleScore;
           place.buzzCount = buzz.buzzCount;
@@ -933,31 +960,31 @@ ${fitScoreGuide}
     }
 
     // 최종 표시 개수로 슬라이스 — finalScore(L3 재정렬) 내림차순
-    const numScore = (p: Record<string, unknown>) =>
+    const numScore = (p: FinalistPlace) =>
       typeof p.finalScore === 'number' ? p.finalScore
       : typeof p.fitScore === 'number' ? p.fitScore : 0;
     const bySlot = (slot: number) =>
       finalists.filter((p) => p.purposeSlot === slot).sort((a, b) => numScore(b) - numScore(a));
 
-    let places;
+    let places: FinalistPlace[];
     if (effectiveTwoPurposes) {
       const firstSorted = bySlot(1);
       const secondSorted = bySlot(2);
-      places = [
+      places = ([
         firstSorted[0] && { ...firstSorted[0], rank: 1 },
         secondSorted[0] && { ...secondSorted[0], rank: 2 },
         firstSorted[1] && { ...firstSorted[1], rank: 3 },
         firstSorted[2] && { ...firstSorted[2], rank: 4 },
         secondSorted[1] && { ...secondSorted[1], rank: 5 },
         secondSorted[2] && { ...secondSorted[2], rank: 6 },
-      ].filter(Boolean);
+      ].filter(Boolean) as FinalistPlace[]);
     } else {
       places = bySlot(1)
         .slice(0, 3)
         .map((p, i) => ({ ...p, rank: i + 1 }));
     }
 
-    const debugBubbleScores = finalists.map((p: { placeName: string; bubbleScore?: number; buzzCount?: number }) => ({
+    const debugBubbleScores = finalists.map((p) => ({
       placeName: p.placeName,
       bubbleScore: p.bubbleScore,
       buzzCount: p.buzzCount,
@@ -974,11 +1001,11 @@ ${fitScoreGuide}
     const naverImgId = process.env.NAVER_CLIENT_ID;
     const naverImgSecret = process.env.NAVER_CLIENT_SECRET;
     await Promise.all(
-      places.map(async (place: { placeName: string; area?: string; lat: number; lng: number; kakaoPlaceUrl?: string; imageUrl?: string }) => {
+      places.map(async (place) => {
         const hasCoords = place.lat && place.lng && place.lat !== 0 && place.lng !== 0;
         const [placeUrl, imageUrl] = await Promise.all([
           kakaoRestKey && hasCoords
-            ? searchKakaoPlaceUrl(place.placeName, place.lat, place.lng, kakaoRestKey)
+            ? searchKakaoPlaceUrl(place.placeName, place.lat!, place.lng!, kakaoRestKey)
             : Promise.resolve(null),
           naverImgId && naverImgSecret
             ? fetchPlaceImage(place.placeName, toSearchName(typeof place.area === 'string' ? place.area : primaryArea), naverImgId, naverImgSecret)
@@ -1000,8 +1027,8 @@ ${fitScoreGuide}
 
     // 1차·2차 도보 시간 haversine으로 보정 (rank 1 → rank 2)
     if (effectiveTwoPurposes) {
-      const rank1 = places.find((p: { rank: number }) => p.rank === 1);
-      const rank2 = places.find((p: { rank: number }) => p.rank === 2);
+      const rank1 = places.find((p) => p.rank === 1);
+      const rank2 = places.find((p) => p.rank === 2);
       if (rank1 && rank2 && rank1.lat && rank1.lng && rank2.lat && rank2.lng &&
           rank1.lat !== 0 && rank2.lat !== 0) {
         rank1.walkingToNext = walkingMinutes(rank1.lat, rank1.lng, rank2.lat, rank2.lng);
@@ -1015,16 +1042,12 @@ ${fitScoreGuide}
         const displayedByKey = new Map(
           places.map((p) => [`${p.placeName}|${p.address}`, p.rank as number]),
         );
-        const candidates = finalists.map((f: {
-          placeName: string; address: string; purposeSlot: number; slotRank: number;
-          fitScore?: number; bubbleScore?: number; buzzCount?: number;
-          naverRank?: number | null; isPublicGem?: boolean; finalScore?: number;
-        }) => {
+        const candidates = finalists.map((f) => {
           const key = `${f.placeName}|${f.address}`;
           return {
             place_key: placeKey(f.placeName, f.address),
-            purposeSlot: f.purposeSlot,
-            slotRank: f.slotRank,
+            purposeSlot: f.purposeSlot ?? null,
+            slotRank: f.slotRank ?? null,
             fitScore: f.fitScore ?? null,
             bubbleScore: f.bubbleScore ?? null,
             buzzCount: f.buzzCount ?? null,
