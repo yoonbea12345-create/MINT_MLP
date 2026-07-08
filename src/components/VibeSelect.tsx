@@ -269,7 +269,7 @@ export default function VibeSelect({ value, onChange, purpose, budget = null, on
               }}
               onBlur={() => { if (excludeInput.trim()) addExcludeFoods(); }}
               placeholder="예: 회, 오이, 곱창 (쉼표로 여러 개)"
-              className="flex-1 border-2 border-gray-200 rounded-xl px-4 py-2.5 text-sm text-gray-700 placeholder-gray-400 focus:outline-none focus:border-[#3CDBC0] transition-colors"
+              className="flex-1 min-w-0 border-2 border-gray-200 rounded-xl px-4 py-2.5 text-sm text-gray-700 placeholder-gray-400 focus:outline-none focus:border-[#3CDBC0] transition-colors"
             />
             {/* 추가 버튼은 편의시설과 동일한 민트로 통일 — 빨강은 '제외' 신호로 태그에만 사용 */}
             <button
@@ -343,7 +343,7 @@ function KeywordTagInput({
           onBlur={commit}
           placeholder={placeholder}
           maxLength={20}
-          className={`flex-1 border-2 rounded-xl px-4 py-2.5 text-sm text-gray-700 placeholder-gray-400 focus:outline-none bg-white transition-colors ${
+          className={`flex-1 min-w-0 border-2 rounded-xl px-4 py-2.5 text-sm text-gray-700 placeholder-gray-400 focus:outline-none bg-white transition-colors ${
             isMint ? 'border-[#3CDBC0]/50 focus:border-[#3CDBC0]' : 'border-orange-300 focus:border-orange-400'
           }`}
         />

@@ -19,9 +19,9 @@ interface Props {
 
 // 밥/술/카페 = "검색어 없이 아무거나 추천받고 싶은 사람" / 메뉴 콕 = "특정 메뉴가 있는 사람"
 const OPTIONS: { value: '밥' | '술' | '카페' | '기타'; label: string; sub: string; emoji: string }[] = [
-  { value: '밥', label: '밥', sub: '아무거나', emoji: '🍽️' },
-  { value: '술', label: '술', sub: '아무데나', emoji: '🍻' },
-  { value: '카페', label: '카페', sub: '아무데나', emoji: '☕' },
+  { value: '밥', label: '밥', sub: 'AI 추천', emoji: '🍽️' },
+  { value: '술', label: '술', sub: 'AI 추천', emoji: '🍻' },
+  { value: '카페', label: '카페', sub: 'AI 추천', emoji: '☕' },
   { value: '기타', label: '메뉴 콕!', sub: '직접 입력', emoji: '🎯' },
 ];
 
@@ -55,8 +55,10 @@ export default function PurposeSelect({ value, onChange }: Props) {
 
   const isNoneSelected = value.secondRaw === '없음' || value.secondRaw === null;
 
+    // 부모(Home step0)가 이미 px-4를 주므로 여기선 좌우 패딩을 두지 않는다
+    //  → 1차·2차 목적 UI가 위의 인원수·모드선택과 가로폭이 정확히 일치.
   return (
-    <div className="px-4 py-3 flex flex-col gap-5">
+    <div className="py-1 flex flex-col gap-5">
       {/* 1차 목적 */}
       <div>
         <div className="flex items-center gap-2 mb-3">
@@ -197,7 +199,7 @@ function MenuTagInput({
             onBlur={commit}
             placeholder={menus.length >= 1 ? '＋ 메뉴 더 입력 후 Enter' : placeholder}
             maxLength={10}
-            className={`flex-1 border-2 rounded-xl px-3.5 py-2.5 text-xs font-bold placeholder:text-gray-400 placeholder:font-medium outline-none transition-colors ${
+            className={`flex-1 min-w-0 border-2 rounded-xl px-3.5 py-2.5 text-xs font-bold placeholder:text-gray-400 placeholder:font-medium outline-none transition-colors ${
               isMint
                 ? 'text-[#2AB5A0] border-gray-200 focus:border-[#3CDBC0]'
                 : 'text-orange-500 border-gray-200 focus:border-orange-300'
