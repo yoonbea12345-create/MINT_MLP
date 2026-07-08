@@ -1,8 +1,13 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
+import { createPortal } from 'react-dom';
+import { searchAddress } from '../services/kakaoMap';
+import type { KakaoPlace } from '../services/kakaoMap';
 
 export type MeetingLocation =
   | { type: 'auto' }
-  | { type: 'manual'; regionId: string; area: string };
+  // 직접 입력 지역은 실제 좌표(lat/lng)를 함께 담아야 추천이 그 지역으로 검색된다.
+  // 프리셋 지역(regionId 있음)은 좌표가 서비스(PRESET_REGIONS)에 있어 생략 가능.
+  | { type: 'manual'; regionId: string; area: string; lat?: number; lng?: number };
 
 interface Props {
   value: MeetingLocation | null;
@@ -24,24 +29,97 @@ const MORE_REGIONS = [
   { id: 'jamsil',   label: '잠실/송파',   desc: '잠실역·롯데월드'       },
 ];
 
+// 출발지 검색과 동일한 자동완성 드롭다운 (body 포털 + fixed 위치)
+function SuggestionDropdown({
+  suggestions,
+  anchorEl,
+  onPick,
+}: {
+  suggestions: KakaoPlace[];
+  anchorEl: HTMLDivElement | null;
+  onPick: (place: KakaoPlace) => void;
+}) {
+  if (!suggestions.length || !anchorEl) return null;
+  const rect = anchorEl.getBoundingClientRect();
+  return createPortal(
+    <div
+      style={{ position: 'fixed', top: rect.bottom + 4, left: rect.left, width: rect.width, zIndex: 9999 }}
+      className="bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden"
+    >
+      {suggestions.map((place) => (
+        <button
+          key={place.id}
+          onMouseDown={() => onPick(place)}
+          className="w-full text-left px-4 py-3 hover:bg-[#E8F8F5] transition-colors border-b border-gray-100 last:border-0"
+        >
+          <div className="text-sm font-medium text-gray-800">{place.place_name}</div>
+          <div className="text-xs text-gray-400 mt-0.5">{place.road_address_name || place.address_name}</div>
+        </button>
+      ))}
+    </div>,
+    document.body
+  );
+}
+
 export default function MeetingLocationSelect({ value, onSelect }: Props) {
-  const [search, setSearch] = useState('');
+  const [search, setSearch] = useState(
+    value?.type === 'manual' && value.regionId === '' ? value.area : ''
+  );
+  const [suggestions, setSuggestions] = useState<KakaoPlace[]>([]);
+  const [searching, setSearching] = useState(false);
   const [showMore, setShowMore] = useState(false);
 
-  function handleSearch() {
-    const trimmed = search.trim();
-    if (trimmed) onSelect({ type: 'manual', regionId: '', area: trimmed });
+  const wrapperRef = useRef<HTMLDivElement | null>(null);
+  const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // 직접 입력 검색으로 좌표가 확정된 상태인지
+  const customSelected =
+    value?.type === 'manual' && value.regionId === '' && value.lat != null && value.lng != null;
+
+  function handleSearchChange(v: string) {
+    setSearch(v);
+    setSuggestions([]);
+    if (searchTimer.current) clearTimeout(searchTimer.current);
+    if (v.trim().length < 1) return;
+    setSearching(true);
+    searchTimer.current = setTimeout(async () => {
+      try {
+        const results = await searchAddress(v.trim());
+        setSuggestions(results.slice(0, 5));
+      } catch { /* ignore */ }
+      finally { setSearching(false); }
+    }, 200);
+  }
+
+  // 자동완성에서 실제 장소 선택 → 좌표까지 담아 확정 (출발지 검색과 동일)
+  function pickPlace(place: KakaoPlace) {
+    setSearch(place.place_name);
+    setSuggestions([]);
+    setSearching(false);
+    onSelect({
+      type: 'manual',
+      regionId: '',
+      area: place.place_name,
+      lat: parseFloat(place.y),
+      lng: parseFloat(place.x),
+    });
   }
 
   function isManualSelected(regionId: string) {
     return value?.type === 'manual' && (value as { type: 'manual'; regionId: string }).regionId === regionId;
   }
 
+  function selectPreset(id: string, label: string) {
+    setSearch('');
+    setSuggestions([]);
+    onSelect({ type: 'manual', regionId: id, area: label });
+  }
+
   return (
     <div className="px-4 py-3 flex flex-col gap-4">
       {/* 자동 중간지점 카드 */}
       <button
-        onClick={() => onSelect({ type: 'auto' })}
+        onClick={() => { setSearch(''); setSuggestions([]); onSelect({ type: 'auto' }); }}
         className={`w-full text-left rounded-2xl p-4 flex items-center gap-3 active:scale-[0.98] transition-all shadow-lg shadow-[#3CDBC0]/25 ${
           value?.type === 'auto'
             ? 'bg-[#3CDBC0] border-4 border-[#2AB58C]'
@@ -70,29 +148,36 @@ export default function MeetingLocationSelect({ value, onSelect }: Props) {
           </div>
           <div className="flex-1">
             <div className="font-black text-gray-800 text-base">직접 입력하기</div>
-            <div className="text-xs text-gray-400 mt-0.5">만날 지역을 직접 입력</div>
+            <div className="text-xs text-gray-400 mt-0.5">만날 지역을 검색해서 선택</div>
           </div>
         </div>
 
-        {/* 검색창 — 메인 */}
-        <div className="relative">
+        {/* 검색창 — 자동완성(출발지 검색과 동일) */}
+        <div ref={wrapperRef} className="relative">
           <input
             type="text"
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            onKeyDown={(e) => { if (e.key === 'Enter') handleSearch(); }}
-            placeholder="예: 홍대, 강남역, 성수동..."
-            className="w-full bg-white border-2 border-[#3CDBC0] rounded-xl px-4 py-3 text-sm text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#3CDBC0]/20 transition-colors"
+            onChange={(e) => handleSearchChange(e.target.value)}
+            placeholder="예: 홍대입구역, 강남역, 성수동..."
+            className={`w-full pl-4 pr-9 py-3 rounded-xl border-2 text-sm text-gray-700 placeholder-gray-400 focus:outline-none transition-colors bg-white ${
+              customSelected ? 'border-[#3CDBC0] bg-[#E8F8F5]' : 'border-[#3CDBC0] focus:ring-2 focus:ring-[#3CDBC0]/20'
+            }`}
           />
-          {search.trim() && (
-            <button
-              onClick={handleSearch}
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 bg-[#3CDBC0] text-white text-xs font-bold px-3 py-1.5 rounded-lg active:scale-95 transition-transform"
-            >
-              →
-            </button>
+          {searching && (
+            <div className="absolute inset-y-0 right-3 flex items-center">
+              <div className="w-4 h-4 border-2 border-[#3CDBC0] border-t-transparent rounded-full animate-spin" />
+            </div>
           )}
+          {customSelected && !searching && (
+            <div className="absolute inset-y-0 right-3 flex items-center">
+              <span className="text-[#3CDBC0] text-sm font-bold">✓</span>
+            </div>
+          )}
+          <SuggestionDropdown suggestions={suggestions} anchorEl={wrapperRef.current} onPick={pickPlace} />
         </div>
+        {customSelected && (
+          <p className="-mt-2 text-xs text-[#2AB5A0] font-medium">📍 {(value as { area: string }).area} 주변으로 추천해요</p>
+        )}
 
         {/* 핫 지역 */}
         <div>
@@ -103,7 +188,7 @@ export default function MeetingLocationSelect({ value, onSelect }: Props) {
             {HOT_REGIONS.map((r) => (
               <button
                 key={r.id}
-                onClick={() => onSelect({ type: 'manual', regionId: r.id, area: r.label })}
+                onClick={() => selectPreset(r.id, r.label)}
                 className={`rounded-xl border-2 px-3 py-2.5 text-center active:scale-[0.97] transition-all ${
                   isManualSelected(r.id)
                     ? 'border-[#3CDBC0] bg-teal-50'
@@ -129,7 +214,7 @@ export default function MeetingLocationSelect({ value, onSelect }: Props) {
             {MORE_REGIONS.map((r) => (
               <button
                 key={r.id}
-                onClick={() => onSelect({ type: 'manual', regionId: r.id, area: r.label })}
+                onClick={() => selectPreset(r.id, r.label)}
                 className={`rounded-xl border-2 px-3 py-2.5 text-center active:scale-[0.97] transition-all ${
                   isManualSelected(r.id)
                     ? 'border-[#3CDBC0] bg-teal-50'

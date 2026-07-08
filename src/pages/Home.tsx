@@ -448,10 +448,18 @@ export default function Home() {
       handleMidpointSelect();
     } else {
       const region = PRESET_REGIONS.find((r) => r.id === loc.regionId);
+      const validLocs = locations.filter((l) => l.lat != null && l.lng != null);
       if (region) {
         handleMidpointSelect(region);
+      } else if (loc.lat != null && loc.lng != null) {
+        // 직접 검색으로 좌표가 확정된 지역 — 그 좌표를 중심으로 추천 (핵심 수정)
+        const midpoint = { lat: loc.lat, lng: loc.lng };
+        const nearestAreas = findNearestAreas(midpoint, 3);
+        setMidpointData({ midpoint, areaName: loc.area, nearestAreas });
+        setResultTravelTimes(null);
+        handleRecommend(midpoint, nearestAreas, validLocs);
       } else {
-        const validLocs = locations.filter((l) => l.lat != null && l.lng != null);
+        // 좌표 없는 텍스트만(구버전·자동완성 미선택) — 최후 폴백
         const coords = validLocs.map((l) => ({ lat: l.lat!, lng: l.lng! }));
         const balanced = findBalancedAreas(coords.length >= 2 ? coords : [{ lat: 37.5665, lng: 126.978 }]);
         const nearestAreas = findNearestAreas(balanced.midpoint, 3);
