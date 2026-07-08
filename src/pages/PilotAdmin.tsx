@@ -12,10 +12,10 @@ interface PilotFeedback {
 }
 
 async function callPilotAdmin(password: string): Promise<PilotFeedback[]> {
-  const res = await fetch('/api/pilot-admin-feedback', {
+  const res = await fetch('/api/pilot-feedback', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ password }),
+    body: JSON.stringify({ action: 'admin-list', password }),
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(data.error || '데이터를 불러오지 못했어요.');
