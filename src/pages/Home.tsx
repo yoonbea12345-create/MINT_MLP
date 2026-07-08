@@ -840,6 +840,18 @@ export default function Home() {
           <div className="flex items-center justify-between mb-2">
             <button
               onClick={() => {
+                // 결과에서 뒤로가기 = 바로 이전 입력 화면(마지막 스텝)으로. 입력값은 그대로 유지해 바로 수정·재추천 가능.
+                setChangeNote(null);
+                setView('steps');
+                setStep(3);
+              }}
+              className="text-sm text-gray-400 hover:text-gray-600"
+            >
+              ← 뒤로
+            </button>
+            <button
+              onClick={() => {
+                // 처음부터 다시 — 전체 초기화
                 clearResultSnapshot();
                 try { localStorage.removeItem(INPUT_DRAFT_KEY); sessionStorage.removeItem(INPUT_DRAFT_KEY); localStorage.removeItem(GROUP_SESSION_KEY); } catch { /* ignore */ }
                 setResult(null);
@@ -862,11 +874,11 @@ export default function Home() {
                 setResultWeather(null);
                 setChangeNote(null);
               }}
-              className="text-sm text-gray-400 hover:text-gray-600"
+              className="text-[#3CDBC0] font-black text-lg"
+              title="처음부터 다시"
             >
-              ← 처음으로
+              MINT
             </button>
-            <span className="text-[#3CDBC0] font-black text-lg">MINT</span>
           </div>
 
           {/* 날씨 반영 배너 — "모든 변수 반영"을 유저가 체감하게 */}

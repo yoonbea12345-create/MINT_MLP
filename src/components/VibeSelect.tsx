@@ -119,18 +119,25 @@ export default function VibeSelect({ value, onChange, purpose, budget = null, on
   function toggle(groupLabel: string, key: string) {
     const g = value[groupLabel] ?? { first: null, second: null };
     let { first, second } = g;
-    if (first === key) {
-      first = second;
+    const isFirst = first === key;
+    const isSecond = second === key;
+    if (isFirst && isSecond) {
+      // 1차+2차 동시 지정 상태 → 해제
+      first = null;
       second = null;
-    } else if (second === key) {
-      second = null;
-    } else if (first === null) {
-      first = key;
-    } else if (second === null) {
-      second = key;
+    } else if (isFirst) {
+      // 1차만 지정됨: 2차가 비었으면 같은 분위기를 2차로도(중복 허용), 아니면 1차 해제
+      if (second === null) second = key;
+      else { first = second; second = null; }
+    } else if (isSecond) {
+      // 2차만 지정됨: 1차가 비었으면 같은 분위기를 1차로도, 아니면 2차 해제
+      if (first === null) first = key;
+      else second = null;
     } else {
-      first = second;
-      second = key;
+      // 미선택: 빈 슬롯에 채우고, 둘 다 차있으면 밀어낸다
+      if (first === null) first = key;
+      else if (second === null) second = key;
+      else { first = second; second = key; }
     }
     onChange({ ...value, [groupLabel]: { first, second } });
   }
@@ -158,7 +165,7 @@ export default function VibeSelect({ value, onChange, purpose, budget = null, on
         <div className="bg-[#E8F8F5] border border-[#3CDBC0]/30 rounded-xl px-3 py-2 flex items-center gap-2">
           <span className="text-base">💡</span>
           <p className="text-[11px] text-[#2AB5A0] leading-snug">
-            같은 항목을 <span className="font-black">탭할 때마다 1차 → 2차 → 해제</span>로 지정돼요
+            탭할 때마다 <span className="font-black">1차 → 1·2차 → 해제</span> · 1차·2차에 <span className="font-black">같은 분위기</span>도 돼요
           </p>
         </div>
       )}
@@ -185,6 +192,7 @@ export default function VibeSelect({ value, onChange, purpose, budget = null, on
               {group.options.map((opt) => {
                 const isFirst = g.first === opt.key;
                 const isSecond = g.second === opt.key;
+                const isBoth = isFirst && isSecond;
                 return (
                   <button
                     key={opt.key}
@@ -197,12 +205,13 @@ export default function VibeSelect({ value, onChange, purpose, budget = null, on
                         : 'border-gray-200 bg-white text-gray-700 hover:border-[#3CDBC0]/50'
                     }`}
                   >
-                    {isFirst && (
+                    {isBoth ? (
+                      <span className="absolute -top-1.5 -right-1.5 text-[7px] font-black bg-gradient-to-r from-[#1E9E8C] to-orange-400 text-white px-1.5 py-0.5 rounded-full leading-none z-10 shadow-sm">1·2차</span>
+                    ) : isFirst ? (
                       <span className="absolute -top-1.5 -right-1.5 text-[7px] font-black bg-[#1E9E8C] text-white px-1.5 py-0.5 rounded-full leading-none z-10 shadow-sm">1차</span>
-                    )}
-                    {isSecond && (
+                    ) : isSecond ? (
                       <span className="absolute -top-1.5 -right-1.5 text-[7px] font-black bg-orange-400 text-white px-1.5 py-0.5 rounded-full leading-none z-10 shadow-sm">2차</span>
-                    )}
+                    ) : null}
                     <span className="text-lg mb-1 leading-none">{opt.emoji}</span>
                     <span>{opt.label}</span>
                   </button>
@@ -240,6 +249,46 @@ export default function VibeSelect({ value, onChange, purpose, budget = null, on
               );
             })}
           </div>
+        </div>
+      )}
+
+      {/* 키워드 — 자유 입력 강조 섹션. 분위기·취향·편의시설에 없는 조건도 뭐든지 */}
+      {showExtras && onKeywordsChange && (
+        <div className="rounded-2xl border-2 border-[#3CDBC0]/40 bg-[#F0FDF9] p-4">
+          <p className="text-sm font-black text-[#2AB5A0] mb-1">🔎 키워드로 원하는 건 뭐든지!</p>
+          <p className="text-[11px] text-gray-500 mb-2.5 leading-relaxed">분위기·취향에 없는 조건도 자유롭게 검색해 더하세요. 예: 루프탑, 노포, 조용한, 뷰맛집</p>
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={customInput}
+              onChange={(e) => setCustomInput(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addCustomKeyword(); } }}
+              placeholder="원하는 키워드를 검색해 추가"
+              className="flex-1 border-2 border-[#3CDBC0]/50 rounded-xl px-4 py-2.5 text-sm text-gray-700 placeholder-gray-400 focus:outline-none focus:border-[#3CDBC0] bg-white transition-colors"
+            />
+            <button
+              onClick={addCustomKeyword}
+              className="flex-shrink-0 px-4 rounded-xl bg-[#3CDBC0] text-white text-sm font-bold transition-all active:scale-95 hover:bg-[#2AB5A0]"
+            >
+              추가
+            </button>
+          </div>
+          {keywords.filter((k) => !PRESET_CHIP_LABELS.includes(k)).length > 0 && (
+            <div className="flex flex-wrap gap-2 mt-2.5">
+              {keywords
+                .filter((k) => !PRESET_CHIP_LABELS.includes(k))
+                .map((k) => (
+                  <button
+                    key={k}
+                    onClick={() => toggleKeyword(k)}
+                    className="flex items-center gap-1 px-3 py-1.5 rounded-full bg-white border border-[#3CDBC0]/50 text-[#2AB5A0] text-xs font-bold transition-all active:scale-95"
+                  >
+                    <span>#{k}</span>
+                    <span className="text-[#2AB5A0]/60">×</span>
+                  </button>
+                ))}
+            </div>
+          )}
         </div>
       )}
 
@@ -293,7 +342,7 @@ export default function VibeSelect({ value, onChange, purpose, budget = null, on
         </div>
       )}
 
-      {/* 편의시설 키워드 */}
+      {/* 편의시설 — 프리셋 칩만 (자유 키워드는 위 '키워드' 섹션으로 분리) */}
       {showExtras && onKeywordsChange && (
         <div>
           <div className="flex items-center gap-2 mb-2">
@@ -319,47 +368,6 @@ export default function VibeSelect({ value, onChange, purpose, budget = null, on
               );
             })}
           </div>
-
-          {/* 키워드 직접 입력 */}
-          <div className="flex gap-2 mt-2">
-            <input
-              type="text"
-              value={customInput}
-              onChange={(e) => setCustomInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  e.preventDefault();
-                  addCustomKeyword();
-                }
-              }}
-              placeholder="원하는 키워드 직접 입력"
-              className="flex-1 border-2 border-gray-200 rounded-xl px-4 py-2.5 text-sm text-gray-700 placeholder-gray-400 focus:outline-none focus:border-[#3CDBC0] transition-colors"
-            />
-            <button
-              onClick={addCustomKeyword}
-              className="flex-shrink-0 px-4 rounded-xl bg-[#3CDBC0] text-white text-sm font-bold transition-all active:scale-95 hover:bg-[#2AB5A0]"
-            >
-              추가
-            </button>
-          </div>
-
-          {/* 직접 입력한 키워드 태그 */}
-          {keywords.filter((k) => !PRESET_CHIP_LABELS.includes(k)).length > 0 && (
-            <div className="flex flex-wrap gap-2 mt-2.5">
-              {keywords
-                .filter((k) => !PRESET_CHIP_LABELS.includes(k))
-                .map((k) => (
-                  <button
-                    key={k}
-                    onClick={() => toggleKeyword(k)}
-                    className="flex items-center gap-1 px-3 py-1.5 rounded-full bg-[#E8F8F5] border border-[#3CDBC0]/40 text-[#2AB5A0] text-xs font-bold transition-all active:scale-95"
-                  >
-                    <span>#{k}</span>
-                    <span className="text-[#2AB5A0]/60">×</span>
-                  </button>
-                ))}
-            </div>
-          )}
         </div>
       )}
     </div>

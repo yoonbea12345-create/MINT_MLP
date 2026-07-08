@@ -346,7 +346,7 @@ export default function MemberInput() {
           <p className="text-xs text-gray-400 mt-1">눈치 안 보고 각자 원하는 대로 (많이 고를수록 정확해져요)</p>
         )}
         {phase === 'step2' && (
-          <p className="text-xs text-gray-400 mt-1">예산·못 먹는 음식·편의시설 — 모두 선택사항</p>
+          <p className="text-xs text-gray-400 mt-1">예산·키워드·못 먹는 음식·편의시설 — 모두 선택사항</p>
         )}
       </div>
 
