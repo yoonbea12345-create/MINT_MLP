@@ -8,8 +8,23 @@ const DEFAULT_LABELS = ['모임·목적', '관계', '지역·장소', '분위기
 
 export default function StepProgress({ current, total, labels }: Props) {
   const STEP_LABELS = labels ?? DEFAULT_LABELS;
+  // 캐릭터를 현재 스텝 원(w-7 = 1.75rem) 중앙에 정확히 올린다.
+  // 원 중앙 x = 14px(원 반지름) + (사용 가능 폭 - 28px) × 진행비율
+  const mascotLeft = `calc(0.875rem + (100% - 1.75rem) * ${total > 1 ? current / (total - 1) : 0})`;
   return (
-    <div className="w-full px-4 pt-6 pb-2">
+    <div className="w-full px-4 pt-9 pb-2">
+      <div className="relative">
+        <div
+          className="absolute -top-7 z-10 pointer-events-none transition-[left] duration-500 ease-in-out"
+          style={{ left: mascotLeft, transform: 'translateX(-50%)' }}
+        >
+          <img
+            src="/image/mascot-bird.webp"
+            alt=""
+            aria-hidden="true"
+            className="w-8 h-8 select-none drop-shadow-sm animate-mascot-bob"
+          />
+        </div>
       <div className="flex items-center justify-between mb-3">
         {STEP_LABELS.slice(0, total).map((label, i) => (
           <div key={i} className="flex flex-col items-center gap-1">
@@ -39,6 +54,7 @@ export default function StepProgress({ current, total, labels }: Props) {
           className="absolute inset-y-0 left-0 bg-[#3CDBC0] rounded-full transition-all duration-500 ease-in-out"
           style={{ width: `${(current / (total - 1)) * 100}%` }}
         />
+      </div>
       </div>
     </div>
   );

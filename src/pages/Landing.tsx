@@ -473,18 +473,18 @@ export default function Landing() {
                   따로 쓰면 골고루, <strong className="text-[#2AB5A0]">&로 묶으면</strong> 한 집에서 다.
                 </p>
                 <div className="flex flex-col gap-2.5">
-                  {/* 따로 = 골고루 다른 집 */}
+                  {/* & 로 묶으면 = 한 집에서 다 (짧은 줄을 위로) */}
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <span className="bg-white border border-[#3CDBC0]/50 text-[#2AB5A0] text-xs font-bold px-3 py-1.5 rounded-full whitespace-nowrap">#회&초밥</span>
+                    <span className="text-[#3CDBC0] font-bold text-sm">→</span>
+                    <span className="bg-[#3CDBC0] text-white text-xs font-bold px-3 py-1.5 rounded-full whitespace-nowrap">회·초밥 다 되는 맛집</span>
+                  </div>
+                  {/* 따로 = 골고루 다른 집 (긴 줄을 아래로 — 안정감) */}
                   <div className="flex flex-wrap items-center gap-1.5">
                     <span className="bg-white border border-[#3CDBC0]/50 text-[#2AB5A0] text-xs font-bold px-3 py-1.5 rounded-full">#보쌈</span>
                     <span className="bg-white border border-[#3CDBC0]/50 text-[#2AB5A0] text-xs font-bold px-3 py-1.5 rounded-full">#피자</span>
                     <span className="text-[#3CDBC0] font-bold text-sm">→</span>
                     <span className="bg-[#3CDBC0] text-white text-xs font-bold px-3 py-1.5 rounded-full whitespace-nowrap">보쌈집·피자집 골고루</span>
-                  </div>
-                  {/* & 로 묶으면 = 한 집에서 다 */}
-                  <div className="flex flex-wrap items-center gap-1.5">
-                    <span className="bg-white border border-[#3CDBC0]/50 text-[#2AB5A0] text-xs font-bold px-3 py-1.5 rounded-full whitespace-nowrap">#회&초밥</span>
-                    <span className="text-[#3CDBC0] font-bold text-sm">→</span>
-                    <span className="bg-[#3CDBC0] text-white text-xs font-bold px-3 py-1.5 rounded-full whitespace-nowrap">회·초밥 다 되는 맛집</span>
                   </div>
                 </div>
               </div>

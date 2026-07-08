@@ -69,6 +69,14 @@ body {
   animation: bounce 1s ease-in-out infinite;
 }
 
+@keyframes mascotBob {
+  0%, 100% { transform: translateY(0); }
+  50%       { transform: translateY(-3px); }
+}
+.animate-mascot-bob {
+  animation: mascotBob 2s ease-in-out infinite;
+}
+
 .shimmer {
   background: linear-gradient(90deg, #E8F8F5 25%, #C8F0E8 50%, #E8F8F5 75%);
   background-size: 200% 100%;
