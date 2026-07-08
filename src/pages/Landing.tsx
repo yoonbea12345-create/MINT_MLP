@@ -442,9 +442,9 @@ export default function Landing() {
           {[
             { n: '1', title: '링크 만들기', desc: '인원수·코스만 고르면 3초 완성', img: '/image/landing/group-create.webp' },
             { n: '2', title: '단톡방에 공유', desc: '입력 현황이 실시간으로 보여요', img: '/image/landing/group-share.webp' },
-            { n: '3', title: '취향은 몰래', desc: '눈치 안 보고 각자 원하는 분위기 선택', img: '/image/landing/join-vibe.webp' },
-            { n: '4', title: '각자 이름·출발지', desc: '멤버는 회원가입 없이 링크만 열면 끝', img: '/image/landing/join-start.webp' },
-            { n: '5', title: '중간지점이든 동네든', desc: '전원 모이면 중간지점 자동 계산, 또는 원하는 동네 직접 선택', img: '/image/landing/region.webp' },
+            { n: '3', title: '각자 이름·출발지', desc: '멤버는 회원가입 없이 링크만 열면 끝', img: '/image/landing/join-start.webp' },
+            { n: '4', title: '중간지점이든 동네든', desc: '전원 모이면 중간지점 자동 계산, 또는 원하는 동네 직접 선택', img: '/image/landing/region.webp' },
+            { n: '5', title: '취향은 몰래', desc: '눈치 안 보고 각자 원하는 분위기 선택', img: '/image/landing/join-vibe.webp' },
           ].map(({ n, title, desc, img }) => (
             <div key={n} className="snap-center flex-shrink-0 w-60 lg:w-full text-center">
               {/* 텍스트(번호·제목·설명)를 이미지 위에 — 혼자정하기(HOW IT WORKS)와 위치 통일 */}
