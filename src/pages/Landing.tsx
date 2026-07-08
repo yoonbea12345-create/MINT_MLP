@@ -451,7 +451,7 @@ export default function Landing() {
                   <p className="text-base font-bold text-gray-800">뭘 먹을지 모르겠어요</p>
                 </div>
                 <p className="text-sm text-gray-500 leading-relaxed mb-3">
-                  <strong className="text-gray-700">밥 · 술 · 카페</strong>만 누르세요. 그 동네 찐맛집을 알아서 골라줘요.
+                  <strong className="text-gray-700">밥 · 술 · 카페</strong>만 누르세요.<br />그 동네 찐맛집을 알아서 골라줘요.
                 </p>
                 <div className="flex flex-wrap gap-2">
                   {['🍽️ 밥', '🍻 술', '☕ 카페'].map((t) => (
