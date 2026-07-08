@@ -439,7 +439,7 @@ export default function Landing() {
           <div className="lg:grid lg:grid-cols-2 lg:gap-14 lg:items-center">
             {/* 스마트폰 목업 — 메뉴 콕 직접 입력 화면 */}
             <div className="mb-8 lg:mb-0 lg:order-2">
-              <PhoneMockup src="/image/landing/menu-demo.webp" alt="'메뉴 콕!'에 #보쌈 #피자를 입력하는 화면" width="w-56 lg:w-72" />
+              <PhoneMockup src="/image/landing/menu-demo.webp" alt="'메뉴 콕!'에 #회&초밥 #파스타를 입력하는 화면" width="w-56 lg:w-72" />
             </div>
 
             {/* 설명 카드 2개 */}
@@ -467,14 +467,26 @@ export default function Landing() {
                   <p className="text-base font-bold text-gray-800">이건 꼭 먹고 싶어요</p>
                 </div>
                 <p className="text-sm text-gray-600 leading-relaxed mb-3 break-keep">
-                  <strong className="text-[#2AB5A0]">메뉴 콕!</strong>에 먹고 싶은 걸 입력하면,<br />그 메뉴가 <strong className="text-[#2AB5A0]">해당 코스</strong>로 그대로 나와요. 여러 개도 OK.
+                  <strong className="text-[#2AB5A0]">메뉴 콕!</strong>에 먹고 싶은 걸 입력하면,<br />그대로 딱 맞는 맛집을 찾아드려요.
                 </p>
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="bg-white border border-[#3CDBC0]/50 text-[#2AB5A0] text-xs font-bold px-3 py-1.5 rounded-full">#보쌈</span>
-                  <span className="bg-white border border-[#3CDBC0]/50 text-[#2AB5A0] text-xs font-bold px-3 py-1.5 rounded-full">#피자</span>
-                  <span className="text-[#3CDBC0] font-bold text-sm">→</span>
-                  <span className="bg-[#3CDBC0] text-white text-xs font-bold px-3 py-1.5 rounded-full">1차 보쌈집 · 2차 피자집</span>
+                <div className="flex flex-col gap-2.5">
+                  {/* 따로 = 골고루 다른 집 */}
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <span className="bg-white border border-[#3CDBC0]/50 text-[#2AB5A0] text-xs font-bold px-3 py-1.5 rounded-full">#보쌈</span>
+                    <span className="bg-white border border-[#3CDBC0]/50 text-[#2AB5A0] text-xs font-bold px-3 py-1.5 rounded-full">#피자</span>
+                    <span className="text-[#3CDBC0] font-bold text-sm">→</span>
+                    <span className="bg-[#3CDBC0] text-white text-xs font-bold px-3 py-1.5 rounded-full whitespace-nowrap">보쌈집·피자집 골고루</span>
+                  </div>
+                  {/* & 로 묶으면 = 한 집에서 다 */}
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <span className="bg-white border border-[#3CDBC0]/50 text-[#2AB5A0] text-xs font-bold px-3 py-1.5 rounded-full whitespace-nowrap">#회&초밥</span>
+                    <span className="text-[#3CDBC0] font-bold text-sm">→</span>
+                    <span className="bg-[#3CDBC0] text-white text-xs font-bold px-3 py-1.5 rounded-full whitespace-nowrap">회·초밥 다 되는 한 집</span>
+                  </div>
                 </div>
+                <p className="text-[11px] text-gray-400 mt-2.5 break-keep">
+                  따로 쓰면 골고루, <strong className="text-[#2AB5A0]">&로 묶으면</strong> 한 집에서 다.
+                </p>
               </div>
             </div>
           </div>
