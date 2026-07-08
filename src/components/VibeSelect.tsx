@@ -56,8 +56,10 @@ interface Props {
   purpose?: { first: string | null; second?: string | null };
   budget?: string | null;
   onBudgetChange?: (b: string | null) => void;
-  keywords?: string[];
+  keywords?: string[];              // 1차 키워드
   onKeywordsChange?: (k: string[]) => void;
+  keywordsSecond?: string[];        // 2차 키워드 (2차 코스가 있을 때만)
+  onKeywordsSecondChange?: (k: string[]) => void;
   vibeCustom?: Record<string, string>;
   onVibeCustomChange?: (label: string, text: string) => void;
   excludeFoods?: string[];
@@ -67,22 +69,10 @@ interface Props {
   section?: 'all' | 'mood' | 'extras';
 }
 
-export default function VibeSelect({ value, onChange, purpose, budget = null, onBudgetChange, keywords = [], onKeywordsChange, excludeFoods = [], onExcludeFoodsChange, section = 'all' }: Props) {
+export default function VibeSelect({ value, onChange, purpose, budget = null, onBudgetChange, keywords = [], onKeywordsChange, keywordsSecond = [], onKeywordsSecondChange, excludeFoods = [], onExcludeFoodsChange, section = 'all' }: Props) {
   const showMood = section === 'all' || section === 'mood';
   const showExtras = section === 'all' || section === 'extras';
-  const [customInput, setCustomInput] = useState('');
   const [excludeInput, setExcludeInput] = useState('');
-
-  function addCustomKeyword() {
-    if (!onKeywordsChange) return;
-    const trimmed = customInput.trim();
-    if (!trimmed || keywords.includes(trimmed)) {
-      setCustomInput('');
-      return;
-    }
-    onKeywordsChange([...keywords, trimmed]);
-    setCustomInput('');
-  }
 
   function removeExcludeFood(label: string) {
     if (!onExcludeFoodsChange) return;
@@ -128,14 +118,6 @@ export default function VibeSelect({ value, onChange, purpose, budget = null, on
     onChange({ ...value, [groupLabel]: { first, second } });
   }
 
-  function toggleKeyword(label: string) {
-    if (!onKeywordsChange) return;
-    if (keywords.includes(label)) {
-      onKeywordsChange(keywords.filter((k) => k !== label));
-    } else {
-      onKeywordsChange([...keywords, label]);
-    }
-  }
 
   const hasSecond = purpose?.second && purpose.second !== '없음';
 
@@ -238,42 +220,29 @@ export default function VibeSelect({ value, onChange, purpose, budget = null, on
         </div>
       )}
 
-      {/* 키워드 — 자유 입력 강조 섹션. 분위기·취향에 없는 조건은 물론 편의시설·메뉴까지 뭐든지 */}
+      {/* 키워드 — 자유 입력 강조 섹션. 2차 코스가 있으면 1차·2차로 나눠 입력 */}
       {showExtras && onKeywordsChange && (
         <div className="rounded-2xl border-2 border-[#3CDBC0]/40 bg-[#F0FDF9] p-4">
           <p className="text-sm font-black text-[#2AB5A0] mb-1 break-keep">🔎 원하는 키워드는 뭐든지!</p>
-          <p className="text-[11px] text-gray-500 mb-2.5 leading-relaxed break-keep">
-            편의시설·분위기·조건 뭐든 자유롭게 추가하세요.<br />예: 단체룸, 주차, 루프탑, 노포, 뷰맛집, 조용한 곳
+          <p className="text-[11px] text-gray-500 mb-3 leading-relaxed break-keep">
+            편의시설·분위기·조건 뭐든 자유롭게. 예: 단체룸, 주차, 루프탑, 노포, 뷰맛집
           </p>
-          <div className="flex gap-2">
-            <input
-              type="text"
-              value={customInput}
-              onChange={(e) => setCustomInput(e.target.value)}
-              onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addCustomKeyword(); } }}
-              onBlur={addCustomKeyword}
-              placeholder="키워드 입력 후 Enter (여러 개 가능)"
-              className="flex-1 border-2 border-[#3CDBC0]/50 rounded-xl px-4 py-2.5 text-sm text-gray-700 placeholder-gray-400 focus:outline-none focus:border-[#3CDBC0] bg-white transition-colors"
-            />
-            <button
-              onClick={addCustomKeyword}
-              className="flex-shrink-0 px-4 rounded-xl bg-[#3CDBC0] text-white text-sm font-bold transition-all active:scale-95 hover:bg-[#2AB5A0]"
-            >
-              추가
-            </button>
-          </div>
-          {keywords.length > 0 && (
-            <div className="flex flex-wrap gap-2 mt-2.5">
-              {keywords.map((k) => (
-                <button
-                  key={k}
-                  onClick={() => toggleKeyword(k)}
-                  className="flex items-center gap-1 px-3 py-1.5 rounded-full bg-white border border-[#3CDBC0]/50 text-[#2AB5A0] text-xs font-bold transition-all active:scale-95"
-                >
-                  <span>#{k}</span>
-                  <span className="text-[#2AB5A0]/60">×</span>
-                </button>
-              ))}
+          <KeywordTagInput
+            badge={hasSecond ? `1차${purpose?.first ? ` · ${purpose.first}` : ''}` : undefined}
+            color="mint"
+            keywords={keywords}
+            onChange={onKeywordsChange}
+            placeholder="키워드 입력 후 Enter (여러 개)"
+          />
+          {hasSecond && onKeywordsSecondChange && (
+            <div className="mt-3">
+              <KeywordTagInput
+                badge={`2차${purpose?.second ? ` · ${purpose.second}` : ''}`}
+                color="orange"
+                keywords={keywordsSecond}
+                onChange={onKeywordsSecondChange}
+                placeholder="2차 키워드 입력 후 Enter"
+              />
             </div>
           )}
         </div>
@@ -329,6 +298,80 @@ export default function VibeSelect({ value, onChange, purpose, budget = null, on
         </div>
       )}
 
+    </div>
+  );
+}
+
+// 키워드 태그 입력 — Enter/완료로 #태그 커밋, 여러 개. 코스별(1차 민트 / 2차 오렌지)로 재사용.
+function KeywordTagInput({
+  badge,
+  color,
+  keywords,
+  onChange,
+  placeholder,
+}: {
+  badge?: string;
+  color: 'mint' | 'orange';
+  keywords: string[];
+  onChange: (k: string[]) => void;
+  placeholder: string;
+}) {
+  const [text, setText] = useState('');
+  const isMint = color === 'mint';
+
+  function commit() {
+    const t = text.trim().slice(0, 20);
+    if (!t) { setText(''); return; }
+    if (keywords.includes(t)) { setText(''); return; }
+    onChange([...keywords, t]);
+    setText('');
+  }
+
+  return (
+    <div>
+      {badge && (
+        <span className={`inline-block text-[10px] font-black px-2 py-0.5 rounded-full mb-1.5 ${
+          isMint ? 'bg-[#1E9E8C] text-white' : 'bg-orange-400 text-white'
+        }`}>{badge}</span>
+      )}
+      <div className="flex gap-2">
+        <input
+          type="text"
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); commit(); } }}
+          onBlur={commit}
+          placeholder={placeholder}
+          maxLength={20}
+          className={`flex-1 border-2 rounded-xl px-4 py-2.5 text-sm text-gray-700 placeholder-gray-400 focus:outline-none bg-white transition-colors ${
+            isMint ? 'border-[#3CDBC0]/50 focus:border-[#3CDBC0]' : 'border-orange-300 focus:border-orange-400'
+          }`}
+        />
+        <button
+          onClick={commit}
+          className={`flex-shrink-0 px-4 rounded-xl text-white text-sm font-bold transition-all active:scale-95 ${
+            isMint ? 'bg-[#3CDBC0] hover:bg-[#2AB5A0]' : 'bg-orange-400 hover:bg-orange-500'
+          }`}
+        >
+          추가
+        </button>
+      </div>
+      {keywords.length > 0 && (
+        <div className="flex flex-wrap gap-2 mt-2.5">
+          {keywords.map((k) => (
+            <button
+              key={k}
+              onClick={() => onChange(keywords.filter((x) => x !== k))}
+              className={`flex items-center gap-1 px-3 py-1.5 rounded-full bg-white border text-xs font-bold transition-all active:scale-95 ${
+                isMint ? 'border-[#3CDBC0]/50 text-[#2AB5A0]' : 'border-orange-300 text-orange-500'
+              }`}
+            >
+              <span>#{k}</span>
+              <span className="opacity-60">×</span>
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

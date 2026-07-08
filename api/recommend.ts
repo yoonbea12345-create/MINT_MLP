@@ -495,6 +495,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const budget: string | null = input.budget ?? null;
 
     const keywords: string[] = Array.isArray(input.keywords) ? input.keywords : [];
+    const keywordsSecond: string[] = Array.isArray(input.keywordsSecond) ? input.keywordsSecond : [];
 
     // 편식 필터 — 후보 사전 제거(아래 filterExcludedFoods) + 프롬프트 절대 제약 이중 적용
     const excludeFoods: string[] = Array.isArray(input.excludeFoods)
@@ -529,7 +530,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       fetchWeather(midLat, midLng),
       searchNaverMulti(purpose.first, searchAreas, groupSize, midLat, midLng, occasion, relation, budget, keywords, firstGenre),
       hasTwoPurposes && purpose.second
-        ? searchNaverMulti(purpose.second, searchAreas, groupSize, midLat, midLng, occasion, relation, budget, keywords, secondGenre)
+        ? searchNaverMulti(purpose.second, searchAreas, groupSize, midLat, midLng, occasion, relation, budget, keywordsSecond.length ? keywordsSecond : keywords, secondGenre)
         : Promise.resolve([]),
       fetchStoresInRadius(midLat, midLng, MIDPOINT_RADIUS_KM * 1000).catch((e) => {
         console.error('[recommend] L0 public data fetch failed', e);
@@ -647,7 +648,10 @@ ${formatNaverPlaces(naverSecondPlaces)}` : ''}
     const occasionLine = occasion ? `\n- 특별한 행사: ${occasion} → ${OCCASION_HINT[occasion] ?? '분위기에 맞는 곳'}` : '';
     const budgetLine = budget ? `\n- 예산: 1인 ${budget}` : '';
     const keywordsLine = keywords.length > 0
-      ? `\n- 필수 키워드: ${keywords.map((k) => `#${k}`).join(' ')} ← 이 조건에 부합하는 장소 최우선 추천`
+      ? `\n- 1차 필수 키워드: ${keywords.map((k) => `#${k}`).join(' ')} ← 1차 장소는 이 조건에 부합하는 곳 최우선`
+      : '';
+    const keywordsSecondLine = keywordsSecond.length > 0
+      ? `\n- 2차 필수 키워드: ${keywordsSecond.map((k) => `#${k}`).join(' ')} ← 2차 장소는 이 조건에 부합하는 곳 최우선`
       : '';
     const excludeFoodsLine = excludeFoods.length > 0
       ? `\n- 🚫 못 먹는 음식(절대 제외): ${excludeFoods.join(', ')} ← 이 음식/재료가 주력 메뉴이거나 피하기 어려운 장소는 fitScore와 무관하게 절대 선택 금지 (편식·알레르기 하드 제약)`
@@ -669,7 +673,7 @@ ${formatNaverPlaces(naverSecondPlaces)}` : ''}
 ## 모임 정보
 - 출발지: ${locationStr || `미입력 (${areaNames} 일대에서 모임)`}
 - 추천 지역: ${areaNames}
-- 인원: ${groupSize}명${groupSize >= 5 ? ' (단체석 또는 넓은 공간 필수)' : ''}${relationLine}${occasionLine}${budgetLine}${keywordsLine}${excludeFoodsLine}${genreLine}
+- 인원: ${groupSize}명${groupSize >= 5 ? ' (단체석 또는 넓은 공간 필수)' : ''}${relationLine}${occasionLine}${budgetLine}${keywordsLine}${keywordsSecondLine}${excludeFoodsLine}${genreLine}
 - 분위기: ${vibeFirstStr}${vibeSecondStr ? ` / 2차: ${vibeSecondStr}` : ''}
 - 현재 시각: ${currentTime}
 - 혼잡도: ${congestionSummary || '정보 없음'}

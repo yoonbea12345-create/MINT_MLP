@@ -134,6 +134,7 @@ export default function Home() {
   const [result, setResult] = useState<PlaceRecommendation[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [keywords, setKeywords] = useState<string[]>([]);
+  const [keywordsSecond, setKeywordsSecond] = useState<string[]>([]);
   const [excludeFoods, setExcludeFoods] = useState<string[]>([]);
   const [vibeCustom, setVibeCustom] = useState<Record<string, string>>({});
   const [showRetryModal, setShowRetryModal] = useState(false);
@@ -405,9 +406,10 @@ export default function Home() {
       .map((m) => ({ name: m.member_name, lat: m.location_lat!, lng: m.location_lng! }));
     setLocations(groupLocations);
     setVibe(aggregateVibe(groupMembers));
-    // 편식은 전원 합집합 — 한 명이라도 못 먹으면 그 음식은 제외
-    const { keywords: memberKeywords, excludeFoods: memberExcludes } = splitMemberKeywords(groupMembers);
+    // 편식은 전원 합집합 — 한 명이라도 못 먹으면 그 음식은 제외. 키워드는 1차/2차 분리 집계.
+    const { keywords: memberKeywords, keywordsSecond: memberKeywords2, excludeFoods: memberExcludes } = splitMemberKeywords(groupMembers);
     setKeywords(memberKeywords);
+    setKeywordsSecond(memberKeywords2);
     setExcludeFoods(memberExcludes);
     setBudget(aggregateBudget(groupMembers));
   }
@@ -547,12 +549,17 @@ export default function Home() {
           : {}),
         ...(vibeWeights && Object.keys(vibeWeights).length > 0 ? { vibeWeights } : {}),
         ...((() => {
-          // 서버 검증 한도(개수 10 · 항목당 30자)에 맞춰 잘라서 전송
+          // 1차 키워드 — 서버 검증 한도(개수 10 · 항목당 30자)에 맞춰 잘라서 전송
           const allKw = [...keywords, ...Object.values(vibeCustom).filter(Boolean)]
             .map((k) => k.trim().slice(0, 30))
             .filter(Boolean)
             .slice(0, 10);
           return allKw.length > 0 ? { keywords: allKw } : {};
+        })()),
+        ...((() => {
+          // 2차 키워드 — 2차 코스가 있을 때만
+          const kw2 = keywordsSecond.map((k) => k.trim().slice(0, 30)).filter(Boolean).slice(0, 10);
+          return kw2.length > 0 ? { keywordsSecond: kw2 } : {};
         })()),
       };
 
@@ -866,6 +873,7 @@ export default function Home() {
                 setVibe({});
                 setBudget(null);
                 setKeywords([]);
+                setKeywordsSecond([]);
                 setExcludeFoods([]);
                 setVibeCustom({});
                 setMeetingLocation(null);
@@ -1001,31 +1009,31 @@ export default function Home() {
 
           {/* Step 0: 모임 유형 선택 */}
           {step === 0 && (
-            <div className="px-4 py-3 flex flex-col gap-5">
+            <div className="px-4 py-3 flex flex-col gap-4">
               {/* 혼자 / 그룹 선택 버튼 */}
               <div className="grid grid-cols-2 gap-3">
                 <button
                   onClick={() => { setAppMode('solo'); setSessionId(null); setGroupMembers([]); setGroupError(null); try { localStorage.removeItem(GROUP_SESSION_KEY); } catch { /* ignore */ } }}
-                  className={`flex flex-col items-center justify-center gap-1.5 py-5 rounded-2xl border-2 transition-all active:scale-[0.97] ${
+                  className={`flex flex-col items-center justify-center gap-0.5 py-3 rounded-2xl border-2 transition-all active:scale-[0.97] ${
                     appMode === 'solo'
                       ? 'border-[#3CDBC0] bg-[#E8F8F5] shadow-md shadow-[#3CDBC0]/20'
                       : 'border-gray-200 bg-white hover:border-[#3CDBC0]/50'
                   }`}
                 >
-                  <span className="text-2xl">🙋</span>
-                  <span className={`text-sm font-black ${appMode === 'solo' ? 'text-[#2AB5A0]' : 'text-gray-700'}`}>혼자 정할게요</span>
+                  <span className="text-lg">🙋</span>
+                  <span className={`text-[13px] font-black ${appMode === 'solo' ? 'text-[#2AB5A0]' : 'text-gray-700'}`}>혼자 정할게요</span>
                   <span className="text-[10px] text-gray-400">내가 직접 입력</span>
                 </button>
                 <button
                   onClick={() => { if (appMode !== 'group') setAppMode('group'); }}
-                  className={`flex flex-col items-center justify-center gap-1.5 py-5 rounded-2xl border-2 transition-all active:scale-[0.97] ${
+                  className={`flex flex-col items-center justify-center gap-0.5 py-3 rounded-2xl border-2 transition-all active:scale-[0.97] ${
                     isGroup
                       ? 'border-[#3CDBC0] bg-[#E8F8F5] shadow-md shadow-[#3CDBC0]/20'
                       : 'border-gray-200 bg-white hover:border-[#3CDBC0]/50'
                   }`}
                 >
-                  <span className="text-2xl">👥</span>
-                  <span className={`text-sm font-black ${isGroup ? 'text-[#2AB5A0]' : 'text-gray-700'}`}>다같이 정할게요</span>
+                  <span className="text-lg">👥</span>
+                  <span className={`text-[13px] font-black ${isGroup ? 'text-[#2AB5A0]' : 'text-gray-700'}`}>다같이 정할게요</span>
                   <span className="text-[10px] text-gray-400">호스트가 코스·지역 선점 →</span>
                 </button>
               </div>
@@ -1040,7 +1048,7 @@ export default function Home() {
                         <button
                           key={size}
                           onClick={() => setGroupSize(size)}
-                          className={`flex items-center justify-center h-12 rounded-xl border-2 text-sm font-bold transition-all active:scale-[0.97] ${
+                          className={`flex items-center justify-center h-10 rounded-xl border-2 text-sm font-bold transition-all active:scale-[0.97] ${
                             groupSize === size
                               ? 'border-[#3CDBC0] bg-[#E8F8F5] text-[#2AB5A0] shadow-md shadow-[#3CDBC0]/20'
                               : 'border-gray-200 bg-white text-gray-700 hover:border-[#3CDBC0]/50'
@@ -1068,7 +1076,7 @@ export default function Home() {
                         <button
                           key={n}
                           onClick={() => setExpectedCount(n)}
-                          className={`flex items-center justify-center h-12 rounded-xl border-2 text-sm font-black transition-all active:scale-[0.97] ${
+                          className={`flex items-center justify-center h-10 rounded-xl border-2 text-sm font-black transition-all active:scale-[0.97] ${
                             expectedCount === n
                               ? 'border-[#3CDBC0] bg-[#E8F8F5] text-[#2AB5A0] shadow-md shadow-[#3CDBC0]/20'
                               : 'border-gray-200 bg-white text-gray-700 hover:border-[#3CDBC0]/50'
@@ -1243,6 +1251,8 @@ export default function Home() {
               onBudgetChange={setBudget}
               keywords={keywords}
               onKeywordsChange={setKeywords}
+              keywordsSecond={keywordsSecond}
+              onKeywordsSecondChange={setKeywordsSecond}
               excludeFoods={excludeFoods}
               onExcludeFoodsChange={setExcludeFoods}
             />

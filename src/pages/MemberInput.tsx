@@ -5,7 +5,7 @@ import type { KakaoPlace } from '../services/kakaoMap';
 import VibeSelect, { VIBE_KEY_TO_LABEL } from '../components/VibeSelect';
 import type { VibeState } from '../components/VibeSelect';
 import StepProgress from '../components/StepProgress';
-import { EXCLUDE_FOOD_PREFIX } from '../utils/groupAggregate';
+import { EXCLUDE_FOOD_PREFIX, SECOND_KEYWORD_PREFIX } from '../utils/groupAggregate';
 import { decodeHostContext } from '../utils/groupLink';
 import type { HostContext } from '../utils/groupLink';
 
@@ -93,6 +93,7 @@ export default function MemberInput() {
   const [vibe, setVibe] = useState<VibeState>({});
   const [budget, setBudget] = useState<string | null>(null);
   const [keywords, setKeywords] = useState<string[]>([]);
+  const [keywordsSecond, setKeywordsSecond] = useState<string[]>([]);
   const [excludeFoods, setExcludeFoods] = useState<string[]>([]);
 
   const [submitting, setSubmitting] = useState(false);
@@ -204,6 +205,7 @@ export default function MemberInput() {
             const all = [
               ...extraVibeLabels,
               ...keywords,
+              ...keywordsSecond.map((k) => `${SECOND_KEYWORD_PREFIX}${k}`),
               ...excludeFoods.map((f) => `${EXCLUDE_FOOD_PREFIX}${f}`),
             ];
             return all.length > 0 ? Array.from(new Set(all)) : null;
@@ -423,6 +425,8 @@ export default function MemberInput() {
             onBudgetChange={setBudget}
             keywords={keywords}
             onKeywordsChange={setKeywords}
+            keywordsSecond={keywordsSecond}
+            onKeywordsSecondChange={setKeywordsSecond}
             excludeFoods={excludeFoods}
             onExcludeFoodsChange={setExcludeFoods}
             section="extras"

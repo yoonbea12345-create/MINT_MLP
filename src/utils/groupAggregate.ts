@@ -16,16 +16,22 @@ export interface GroupMember {
   vibe_keywords?: string[];
 }
 
-// 편식 항목은 DB 스키마 변경 없이 vibe_keywords에 접두사로 실어 보낸다 (MemberInput에서 인코딩)
+// 편식·2차키워드 항목은 DB 스키마 변경 없이 vibe_keywords에 접두사로 실어 보낸다 (MemberInput에서 인코딩)
 export const EXCLUDE_FOOD_PREFIX = '안먹:';
+export const SECOND_KEYWORD_PREFIX = '2차:';
 
-// 멤버 키워드에서 일반 키워드와 편식(못 먹는 음식) 항목을 분리 — 편식은 전원 합집합(한 명이라도 못 먹으면 제외)
-export function splitMemberKeywords(members: GroupMember[]): { keywords: string[]; excludeFoods: string[] } {
+// 멤버 키워드에서 1차 키워드·2차 키워드·편식을 분리 — 편식은 전원 합집합(한 명이라도 못 먹으면 제외)
+export function splitMemberKeywords(members: GroupMember[]): { keywords: string[]; keywordsSecond: string[]; excludeFoods: string[] } {
   const all = members.flatMap((m) => m.vibe_keywords ?? []);
+  const isExclude = (k: string) => k.startsWith(EXCLUDE_FOOD_PREFIX);
+  const isSecond = (k: string) => k.startsWith(SECOND_KEYWORD_PREFIX);
   return {
-    keywords: Array.from(new Set(all.filter((k) => !k.startsWith(EXCLUDE_FOOD_PREFIX)))),
+    keywords: Array.from(new Set(all.filter((k) => !isExclude(k) && !isSecond(k)))),
+    keywordsSecond: Array.from(new Set(
+      all.filter(isSecond).map((k) => k.slice(SECOND_KEYWORD_PREFIX.length).trim()).filter(Boolean),
+    )),
     excludeFoods: Array.from(new Set(
-      all.filter((k) => k.startsWith(EXCLUDE_FOOD_PREFIX)).map((k) => k.slice(EXCLUDE_FOOD_PREFIX.length).trim()).filter(Boolean),
+      all.filter(isExclude).map((k) => k.slice(EXCLUDE_FOOD_PREFIX.length).trim()).filter(Boolean),
     )),
   };
 }

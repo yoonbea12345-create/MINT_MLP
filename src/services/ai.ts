@@ -10,7 +10,8 @@ export interface UserInput {
   occasion?: string | null;
   budget?: string | null;
   vibeWeights?: Record<string, number>;
-  keywords?: string[];
+  keywords?: string[];          // 1차 키워드
+  keywordsSecond?: string[];    // 2차 키워드
   excludeFoods?: string[];
 }
 
