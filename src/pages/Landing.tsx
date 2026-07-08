@@ -397,7 +397,7 @@ export default function Landing() {
           {/* 모바일: 세로 스택 + 연결선 / PC: 4열 그리드 (결과는 RESULT PREVIEW 섹션에서 별도로 보여줌) */}
           <div className="flex flex-col items-center gap-0 lg:grid lg:grid-cols-4 lg:gap-4 lg:items-start">
             {[
-              { badge: 'STEP 1', title: '어떤 모임인지 골라요', desc: <>인원수와 1차·2차 목적(밥/술/카페),<br />밥이면 한식·일식까지 골라 좁혀요</>, img: '/image/landing/purpose.webp', highlight: false },
+              { badge: 'STEP 1', title: '어떤 모임인지 골라요', desc: <>인원수와 1차·2차 목적(밥/술/카페),<br />먹을 메뉴가 정해졌다면 메뉴 콕으로 좁혀봐요</>, img: '/image/landing/purpose.webp', highlight: false },
               { badge: 'STEP 2', title: '누구와 함께하나요', desc: <>친구·연인·가족, 기념일·소개팅<br />같은 특별한 날까지 반영해요</>, img: '/image/landing/relation.webp', highlight: false },
               { badge: 'STEP 3', title: '어디서 만날까요', desc: <>원하는 동네를 직접 고르거나,<br />전원 출발지 중간지점을 맡겨요</>, img: '/image/landing/region.webp', highlight: false },
               { badge: 'STEP 4', title: '분위기와 못 먹는 음식까지', desc: <>1차·2차 분위기를 따로 고르고,<br />못 먹는 음식은 빼고 추천해요</>, img: '/image/landing/vibe.webp', highlight: false },
