@@ -469,6 +469,9 @@ export default function Landing() {
                 <p className="text-sm text-gray-600 leading-relaxed mb-3 break-keep">
                   <strong className="text-[#2AB5A0]">메뉴 콕!</strong>에 먹고 싶은 걸 입력하면,<br />그대로 딱 맞는 맛집을 찾아드려요.
                 </p>
+                <p className="text-[11px] text-gray-400 mb-3 break-keep">
+                  따로 쓰면 골고루, <strong className="text-[#2AB5A0]">&로 묶으면</strong> 한 집에서 다.
+                </p>
                 <div className="flex flex-col gap-2.5">
                   {/* 따로 = 골고루 다른 집 */}
                   <div className="flex flex-wrap items-center gap-1.5">
@@ -484,9 +487,6 @@ export default function Landing() {
                     <span className="bg-[#3CDBC0] text-white text-xs font-bold px-3 py-1.5 rounded-full whitespace-nowrap">회·초밥 다 되는 맛집</span>
                   </div>
                 </div>
-                <p className="text-[11px] text-gray-400 mt-2.5 break-keep">
-                  따로 쓰면 골고루, <strong className="text-[#2AB5A0]">&로 묶으면</strong> 한 집에서 다.
-                </p>
               </div>
             </div>
           </div>
