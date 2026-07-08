@@ -424,7 +424,7 @@ export default function Landing() {
           GROUP MODE — 역할 분리: 호스트(세팅) / 게스트(분위기만)
       ══════════════════════════════════════ */}
       <section className="py-14 lg:py-24 fade-section overflow-hidden">
-        <div className="max-w-lg lg:max-w-5xl mx-auto px-6 lg:text-center mb-8 lg:mb-14">
+        <div className="max-w-lg lg:max-w-5xl mx-auto px-6 lg:text-center mb-6 lg:mb-10">
           <p className="text-xs font-bold tracking-widest text-[#3CDBC0] mb-3">GROUP MODE</p>
           <h2 className="text-2xl lg:text-4xl font-bold text-gray-800 leading-tight mb-3">
             역할은 딱 둘, <span className="text-[#3CDBC0]">한 명이 세팅하면 끝</span>
@@ -441,7 +441,8 @@ export default function Landing() {
             <span className="inline-flex items-center gap-1.5 bg-[#3CDBC0] text-white text-xs font-bold px-3 py-1.5 rounded-full">🧑‍💼 링크 만드는 사람</span>
             <span className="text-sm font-bold text-gray-700">호스트</span>
           </div>
-          <p className="text-xs lg:text-sm text-gray-400 mb-5 lg:mb-8 lg:text-center leading-relaxed">코스·지역만 정하고 링크 공유. 딱 한 번만.</p>
+          <p className="text-xs lg:text-sm text-gray-400 mb-2 lg:mb-10 lg:text-center leading-relaxed">코스·지역만 정하고 링크 공유. 딱 한 번만.</p>
+          <p className="text-xs text-[#2AB5A0] font-bold mb-8 lg:hidden">옆으로 넘겨보세요 →</p>
           <div className="flex gap-4 overflow-x-auto snap-x snap-mandatory scrollbar-hide pb-2 lg:grid lg:grid-cols-3 lg:gap-6 lg:overflow-visible">
             {[
               { n: '1', title: '코스·인원 정하기', desc: '밥·술·카페 코스와 참여 인원을 호스트가 선점', img: '/image/landing/host-course.webp' },
@@ -466,7 +467,8 @@ export default function Landing() {
             <span className="inline-flex items-center gap-1.5 bg-[#E8F8F5] text-[#2AB5A0] border border-[#3CDBC0]/40 text-xs font-bold px-3 py-1.5 rounded-full">🙋 링크 받는 사람</span>
             <span className="text-sm font-bold text-gray-700">친구들</span>
           </div>
-          <p className="text-xs lg:text-sm text-gray-400 mb-5 lg:mb-8 lg:text-center leading-relaxed">가입도, 출발지 고민도 없이 — 링크 열고 분위기만.</p>
+          <p className="text-xs lg:text-sm text-gray-400 mb-2 lg:mb-10 lg:text-center leading-relaxed">가입도, 출발지 고민도 없이 — 링크 열고 분위기만.</p>
+          <p className="text-xs text-[#2AB5A0] font-bold mb-8 lg:hidden">옆으로 넘겨보세요 →</p>
           <div className="flex gap-4 overflow-x-auto snap-x snap-mandatory scrollbar-hide pb-2 lg:grid lg:grid-cols-3 lg:gap-6 lg:overflow-visible lg:max-w-3xl lg:mx-auto">
             {[
               { n: '1', title: '분위기만 몰래 선택', desc: '눈치 안 보고 각자 원하는 분위기·취향', img: '/image/landing/guest-vibe.webp' },
