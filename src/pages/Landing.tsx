@@ -466,8 +466,8 @@ export default function Landing() {
                   <span className="text-2xl">🎯</span>
                   <p className="text-base font-bold text-gray-800">이건 꼭 먹고 싶어요</p>
                 </div>
-                <p className="text-sm text-gray-600 leading-relaxed mb-3">
-                  <strong className="text-[#2AB5A0]">메뉴 콕!</strong>에 먹고 싶은 걸 입력하면, 그 메뉴가 <strong className="text-[#2AB5A0]">해당 코스</strong>로 그대로 나와요. 여러 개도 OK.
+                <p className="text-sm text-gray-600 leading-relaxed mb-3 break-keep">
+                  <strong className="text-[#2AB5A0]">메뉴 콕!</strong>에 먹고 싶은 걸 입력하면,<br />그 메뉴가 <strong className="text-[#2AB5A0]">해당 코스</strong>로 그대로 나와요. 여러 개도 OK.
                 </p>
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="bg-white border border-[#3CDBC0]/50 text-[#2AB5A0] text-xs font-bold px-3 py-1.5 rounded-full">#보쌈</span>
