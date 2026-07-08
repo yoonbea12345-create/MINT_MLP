@@ -50,15 +50,6 @@ const BUDGET_OPTIONS = [
   { value: '4만원+',  label: '4만원+',  emoji: '💎', sub: 'special' },
 ];
 
-const KEYWORD_CHIPS = [
-  { label: '단체룸', emoji: '🚪' },
-  { label: '주차가능', emoji: '🚗' },
-  { label: '야외테라스', emoji: '🌿' },
-  { label: '루프탑', emoji: '🏙️' },
-  { label: '포토존', emoji: '📷' },
-  { label: '반려동물', emoji: '🐾' },
-];
-
 interface Props {
   value: VibeState;
   onChange: (v: VibeState) => void;
@@ -75,8 +66,6 @@ interface Props {
   // 그룹 참여(MemberInput)에서 취향을 2개 스텝으로 나눠 4단계로 맞추기 위한 스위치
   section?: 'all' | 'mood' | 'extras';
 }
-
-const PRESET_CHIP_LABELS = KEYWORD_CHIPS.map((c) => c.label);
 
 export default function VibeSelect({ value, onChange, purpose, budget = null, onBudgetChange, keywords = [], onKeywordsChange, excludeFoods = [], onExcludeFoodsChange, section = 'all' }: Props) {
   const showMood = section === 'all' || section === 'mood';
@@ -249,47 +238,21 @@ export default function VibeSelect({ value, onChange, purpose, budget = null, on
         </div>
       )}
 
-      {/* 편의시설 — 프리셋 칩(6개). 자유 키워드는 아래 '키워드' 섹션으로 분리 */}
-      {showExtras && onKeywordsChange && (
-        <div>
-          <div className="flex items-center gap-2 mb-2">
-            <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest">편의시설</p>
-            <span className="text-[10px] text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full font-medium">선택사항</span>
-          </div>
-          <div className="grid grid-cols-3 gap-2">
-            {KEYWORD_CHIPS.map((chip) => {
-              const isActive = keywords.includes(chip.label);
-              return (
-                <button
-                  key={chip.label}
-                  onClick={() => toggleKeyword(chip.label)}
-                  className={`flex flex-col items-center justify-center h-16 rounded-xl border-2 text-xs font-bold transition-all duration-200 active:scale-[0.97] ${
-                    isActive
-                      ? 'border-[#3CDBC0] bg-[#E8F8F5] text-[#2AB5A0] shadow-md shadow-[#3CDBC0]/20'
-                      : 'border-gray-200 bg-white text-gray-700 hover:border-[#3CDBC0]/50'
-                  }`}
-                >
-                  <span className="text-lg mb-1 leading-none">{chip.emoji}</span>
-                  <span>{chip.label}</span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* 키워드 — 자유 입력 강조 섹션. 분위기·취향·편의시설에 없는 조건도 뭐든지 */}
+      {/* 키워드 — 자유 입력 강조 섹션. 분위기·취향에 없는 조건은 물론 편의시설·메뉴까지 뭐든지 */}
       {showExtras && onKeywordsChange && (
         <div className="rounded-2xl border-2 border-[#3CDBC0]/40 bg-[#F0FDF9] p-4">
           <p className="text-sm font-black text-[#2AB5A0] mb-1 break-keep">🔎 원하는 키워드는 뭐든지!</p>
-          <p className="text-[11px] text-gray-500 mb-2.5 leading-relaxed break-keep">분위기·취향에 없는 조건도 자유롭게 추가하세요. 예: 노포, 뷰맛집, 조용한 곳</p>
+          <p className="text-[11px] text-gray-500 mb-2.5 leading-relaxed break-keep">
+            편의시설·분위기·조건 뭐든 자유롭게 추가하세요.<br />예: 단체룸, 주차, 루프탑, 노포, 뷰맛집, 조용한 곳
+          </p>
           <div className="flex gap-2">
             <input
               type="text"
               value={customInput}
               onChange={(e) => setCustomInput(e.target.value)}
               onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addCustomKeyword(); } }}
-              placeholder="원하는 키워드를 검색해 추가"
+              onBlur={addCustomKeyword}
+              placeholder="키워드 입력 후 Enter (여러 개 가능)"
               className="flex-1 border-2 border-[#3CDBC0]/50 rounded-xl px-4 py-2.5 text-sm text-gray-700 placeholder-gray-400 focus:outline-none focus:border-[#3CDBC0] bg-white transition-colors"
             />
             <button
@@ -299,20 +262,18 @@ export default function VibeSelect({ value, onChange, purpose, budget = null, on
               추가
             </button>
           </div>
-          {keywords.filter((k) => !PRESET_CHIP_LABELS.includes(k)).length > 0 && (
+          {keywords.length > 0 && (
             <div className="flex flex-wrap gap-2 mt-2.5">
-              {keywords
-                .filter((k) => !PRESET_CHIP_LABELS.includes(k))
-                .map((k) => (
-                  <button
-                    key={k}
-                    onClick={() => toggleKeyword(k)}
-                    className="flex items-center gap-1 px-3 py-1.5 rounded-full bg-white border border-[#3CDBC0]/50 text-[#2AB5A0] text-xs font-bold transition-all active:scale-95"
-                  >
-                    <span>#{k}</span>
-                    <span className="text-[#2AB5A0]/60">×</span>
-                  </button>
-                ))}
+              {keywords.map((k) => (
+                <button
+                  key={k}
+                  onClick={() => toggleKeyword(k)}
+                  className="flex items-center gap-1 px-3 py-1.5 rounded-full bg-white border border-[#3CDBC0]/50 text-[#2AB5A0] text-xs font-bold transition-all active:scale-95"
+                >
+                  <span>#{k}</span>
+                  <span className="text-[#2AB5A0]/60">×</span>
+                </button>
+              ))}
             </div>
           )}
         </div>

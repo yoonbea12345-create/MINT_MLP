@@ -71,9 +71,9 @@ export function validateRecommendBody(body: unknown): string | null {
   const purpose = input.purpose as Record<string, unknown> | undefined;
   if (!purpose || !isShortStr(purpose.first, 20)) return invalid;
   if (purpose.second != null && !isShortStr(purpose.second, 20)) return invalid;
-  // 장르/직접입력 메뉴는 최대 2개(쉼표 결합)까지 허용하므로 여유롭게 25자
-  if (purpose.firstGenre != null && !isShortStr(purpose.firstGenre, 25)) return invalid;
-  if (purpose.secondGenre != null && !isShortStr(purpose.secondGenre, 25)) return invalid;
+  // 장르/직접입력 메뉴는 여러 개(쉼표 결합, 코스별 최대 4개)까지 허용하므로 여유롭게 50자
+  if (purpose.firstGenre != null && !isShortStr(purpose.firstGenre, 50)) return invalid;
+  if (purpose.secondGenre != null && !isShortStr(purpose.secondGenre, 50)) return invalid;
 
   const midpoint = b.midpoint as Record<string, unknown> | undefined;
   if (!midpoint || !isFiniteNum(midpoint.lat) || !isFiniteNum(midpoint.lng)) return invalid;

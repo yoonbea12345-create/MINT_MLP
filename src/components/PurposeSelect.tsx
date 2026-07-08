@@ -269,9 +269,9 @@ export default function PurposeSelect({ value, onChange }: Props) {
   );
 }
 
-// 특정 메뉴 태그 입력 — 코스별 최대 2개. 두 번째 메뉴 추가 시 확인창(예=둘 다 검색 / 아니오=삭제).
+// 특정 메뉴 태그 입력 — 키워드 입력 UI와 동일. Enter/완료로 #태그 커밋, 여러 개 가능(코스별 최대 4개).
+const MENU_MAX = 4;
 function MenuTagInput({
-  courseLabel,
   color,
   menus,
   onAdd,
@@ -287,16 +287,12 @@ function MenuTagInput({
 }) {
   const [text, setText] = useState('');
   const isMint = color === 'mint';
-  const full = menus.length >= 2;
+  const full = menus.length >= MENU_MAX;
 
   function commit() {
     const t = text.trim().slice(0, 10);
     if (!t) { setText(''); return; }
     if (menus.includes(t) || full) { setText(''); return; }
-    if (menus.length >= 1) {
-      const ok = window.confirm(`앞에서 ${courseLabel} 메뉴를 '${menus[0]}'로 설정했어요.\n'${t}'도 추가할까요?\n\n확인 = 둘 다 검색 · 취소 = 삭제`);
-      if (!ok) { setText(''); return; }
-    }
     onAdd(t);
     setText('');
   }
@@ -311,7 +307,7 @@ function MenuTagInput({
             onChange={(e) => setText(e.target.value)}
             onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); commit(); } }}
             onBlur={commit}
-            placeholder={menus.length >= 1 ? '＋ 메뉴 하나 더 (최대 2개)' : placeholder}
+            placeholder={menus.length >= 1 ? '＋ 메뉴 더 입력 후 Enter' : placeholder}
             maxLength={10}
             className={`flex-1 border-2 rounded-xl px-3.5 py-2.5 text-xs font-bold placeholder:text-gray-400 placeholder:font-medium outline-none transition-colors ${
               isMint
@@ -341,7 +337,7 @@ function MenuTagInput({
                   : 'bg-orange-50 border-orange-300 text-orange-500'
               }`}
             >
-              <span>🔎 {m}</span>
+              <span>#{m}</span>
               <span className="opacity-60">×</span>
             </button>
           ))}
