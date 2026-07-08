@@ -147,7 +147,7 @@ export default function Landing() {
   const installButton = canInstall && (
     <button
       onClick={triggerInstall}
-      className="w-full flex items-center justify-center gap-2 bg-white border-2 border-[#3CDBC0] text-[#2AB5A0] font-bold text-base py-4 rounded-2xl active:scale-95 transition-all hover:bg-teal-50"
+      className="w-full flex items-center justify-center gap-2 bg-white border-2 border-[#3CDBC0] text-[#2AB5A0] font-bold text-base py-4 rounded-xl active:scale-95 transition-all hover:bg-teal-50"
     >
       <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
         <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
@@ -170,7 +170,7 @@ export default function Landing() {
           </span>
           <button
             onClick={goToApp}
-            className="bg-[#3CDBC0] text-white text-sm font-bold px-5 lg:px-6 lg:py-2.5 py-2 rounded-full transition-all active:scale-95 hover:bg-[#2AB5A0]"
+            className="bg-[#3CDBC0] text-white text-sm font-bold px-5 lg:px-6 lg:py-2.5 py-2 rounded-xl transition-all active:scale-95 hover:bg-[#2AB5A0]"
           >
             시작하기 →
           </button>
@@ -226,7 +226,7 @@ export default function Landing() {
             <div className="flex flex-col gap-3 w-full max-w-xs mb-3 mx-auto lg:mx-0">
               <button
                 onClick={goToApp}
-                className="w-full bg-gradient-to-r from-[#3CDBC0] to-[#2AB5A0] text-white font-black text-lg py-4 rounded-2xl cta-glow-mint active:scale-95 transition-all"
+                className="w-full bg-gradient-to-r from-[#3CDBC0] to-[#2AB5A0] text-white font-black text-lg py-4 rounded-xl cta-glow-mint active:scale-95 transition-all"
               >
                 지금 바로 추천받기
               </button>
@@ -529,7 +529,7 @@ export default function Landing() {
               badge: '🙋 링크 받는 사람',
               desc: '가입도, 출발지 고민도 없이 — 링크 열고 분위기만.',
               cols: 'lg:grid-cols-3',
-              max: 'lg:max-w-3xl lg:mx-auto',
+              max: 'lg:max-w-[56.75rem] lg:mx-auto',
               steps: [
                 { n: '1', title: '분위기만 몰래 선택', desc: '눈치 안 보고 각자 원하는 분위기·취향', img: '/image/landing/guest-vibe.webp' },
                 { n: '2', title: '못 먹는 음식·편의시설', desc: '못 먹는 음식은 빼고, 필요한 시설만 콕', img: '/image/landing/guest-extra.webp' },
@@ -541,17 +541,23 @@ export default function Landing() {
           const allImgs = [...roleSteps.host.steps, ...roleSteps.guest.steps].map((s) => s.img);
           return (
             <div className="max-w-7xl mx-auto px-6">
-              <div className="flex gap-2 rounded-2xl bg-white border border-gray-100 p-1.5 shadow-sm mb-4 lg:max-w-md lg:mx-auto">
+              <div className="relative flex gap-1.5 rounded-xl bg-white border border-gray-200 p-1 shadow-sm mb-5 lg:max-w-[360px] lg:mx-auto overflow-hidden">
+                <span
+                  className={`absolute left-1 top-1 bottom-1 w-[calc(50%-4px)] rounded-lg bg-[#3CDBC0] shadow-md shadow-[#3CDBC0]/25 transition-transform duration-300 ease-out ${
+                    groupRole === 'guest' ? 'translate-x-[calc(100%+6px)]' : 'translate-x-0'
+                  }`}
+                  aria-hidden="true"
+                />
                 {(['host', 'guest'] as const).map((role) => {
                   const selected = groupRole === role;
                   return (
                     <button
                       key={role}
                       onClick={() => setGroupRole(role)}
-                      className={`flex-1 rounded-xl px-3 py-2.5 text-xs font-black transition-all active:scale-[0.98] ${
+                      className={`relative z-10 flex-1 rounded-lg px-3 py-2.5 text-xs font-black transition-colors duration-200 active:scale-[0.98] ${
                         selected
-                          ? 'bg-[#3CDBC0] text-white shadow-md shadow-[#3CDBC0]/25'
-                          : 'bg-transparent text-gray-500'
+                          ? 'text-white'
+                          : 'text-gray-500'
                       }`}
                     >
                       {roleSteps[role].badge}
@@ -819,7 +825,7 @@ export default function Landing() {
           <div className="flex flex-col gap-3 w-full max-w-xs mb-6 mx-auto">
             <button
               onClick={goToApp}
-              className="w-full bg-gradient-to-r from-[#3CDBC0] to-[#2AB5A0] text-white font-black text-lg py-4 rounded-2xl cta-glow-mint active:scale-95 transition-all"
+              className="w-full bg-gradient-to-r from-[#3CDBC0] to-[#2AB5A0] text-white font-black text-lg py-4 rounded-xl cta-glow-mint active:scale-95 transition-all"
             >
               지금 바로 추천받기
             </button>
@@ -918,7 +924,7 @@ export default function Landing() {
             </div>
             <button
               onClick={() => setShowPrivacy(false)}
-              className="w-full mt-6 py-3.5 rounded-2xl bg-[#3CDBC0] text-white font-bold text-sm active:scale-95 transition-all"
+              className="w-full mt-6 py-3.5 rounded-xl bg-[#3CDBC0] text-white font-bold text-sm active:scale-95 transition-all"
             >
               확인
             </button>
@@ -973,7 +979,7 @@ export default function Landing() {
             )}
             <button
               onClick={() => setGuide(null)}
-              className="w-full py-3.5 rounded-2xl bg-[#3CDBC0] text-white font-bold text-sm active:scale-95 transition-all"
+              className="w-full py-3.5 rounded-xl bg-[#3CDBC0] text-white font-bold text-sm active:scale-95 transition-all"
             >
               확인
             </button>
