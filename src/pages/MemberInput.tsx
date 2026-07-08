@@ -94,7 +94,6 @@ export default function MemberInput() {
   const [budget, setBudget] = useState<string | null>(null);
   const [keywords, setKeywords] = useState<string[]>([]);
   const [excludeFoods, setExcludeFoods] = useState<string[]>([]);
-  const [vibeCustom, setVibeCustom] = useState<Record<string, string>>({});
 
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -175,6 +174,15 @@ export default function MemberInput() {
     setSubmitting(true);
     setError(null);
     try {
+      // 멤버가 고른 vibe 전체(분위기·취향 그룹의 1·2차 모두) 수집.
+      // 대표 분위기 1개만 vibe_atmosphere로 보내면 취향·2차 선택이 유실되므로,
+      // 대표 1개는 집계 투표용으로, 나머지는 라벨로 vibe_keywords에 실어 추천에 빠짐없이 반영한다.
+      const allVibeKeys = Object.values(vibe).flatMap((g) => [g.first, g.second]).filter((k): k is string => !!k);
+      const primaryAtm = vibe['분위기']?.first ?? allVibeKeys[0] ?? null;
+      const extraVibeLabels = allVibeKeys
+        .filter((k) => k !== primaryAtm)
+        .map((k) => VIBE_KEY_TO_LABEL[k] ?? k);
+
       const res = await fetch('/api/session-join', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -188,16 +196,16 @@ export default function MemberInput() {
           // 코스는 호스트가 정한 값을 그대로 실어 멤버 기록을 일관되게 유지
           purpose_first: hostCtx?.purposeFirst ?? null,
           purpose_second: hostCtx?.purposeSecond && hostCtx.purposeSecond !== '없음' ? hostCtx.purposeSecond : null,
-          vibe_atmosphere: Object.values(vibe).find((g) => g.first)?.first ?? null,
+          vibe_atmosphere: primaryAtm,
           vibe_budget: budget,
           vibe_keywords: (() => {
-            // 편식은 접두사로 키워드에 실어 보냄 — 호스트가 집계 시 분리
+            // 대표 외 vibe + 편의시설 키워드 + 편식(접두사) 모두 합쳐 전송. 편식은 호스트가 집계 시 분리.
             const all = [
+              ...extraVibeLabels,
               ...keywords,
-              ...Object.values(vibeCustom).filter(Boolean),
               ...excludeFoods.map((f) => `${EXCLUDE_FOOD_PREFIX}${f}`),
             ];
-            return all.length > 0 ? all : null;
+            return all.length > 0 ? Array.from(new Set(all)) : null;
           })(),
         }),
       });
@@ -416,8 +424,6 @@ export default function MemberInput() {
             onKeywordsChange={setKeywords}
             excludeFoods={excludeFoods}
             onExcludeFoodsChange={setExcludeFoods}
-            vibeCustom={vibeCustom}
-            onVibeCustomChange={(label, text) => setVibeCustom((prev) => ({ ...prev, [label]: text }))}
             section="extras"
           />
         )}
