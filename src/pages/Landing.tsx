@@ -436,33 +436,45 @@ export default function Landing() {
             </p>
           </div>
 
-          <div className="flex flex-col lg:flex-row gap-4 lg:gap-6">
-            {/* 아무거나 */}
-            <div className="lg:flex-1 rounded-2xl border-2 border-gray-100 bg-gray-50/50 p-6">
-              <div className="text-3xl mb-3">🤷</div>
-              <p className="text-base font-bold text-gray-800 mb-1.5">뭘 먹을지 모르겠어요</p>
-              <p className="text-sm text-gray-500 leading-relaxed mb-4">
-                <strong className="text-gray-700">밥 · 술 · 카페</strong>만 누르세요. 그 동네 찐맛집을 AI가 알아서 골라줘요.
-              </p>
-              <div className="flex flex-wrap gap-2">
-                {['🍽️ 밥', '🍻 술', '☕ 카페'].map((t) => (
-                  <span key={t} className="bg-white border border-gray-200 text-gray-600 text-xs font-bold px-3 py-1.5 rounded-full">{t}</span>
-                ))}
-              </div>
+          <div className="lg:grid lg:grid-cols-2 lg:gap-14 lg:items-center">
+            {/* 스마트폰 목업 — 메뉴 콕 직접 입력 화면 */}
+            <div className="mb-8 lg:mb-0 lg:order-2">
+              <PhoneMockup src="/image/landing/menu-demo.webp" alt="'메뉴 콕!'에 #보쌈 #피자를 입력하는 화면" width="w-56 lg:w-72" />
             </div>
 
-            {/* 메뉴 콕 */}
-            <div className="lg:flex-1 rounded-2xl border-2 border-[#3CDBC0] bg-teal-50 p-6">
-              <div className="text-3xl mb-3">🎯</div>
-              <p className="text-base font-bold text-gray-800 mb-1.5">이건 꼭 먹고 싶어요</p>
-              <p className="text-sm text-gray-600 leading-relaxed mb-4">
-                <strong className="text-[#2AB5A0]">메뉴 콕!</strong>에 먹고 싶은 걸 입력하면, 그 메뉴가 <strong className="text-[#2AB5A0]">해당 코스</strong>로 그대로 나와요. 여러 개도 OK.
-              </p>
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="bg-white border border-[#3CDBC0]/50 text-[#2AB5A0] text-xs font-bold px-3 py-1.5 rounded-full">#보쌈</span>
-                <span className="bg-white border border-[#3CDBC0]/50 text-[#2AB5A0] text-xs font-bold px-3 py-1.5 rounded-full">#피자</span>
-                <span className="text-[#3CDBC0] font-bold text-sm">→</span>
-                <span className="bg-[#3CDBC0] text-white text-xs font-bold px-3 py-1.5 rounded-full">1차 보쌈집 · 2차 피자집</span>
+            {/* 설명 카드 2개 */}
+            <div className="flex flex-col gap-4 lg:order-1">
+              {/* 아무거나 */}
+              <div className="rounded-2xl border-2 border-gray-100 bg-gray-50/50 p-5 lg:p-6">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-2xl">🤷</span>
+                  <p className="text-base font-bold text-gray-800">뭘 먹을지 모르겠어요</p>
+                </div>
+                <p className="text-sm text-gray-500 leading-relaxed mb-3">
+                  <strong className="text-gray-700">밥 · 술 · 카페</strong>만 누르세요. 그 동네 찐맛집을 AI가 알아서 골라줘요.
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {['🍽️ 밥', '🍻 술', '☕ 카페'].map((t) => (
+                    <span key={t} className="bg-white border border-gray-200 text-gray-600 text-xs font-bold px-3 py-1.5 rounded-full">{t}</span>
+                  ))}
+                </div>
+              </div>
+
+              {/* 메뉴 콕 */}
+              <div className="rounded-2xl border-2 border-[#3CDBC0] bg-teal-50 p-5 lg:p-6">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-2xl">🎯</span>
+                  <p className="text-base font-bold text-gray-800">이건 꼭 먹고 싶어요</p>
+                </div>
+                <p className="text-sm text-gray-600 leading-relaxed mb-3">
+                  <strong className="text-[#2AB5A0]">메뉴 콕!</strong>에 먹고 싶은 걸 입력하면, 그 메뉴가 <strong className="text-[#2AB5A0]">해당 코스</strong>로 그대로 나와요. 여러 개도 OK.
+                </p>
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="bg-white border border-[#3CDBC0]/50 text-[#2AB5A0] text-xs font-bold px-3 py-1.5 rounded-full">#보쌈</span>
+                  <span className="bg-white border border-[#3CDBC0]/50 text-[#2AB5A0] text-xs font-bold px-3 py-1.5 rounded-full">#피자</span>
+                  <span className="text-[#3CDBC0] font-bold text-sm">→</span>
+                  <span className="bg-[#3CDBC0] text-white text-xs font-bold px-3 py-1.5 rounded-full">1차 보쌈집 · 2차 피자집</span>
+                </div>
               </div>
             </div>
           </div>
