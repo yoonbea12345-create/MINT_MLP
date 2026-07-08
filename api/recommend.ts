@@ -244,8 +244,9 @@ async function searchNaverMulti(
   const budgetPrefix = budget === '~2만원' ? '가성비 ' : budget === '4만원+' ? '고급 ' : '';
   // 기타(직접 입력) 목적은 입력 텍스트 자체가 최우선 검색 키워드 — 안 넣으면 원하는 업종이 후보에 아예 없음
   const isCustomPurpose = !PURPOSE_KEYWORDS[purpose];
-  // 장르가 지정되면 키워드 풀을 통째로 해당 장르로 교체 — "밥인데 한식만" 스코프 좁히기
-  const genrePool = genre ? GENRE_KEYWORDS[genre] : undefined;
+  // 장르가 지정되면 키워드 풀을 통째로 해당 장르로 교체 — "밥인데 한식만" 스코프 좁히기.
+  // 프리셋에 없는 직접 입력 메뉴(예: 두루치기)는 그 메뉴 자체를 검색 키워드로 써서 후보 풀을 그 메뉴로 좁힌다.
+  const genrePool = genre ? (GENRE_KEYWORDS[genre] ?? [genre]) : undefined;
   const baseKeywords = genrePool ?? (isCustomPurpose ? [purpose, ...PURPOSE_KEYWORDS['기타']] : PURPOSE_KEYWORDS[purpose]);
 
   // 행사/관계 추가 키워드 병합
@@ -475,8 +476,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     };
     const hasTwoPurposes = !!(purpose.second && purpose.second !== '없음');
     // 장르 좁히기 — 알려진 장르만 인정 (임의 문자열로 프롬프트/검색 오염 방지)
-    const firstGenre = purpose.firstGenre && GENRE_KEYWORDS[purpose.firstGenre] ? purpose.firstGenre : null;
-    const secondGenre = purpose.secondGenre && GENRE_KEYWORDS[purpose.secondGenre] ? purpose.secondGenre : null;
+    // 프리셋 장르(GENRE_KEYWORDS) + 사용자가 직접 입력한 메뉴(예: 두루치기)도 그대로 수용.
+    // 직접 입력 메뉴는 아래 searchNaverMulti에서 검색 키워드 풀을 그 메뉴로 교체해 확실히 반영한다.
+    const firstGenre = purpose.firstGenre?.trim() || null;
+    const secondGenre = purpose.secondGenre?.trim() || null;
     const purposeFirstLabel = firstGenre ? `${purpose.first}·${firstGenre}` : purpose.first;
     const purposeSecondLabel = secondGenre && purpose.second ? `${purpose.second}·${secondGenre}` : purpose.second;
     const vibe = input.vibe as { first?: string[]; second?: string[] } | undefined;

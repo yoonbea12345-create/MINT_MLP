@@ -39,8 +39,25 @@ export default function PurposeSelect({ value, onChange }: Props) {
   const [secondText, setSecondText] = useState<string>(
     value.secondRaw === '기타' && value.second ? value.second : ''
   );
+  // 장르 자리에 직접 입력하는 특정 메뉴(예: 두루치기) — 프리셋 장르에 없는 firstGenre/secondGenre 값
+  const [firstGenreText, setFirstGenreText] = useState<string>(
+    value.firstGenre && !PURPOSE_GENRES[value.firstRaw ?? '']?.includes(value.firstGenre) ? value.firstGenre : ''
+  );
+  const [secondGenreText, setSecondGenreText] = useState<string>(
+    value.secondGenre && !PURPOSE_GENRES[value.secondRaw ?? '']?.includes(value.secondGenre) ? value.secondGenre : ''
+  );
+
+  function handleFirstGenreText(text: string) {
+    setFirstGenreText(text);
+    onChange({ ...value, firstGenre: text.trim() || null });
+  }
+  function handleSecondGenreText(text: string) {
+    setSecondGenreText(text);
+    onChange({ ...value, secondGenre: text.trim() || null });
+  }
 
   function selectFirst(opt: '밥' | '술' | '카페' | '기타') {
+    if (opt !== value.firstRaw) setFirstGenreText(''); // 목적 바뀌면 직접입력 메뉴도 초기화
     if (opt === '기타') {
       onChange({ ...value, first: firstText.trim() || null, firstRaw: '기타', firstGenre: null });
     } else {
@@ -55,6 +72,7 @@ export default function PurposeSelect({ value, onChange }: Props) {
   }
 
   function selectSecond(opt: '밥' | '술' | '카페' | '기타' | '없음') {
+    if (opt !== value.secondRaw) setSecondGenreText(''); // 목적 바뀌면 직접입력 메뉴 초기화
     if (opt === '없음') {
       onChange({ ...value, second: '없음', secondRaw: '없음', secondGenre: null });
     } else if (opt === '기타') {
@@ -66,8 +84,10 @@ export default function PurposeSelect({ value, onChange }: Props) {
 
   function toggleGenre(slot: 'first' | 'second', genre: string) {
     if (slot === 'first') {
+      setFirstGenreText(''); // 프리셋 장르 선택 시 직접입력 메뉴는 해제
       onChange({ ...value, firstGenre: value.firstGenre === genre ? null : genre });
     } else {
+      setSecondGenreText('');
       onChange({ ...value, secondGenre: value.secondGenre === genre ? null : genre });
     }
   }
@@ -125,25 +145,39 @@ export default function PurposeSelect({ value, onChange }: Props) {
           })}
         </div>
 
-        {/* 장르 좁히기 (선택) — 밥/술 선택 시에만 노출 */}
-        {value.firstRaw && PURPOSE_GENRES[value.firstRaw] && (
+        {/* 장르 좁히기 + 특정 메뉴 직접 입력 — 밥/술/카페 선택 시 노출 */}
+        {value.firstRaw && value.firstRaw !== '기타' && (
           <div className="mt-2.5 animate-fade-in-up">
-            <p className="text-[10px] text-gray-400 mb-1.5">장르를 좁히고 싶다면 골라주세요 (선택)</p>
-            <div className="flex flex-wrap gap-1.5">
-              {PURPOSE_GENRES[value.firstRaw].map((g) => (
-                <button
-                  key={g}
-                  onClick={() => toggleGenre('first', g)}
-                  className={`px-3 py-1.5 rounded-full border-2 text-xs font-bold transition-all active:scale-95 ${
-                    value.firstGenre === g
-                      ? 'border-[#3CDBC0] bg-[#3CDBC0] text-white shadow-md shadow-[#3CDBC0]/30'
-                      : 'border-gray-200 bg-white text-gray-500 hover:border-[#3CDBC0]/50'
-                  }`}
-                >
-                  {g}
-                </button>
-              ))}
-            </div>
+            {PURPOSE_GENRES[value.firstRaw] && (
+              <>
+                <p className="text-[10px] text-gray-400 mb-1.5">장르를 좁히거나, 특정 메뉴를 직접 입력하세요 (선택)</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {PURPOSE_GENRES[value.firstRaw].map((g) => (
+                    <button
+                      key={g}
+                      onClick={() => toggleGenre('first', g)}
+                      className={`px-3 py-1.5 rounded-full border-2 text-xs font-bold transition-all active:scale-95 ${
+                        value.firstGenre === g
+                          ? 'border-[#3CDBC0] bg-[#3CDBC0] text-white shadow-md shadow-[#3CDBC0]/30'
+                          : 'border-gray-200 bg-white text-gray-500 hover:border-[#3CDBC0]/50'
+                      }`}
+                    >
+                      {g}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+            <input
+              type="text"
+              value={firstGenreText}
+              onChange={(e) => handleFirstGenreText(e.target.value)}
+              placeholder={PURPOSE_GENRES[value.firstRaw] ? '🔎 또는 특정 메뉴 콕 집기 (예: 두루치기)' : '🔎 특정 메뉴 콕 집기 (예: 빙수)'}
+              maxLength={10}
+              className={`mt-2 w-full border-2 rounded-xl px-3.5 py-2.5 text-xs font-bold text-[#2AB5A0] placeholder:text-gray-400 placeholder:font-medium outline-none transition-colors ${
+                firstGenreText.trim() ? 'border-[#3CDBC0] bg-[#E8F8F5]' : 'border-gray-200 focus:border-[#3CDBC0]'
+              }`}
+            />
           </div>
         )}
       </div>
@@ -192,25 +226,39 @@ export default function PurposeSelect({ value, onChange }: Props) {
           })}
         </div>
 
-        {/* 2차 장르 좁히기 (선택) — 안내문구는 1차와 중복이라 짧게 */}
-        {value.secondRaw && PURPOSE_GENRES[value.secondRaw] && (
+        {/* 2차 장르 좁히기 + 특정 메뉴 직접 입력 */}
+        {value.secondRaw && value.secondRaw !== '기타' && value.secondRaw !== '없음' && (
           <div className="mb-2.5 animate-fade-in-up">
-            <p className="text-[10px] text-gray-400 mb-1.5">2차 장르 (선택)</p>
-            <div className="flex flex-wrap gap-1.5">
-              {PURPOSE_GENRES[value.secondRaw].map((g) => (
-                <button
-                  key={g}
-                  onClick={() => toggleGenre('second', g)}
-                  className={`px-3 py-1.5 rounded-full border-2 text-xs font-bold transition-all active:scale-95 ${
-                    value.secondGenre === g
-                      ? 'border-orange-400 bg-orange-400 text-white shadow-md shadow-orange-200/60'
-                      : 'border-gray-200 bg-white text-gray-500 hover:border-orange-300'
-                  }`}
-                >
-                  {g}
-                </button>
-              ))}
-            </div>
+            {PURPOSE_GENRES[value.secondRaw] && (
+              <>
+                <p className="text-[10px] text-gray-400 mb-1.5">2차 장르 또는 특정 메뉴 (선택)</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {PURPOSE_GENRES[value.secondRaw].map((g) => (
+                    <button
+                      key={g}
+                      onClick={() => toggleGenre('second', g)}
+                      className={`px-3 py-1.5 rounded-full border-2 text-xs font-bold transition-all active:scale-95 ${
+                        value.secondGenre === g
+                          ? 'border-orange-400 bg-orange-400 text-white shadow-md shadow-orange-200/60'
+                          : 'border-gray-200 bg-white text-gray-500 hover:border-orange-300'
+                      }`}
+                    >
+                      {g}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+            <input
+              type="text"
+              value={secondGenreText}
+              onChange={(e) => handleSecondGenreText(e.target.value)}
+              placeholder={PURPOSE_GENRES[value.secondRaw] ? '🔎 또는 특정 메뉴 콕 집기 (예: 하이볼)' : '🔎 특정 메뉴 콕 집기 (예: 빙수)'}
+              maxLength={10}
+              className={`mt-2 w-full border-2 rounded-xl px-3.5 py-2.5 text-xs font-bold text-orange-500 placeholder:text-gray-400 placeholder:font-medium outline-none transition-colors ${
+                secondGenreText.trim() ? 'border-orange-400 bg-orange-50' : 'border-gray-200 focus:border-orange-300'
+              }`}
+            />
           </div>
         )}
 
