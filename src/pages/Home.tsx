@@ -118,6 +118,7 @@ export default function Home() {
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [expectedCount, setExpectedCount] = useState<number>(3);
   const [groupMembers, setGroupMembers] = useState<GroupMember[]>([]);
+  const [pendingGroupRecommend, setPendingGroupRecommend] = useState(false);
   const [creatingSession, setCreatingSession] = useState(false);
   const [groupError, setGroupError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
@@ -345,6 +346,25 @@ export default function Home() {
     };
   }, [appMode, sessionId, view]);
 
+  // 대기 화면 "지금 추천받기" — 집계(setState) 반영 뒤 다음 렌더에서 추천을 트리거해 stale 상태를 피한다
+  useEffect(() => {
+    if (!pendingGroupRecommend) return;
+    setPendingGroupRecommend(false);
+    if (meetingLocation) handleConfirmMeetingLocation(meetingLocation);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingGroupRecommend]);
+
+  // 호스트가 링크로 돌아왔을 때(?grp=recommend) 멤버가 모이면 자동으로 추천을 시작
+  useEffect(() => {
+    if (!isGroup || !sessionId || step !== 2) return;
+    if (!new URLSearchParams(window.location.search).has('grp')) return;
+    if (groupMembers.length < 2 || !meetingLocation) return;
+    try { window.history.replaceState(null, '', '/app'); } catch { /* ignore */ }
+    aggregateGroupMembers();
+    setPendingGroupRecommend(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isGroup, sessionId, step, groupMembers.length]);
+
   async function handleCreateSession() {
     setCreatingSession(true);
     setGroupError(null);
@@ -414,10 +434,17 @@ export default function Home() {
     setBudget(aggregateBudget(groupMembers));
   }
 
+  function requestGroupRecommend() {
+    if (!meetingLocation || groupMembers.length < 2) return;
+    aggregateGroupMembers();
+    setPendingGroupRecommend(true);
+  }
+
   function handleNext() {
-    // 그룹: 공유(step 2) → 확정(step 3) 진입 시 멤버 데이터 집계
+    // 그룹: 대기 화면에서 바로 추천으로 진입. 집계 state 반영 뒤 effect에서 추천을 시작한다.
     if (step === 2 && isGroup) {
-      aggregateGroupMembers();
+      requestGroupRecommend();
+      return;
     }
     setStep((s) => (s + 1) as Step);
   }
@@ -1235,8 +1262,11 @@ export default function Home() {
                   shareLink={groupShareLink()}
                   copied={copied}
                   onCopy={handleCopyLink}
+                  onRecommend={requestGroupRecommend}
                   members={groupMembers}
                   expectedCount={expectedCount}
+                  canRecommend={canNext()}
+                  recommending={pendingGroupRecommend || loading}
                 />
               )}
             </div>
@@ -1327,7 +1357,7 @@ export default function Home() {
                       : 'bg-gray-200 text-gray-400 cursor-not-allowed'
                   }`}
                 >
-                  다음
+                  {step === 2 && isGroup && sessionId ? `${groupMembers.length}명으로 추천받기` : '다음'}
                 </button>
               </div>
               {!canNext() && (

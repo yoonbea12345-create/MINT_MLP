@@ -4,12 +4,24 @@ interface Props {
   shareLink: string;
   copied: boolean;
   onCopy: () => void;
+  onRecommend: () => void;
   members: GroupMember[];
   expectedCount: number;
+  canRecommend: boolean;
+  recommending: boolean;
 }
 
 // 그룹 모드: 링크 공유 + 실시간 입력 현황
-export default function GroupWaiting({ shareLink, copied, onCopy, members, expectedCount }: Props) {
+export default function GroupWaiting({
+  shareLink,
+  copied,
+  onCopy,
+  onRecommend,
+  members,
+  expectedCount,
+  canRecommend,
+  recommending,
+}: Props) {
   const allVoted = members.length >= expectedCount && members.length > 0;
 
   return (
@@ -72,7 +84,18 @@ export default function GroupWaiting({ shareLink, copied, onCopy, members, expec
       {allVoted && (
         <div className="p-4 bg-[#E8F8F5] border border-[#3CDBC0]/40 rounded-2xl text-center">
           <p className="text-base font-black text-[#2AB5A0]">🎉 전원 완료!</p>
-          <p className="text-xs text-[#2AB5A0]/70 mt-0.5">모두의 취향이 모였어요. 아래 다음 버튼을 눌러주세요!</p>
+          <p className="text-xs text-[#2AB5A0]/70 mt-0.5">모두의 취향이 모였어요. 바로 추천받을 수 있어요.</p>
+          <button
+            onClick={onRecommend}
+            disabled={!canRecommend || recommending}
+            className={`mt-3 w-full py-3 rounded-2xl font-black text-sm transition-all active:scale-95 ${
+              canRecommend && !recommending
+                ? 'bg-[#3CDBC0] text-white shadow-lg shadow-[#3CDBC0]/25 hover:bg-[#2AB5A0]'
+                : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+            }`}
+          >
+            {recommending ? '추천 준비 중...' : `${members.length}명 취향으로 추천받기 →`}
+          </button>
         </div>
       )}
     </div>
