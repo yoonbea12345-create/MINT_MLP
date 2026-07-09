@@ -82,9 +82,10 @@ const COMBOS = [
 
 function PhoneMockup({ src, alt, width = 'w-56' }: { src: string; alt: string; width?: string }) {
   return (
-    <div className={`${width} mx-auto bg-white rounded-3xl shadow-xl shadow-teal-100 border-2 border-gray-100 overflow-hidden`}>
-      <div className="w-12 h-1 bg-gray-200 rounded-full mx-auto mt-2 mb-1" />
-      <img src={src} alt={alt} className="w-full block" loading="lazy" />
+    <div className={`${width} mx-auto rounded-[2rem] bg-white p-1.5 ring-1 ring-black/5 shadow-2xl shadow-teal-900/10`}>
+      <div className="overflow-hidden rounded-[1.6rem] bg-white">
+        <img src={src} alt={alt} className="w-full block" loading="lazy" />
+      </div>
     </div>
   );
 }
