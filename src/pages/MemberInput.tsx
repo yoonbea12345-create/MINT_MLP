@@ -356,8 +356,9 @@ export default function MemberInput() {
         )}
       </div>
 
-      {/* 콘텐츠 */}
+      {/* 콘텐츠 — 짧은 스텝은 세로 중앙정렬(빈 공간 제거), 길면 정상 스크롤 */}
       <div key={phase} className="flex-1 min-h-0 overflow-y-auto animate-fade-in-up">
+        <div className="min-h-full flex flex-col justify-center">
         {phase === 'step0' && (
           <div className="px-5 pt-3 pb-4 flex flex-col gap-5">
             {/* 이름 */}
@@ -436,6 +437,7 @@ export default function MemberInput() {
             section="extras"
           />
         )}
+        </div>
       </div>
 
       {/* 에러 */}
