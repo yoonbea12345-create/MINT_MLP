@@ -547,10 +547,6 @@ export default function Landing() {
                 })}
               </div>
 
-              <div className="flex items-center gap-2.5 mb-1 lg:justify-center">
-                <span className="inline-flex items-center gap-1.5 bg-[#E8F8F5] text-[#2AB5A0] border border-[#3CDBC0]/40 text-xs font-bold px-3 py-1.5 rounded-full">{active.badge}</span>
-                <span className="text-sm font-bold text-gray-700">{active.label}</span>
-              </div>
               <p className="text-xs lg:text-sm text-gray-400 mb-2 lg:mb-10 lg:text-center leading-relaxed">{active.desc}</p>
               <p className="text-xs text-[#2AB5A0] font-bold mb-8 lg:hidden">옆으로 넘겨보세요 →</p>
 
