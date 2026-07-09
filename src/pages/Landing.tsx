@@ -71,15 +71,6 @@ function goToApp() {
   window.location.pathname = '/app';
 }
 
-// ── 히어로: 앱 입력 조합 로테이션 (조건 → 결과의 마법을 미리 보여주기) ──
-const COMBOS = [
-  { chips: ['🍻 술', '시끌벅적', '성수'], result: '아키야마 성수본점' },
-  { chips: ['🍜 밥', '검증된 곳', '선릉'], result: '농민백암순대 본점' },
-  { chips: ['☕ 카페', '인스타감성', '연남'], result: '카페 레이어드 연남점' },
-  { chips: ['💕 100일 데이트', '야경맛집', '성수'], result: '성수옥상' },
-  { chips: ['🏢 회식', '단체 가능', '용산'], result: '몽탄' },
-];
-
 function PhoneMockup({ src, alt, width = 'w-56' }: { src: string; alt: string; width?: string }) {
   return (
     <div className={`${width} mx-auto bg-white rounded-3xl shadow-xl shadow-teal-100 border-2 border-gray-100 overflow-hidden`}>
@@ -102,7 +93,6 @@ function KakaoTalkBubble({ className = 'w-6 h-6' }: { className?: string }) {
 export default function Landing() {
   useEffect(() => { trackEvent('landing_view'); }, []);
   const { canInstall, triggerInstall, isIOS, guide, setGuide } = useInstallPrompt();
-  const [comboIdx, setComboIdx] = useState(0);
   const [visitCount, setVisitCount] = useState(0);
   const [showPrivacy, setShowPrivacy] = useState(false);
   const [groupRole, setGroupRole] = useState<'host' | 'guest'>('host');
@@ -135,14 +125,6 @@ export default function Landing() {
     document.querySelectorAll('.fade-section').forEach((el) => obs.observe(el));
     return () => obs.disconnect();
   }, []);
-
-  // 히어로 조합 로테이션
-  useEffect(() => {
-    const t = setInterval(() => setComboIdx((i) => (i + 1) % COMBOS.length), 3200);
-    return () => clearInterval(t);
-  }, []);
-
-  const combo = COMBOS[comboIdx];
 
   const installButton = canInstall && (
     <button
@@ -178,13 +160,13 @@ export default function Landing() {
       </nav>
 
       {/* ══════════════════════════════════════
-          HERO — 조건 조합이 결과로 바뀌는 마법
-          모바일: 세로 중앙 / PC: 좌 카피·CTA + 우 데모·결과 2단
+          HERO — 첫 결과 화면 미리보기
+          모바일: 세로 중앙 / PC: 좌 카피·CTA + 우 결과 목업
       ══════════════════════════════════════ */}
-      <section className="px-6 pt-12 pb-12 lg:pt-16 lg:pb-20">
-        <div className="max-w-lg lg:max-w-7xl mx-auto lg:grid lg:grid-cols-2 lg:gap-24 lg:items-center">
+      <section className="px-6 pt-12 pb-12 lg:min-h-[calc(100vh-64px)] lg:flex lg:items-center lg:pt-0 lg:pb-0">
+        <div className="max-w-lg lg:max-w-7xl mx-auto lg:grid lg:grid-cols-2 lg:gap-24 lg:items-center lg:-translate-y-8">
           {/* 좌: 카피 + CTA + 통계 */}
-          <div className="text-center lg:text-left lg:min-h-[640px] lg:flex lg:flex-col lg:justify-center">
+          <div className="text-center lg:text-left">
             <div className="inline-flex items-center gap-1.5 bg-teal-50 border border-teal-200 text-[#2AB5A0] text-xs font-bold px-4 py-1.5 rounded-full mb-6 lg:mb-7 lg:self-start">
               ✦ 그룹 만남 장소 큐레이션
             </div>
@@ -196,32 +178,6 @@ export default function Landing() {
               조건 몇 개만 고르세요.<br />
               이 모임에 <strong className="text-gray-800">딱 맞는 장소 3곳</strong>, 30초 안에 나옵니다.
             </p>
-
-            {/* 조건 → 결과 로테이션 데모 (모바일은 여기, PC는 우측 컬럼에 크게) */}
-            <div className="lg:hidden w-full max-w-xs mx-auto bg-white border border-teal-100 rounded-3xl p-4 shadow-sm mb-7 min-h-[104px] flex flex-col justify-center">
-              <div key={comboIdx} className="animate-fade-in">
-                <div className="flex items-center justify-center gap-1.5 flex-wrap mb-2.5">
-                  {combo.chips.map((c) => (
-                    <span key={c} className="bg-[#E8F8F5] text-[#2AB5A0] text-xs font-bold px-3 py-1.5 rounded-full">{c}</span>
-                  ))}
-                </div>
-                <div className="flex items-center justify-center gap-2 text-sm">
-                  <a
-                    href={`https://map.kakao.com/link/search/${encodeURIComponent(combo.result)}`}
-                    target="_blank"
-                    rel="noreferrer"
-                    onClick={() => trackEvent('landing_demo_place_click')}
-                    className="flex items-center gap-1 font-bold text-gray-800 underline decoration-[#3CDBC0] decoration-2 underline-offset-4 active:scale-95 transition-transform"
-                  >
-                    <svg className="w-3.5 h-3.5 text-[#3CDBC0] flex-shrink-0" viewBox="0 0 24 24" fill="currentColor">
-                      <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
-                    </svg>
-                    {combo.result}
-                  </a>
-                  <span className="bg-[#3CDBC0] text-white text-[10px] font-bold px-2 py-0.5 rounded-full">적합도 90+</span>
-                </div>
-              </div>
-            </div>
 
             <div className="flex flex-col gap-3 w-full max-w-xs mb-3 mx-auto lg:mx-0 lg:mb-5">
               <button
@@ -254,36 +210,14 @@ export default function Landing() {
                 </div>
               ))}
             </div>
+            <div className="lg:hidden mt-9">
+              <PhoneMockup src="/image/landing/hero-result.webp" alt="MINT 첫 추천 결과 예시" width="w-56" />
+            </div>
           </div>
 
-          {/* 우 (PC 전용): 큰 데모 카드 + 결과 폰목업 */}
-          <div className="hidden lg:flex lg:flex-col lg:items-center lg:gap-6 lg:pt-4 lg:w-full lg:max-w-xs lg:justify-self-center">
-            <div className="w-full bg-white border border-teal-100 rounded-3xl p-5 shadow-lg shadow-teal-100">
-              <p className="text-xs font-bold tracking-widest text-[#3CDBC0] mb-4 text-center">조건만 고르면 이렇게</p>
-              <div key={`lg-${comboIdx}`} className="animate-fade-in">
-                <div className="flex items-center justify-center gap-2 flex-wrap mb-4">
-                  {combo.chips.map((c) => (
-                    <span key={c} className="bg-[#E8F8F5] text-[#2AB5A0] text-sm font-bold px-4 py-2 rounded-full">{c}</span>
-                  ))}
-                </div>
-                <div className="flex items-center justify-center gap-2 text-base">
-                  <a
-                    href={`https://map.kakao.com/link/search/${encodeURIComponent(combo.result)}`}
-                    target="_blank"
-                    rel="noreferrer"
-                    onClick={() => trackEvent('landing_demo_place_click')}
-                    className="flex items-center gap-1.5 font-bold text-gray-800 underline decoration-[#3CDBC0] decoration-2 underline-offset-4 hover:text-[#2AB5A0] transition-colors"
-                  >
-                    <svg className="w-4 h-4 text-[#3CDBC0] flex-shrink-0" viewBox="0 0 24 24" fill="currentColor">
-                      <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
-                    </svg>
-                    {combo.result}
-                  </a>
-                  <span className="bg-[#3CDBC0] text-white text-xs font-bold px-2.5 py-1 rounded-full">적합도 90+</span>
-                </div>
-              </div>
-            </div>
-            <PhoneMockup src="/image/landing/result.webp" alt="MINT 추천 결과 예시" width="w-full" />
+          {/* 우 (PC 전용): 결과 폰목업 */}
+          <div className="hidden lg:block lg:w-full lg:max-w-xs lg:justify-self-center">
+            <PhoneMockup src="/image/landing/hero-result.webp" alt="MINT 첫 추천 결과 예시" width="w-full" />
           </div>
         </div>
       </section>
