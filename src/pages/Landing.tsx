@@ -324,9 +324,19 @@ export default function Landing() {
             <p className="text-sm lg:text-base text-gray-400 mb-6 leading-relaxed">
               장소 하나 정하는 데 30분. 결국 아무도 안 정해서 맨날 같은 곳.
             </p>
-            <div className="hidden lg:block bg-teal-50 border border-teal-100 rounded-2xl p-6 text-center max-w-sm">
-              <div className="text-5xl font-black text-[#3CDBC0]">평균 32분</div>
-              <div className="text-sm text-gray-400 mt-1">한국인이 모임 장소 정하는 데 쓰는 시간</div>
+            <div className="hidden lg:block bg-teal-50 border border-teal-100 rounded-2xl p-7 max-w-sm">
+              <div className="text-sm font-bold text-gray-500 mb-5">모임 장소 정하는 데 걸리는 시간</div>
+              <div className="flex items-center gap-5">
+                <div>
+                  <div className="text-5xl font-black text-gray-300 line-through decoration-gray-300 decoration-2">32분</div>
+                  <div className="text-xs text-gray-400 mt-1.5">단톡방 실랑이</div>
+                </div>
+                <div className="text-3xl font-black text-[#3CDBC0]">→</div>
+                <div>
+                  <div className="text-5xl font-black text-[#3CDBC0]">30초</div>
+                  <div className="text-xs font-bold text-[#2AB5A0] mt-1.5">MINT로</div>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -360,9 +370,19 @@ export default function Landing() {
               </div>
             </div>
 
-            <div className="mt-6 lg:hidden bg-teal-50 border border-teal-100 rounded-2xl p-5 text-center">
-              <div className="text-4xl font-black text-[#3CDBC0]">평균 32분</div>
-              <div className="text-sm text-gray-400 mt-1">한국인이 모임 장소 정하는 데 쓰는 시간</div>
+            <div className="mt-6 lg:hidden bg-teal-50 border border-teal-100 rounded-2xl p-5">
+              <div className="text-xs font-bold text-gray-500 mb-3 text-center">모임 장소 정하는 데 걸리는 시간</div>
+              <div className="flex items-center justify-center gap-4">
+                <div className="text-center">
+                  <div className="text-3xl font-black text-gray-300 line-through decoration-2">32분</div>
+                  <div className="text-[11px] text-gray-400 mt-1">단톡방 실랑이</div>
+                </div>
+                <div className="text-2xl font-black text-[#3CDBC0]">→</div>
+                <div className="text-center">
+                  <div className="text-3xl font-black text-[#3CDBC0]">30초</div>
+                  <div className="text-[11px] font-bold text-[#2AB5A0] mt-1">MINT로</div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -462,7 +482,7 @@ export default function Landing() {
           <div className="lg:grid lg:grid-cols-2 lg:gap-14 lg:items-center">
             {/* 스마트폰 목업 — 메뉴 콕 직접 입력 화면 */}
             <div className="mb-8 lg:mb-0 lg:order-1">
-              <PhoneMockup src="/image/landing/menu-demo.webp" alt="'메뉴 콕!'에 #회&초밥 #파스타를 입력하는 화면" width="w-56 lg:w-72" />
+              <PhoneMockup src="/image/landing/menu-demo.webp" alt="'메뉴 콕!'에 #회&초밥 #파스타를 입력하는 화면" width="w-56 lg:w-64" />
             </div>
 
             {/* 설명 카드 2개 */}
@@ -644,7 +664,7 @@ export default function Landing() {
                 <span className="font-bold text-gray-400">기존 지도 앱</span>
               </div>
               <ul className="flex flex-col gap-2 lg:gap-3">
-                {['검색어를 알아야 검색 가능', '결과 수십 개 → 또 고민', '중간 지점? 내가 계산해야 함', '광고성 상위 노출 — 진짜 맛집인지 모름'].map((t) => (
+                {['검색어를 알아야 검색 가능', '결과 수십 개 → 또 고민', '중간 지점? 내가 계산해야 함', '광고성 상위 노출 — 진짜 맛집인지 모름', '결국 지쳐서 늘 가던 곳으로'].map((t) => (
                   <li key={t} className="flex items-start gap-2 text-sm lg:text-base text-gray-400">
                     <span className="text-gray-300 mt-0.5">✕</span>{t}
                   </li>
@@ -783,6 +803,29 @@ export default function Landing() {
               카톡 공유
             </div>
           </div>
+
+          {/* 단톡방에 공유된 모습 미리보기 */}
+          <div className="mt-9 lg:mt-12 max-w-sm mx-auto">
+            <div className="rounded-2xl bg-[#B2C7D9] p-4 shadow-md">
+              <div className="flex items-start gap-2 flex-row-reverse text-left">
+                <div className="w-full">
+                  <div className="ml-auto max-w-[85%] overflow-hidden rounded-2xl rounded-tr-md bg-[#FEE500] shadow-sm">
+                    <div className="px-3.5 py-3">
+                      <p className="text-[13px] font-bold text-gray-800">📍 오늘 여기 어때?</p>
+                    </div>
+                    <div className="border-t border-black/5 bg-white px-3.5 py-3">
+                      <p className="text-[13px] font-bold text-gray-800">안목 성수 · 시끌벅적 국밥</p>
+                      <p className="text-[11px] text-gray-500 mt-0.5">1차 밥 → 2차 술 · 적합도 88점</p>
+                      <div className="mt-2 flex items-center gap-1 text-[11px] font-bold text-[#2AB5A0]">
+                        <KakaoTalkBubble className="w-3.5 h-3.5" /> MINT 추천 열어보기
+                      </div>
+                    </div>
+                  </div>
+                  <div className="mt-1 text-right text-[10px] text-gray-500">오후 6:12 · 읽음 3</div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -817,6 +860,10 @@ export default function Landing() {
                 q: '서울만 되나요?',
                 a: '전국을 지원합니다. 전국 79만 곳의 인허가 데이터 기반으로, 어느 지역이든 실존 장소를 추천해드려요.',
               },
+              {
+                q: '앱을 꼭 설치해야 하나요?',
+                a: '아니요. 설치 없이 웹에서 바로 쓸 수 있어요. 자주 쓸 것 같으면 홈 화면에 추가해 앱처럼 사용할 수도 있습니다.',
+              },
             ].map(({ q, a }) => (
               <div key={q} className="bg-white border border-gray-100 rounded-2xl p-5 lg:p-6">
                 <p className="text-sm lg:text-base font-semibold text-gray-800 mb-2">{q}</p>
@@ -831,7 +878,7 @@ export default function Landing() {
           FINAL CTA
       ══════════════════════════════════════ */}
       <section className="bg-gradient-to-b from-[#F0FDF9] to-[#E8FBF3] fade-section">
-        <div className="max-w-lg lg:max-w-3xl mx-auto px-6 py-16 lg:py-28 text-center">
+        <div className="max-w-lg lg:max-w-3xl mx-auto px-6 py-14 lg:pt-20 lg:pb-28 text-center">
           <h2 className="text-3xl lg:text-6xl font-black text-gray-800 leading-tight mb-1">어디서 만나지?</h2>
           <h2 className="text-3xl lg:text-6xl font-black text-[#3CDBC0] leading-tight mb-3 lg:mb-4">MINT 하지, 뭐.</h2>
           <div className="flex items-center justify-center gap-2.5 mb-4 lg:mb-6">
