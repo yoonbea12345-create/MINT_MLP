@@ -1,7 +1,7 @@
 {
   "name": "MINT - 그룹 외출 큐레이션",
   "short_name": "MINT",
-  "description": "약속은 잡았는데 어디 가지? MINT가 30초 만에 해결해드려요.",
+  "description": "약속은 잡았는데 어디서 만나지? MINT가 30초 만에 해결해드려요.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

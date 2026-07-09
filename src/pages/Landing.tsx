@@ -181,24 +181,24 @@ export default function Landing() {
           HERO — 조건 조합이 결과로 바뀌는 마법
           모바일: 세로 중앙 / PC: 좌 카피·CTA + 우 데모·결과 2단
       ══════════════════════════════════════ */}
-      <section className="px-6 pt-12 pb-12 lg:pt-20 lg:pb-24">
+      <section className="px-6 pt-12 pb-12 lg:pt-16 lg:pb-20">
         <div className="max-w-lg lg:max-w-7xl mx-auto lg:grid lg:grid-cols-2 lg:gap-24 lg:items-center">
           {/* 좌: 카피 + CTA + 통계 */}
-          <div className="text-center lg:text-left">
-            <div className="inline-flex items-center gap-1.5 bg-teal-50 border border-teal-200 text-[#2AB5A0] text-xs font-bold px-4 py-1.5 rounded-full mb-6">
+          <div className="text-center lg:text-left lg:min-h-[640px] lg:flex lg:flex-col lg:justify-center">
+            <div className="inline-flex items-center gap-1.5 bg-teal-50 border border-teal-200 text-[#2AB5A0] text-xs font-bold px-4 py-1.5 rounded-full mb-6 lg:mb-7 lg:self-start">
               ✦ 그룹 만남 장소 큐레이션
             </div>
-            <h1 className="text-4xl lg:text-6xl font-black text-gray-800 leading-tight mb-3">
+            <h1 className="text-4xl lg:text-6xl font-black text-gray-800 leading-tight mb-3 lg:mb-5">
               약속은 잡았는데<br />
-              <span className="text-[#3CDBC0]">어디 가지?</span>
+              <span className="text-[#3CDBC0]">어디서 만나지?</span>
             </h1>
-            <p className="text-gray-600 text-base lg:text-lg leading-relaxed mb-7">
+            <p className="text-gray-600 text-base lg:text-lg leading-relaxed mb-7 lg:mb-10">
               조건 몇 개만 고르세요.<br />
               이 모임에 <strong className="text-gray-800">딱 맞는 장소 3곳</strong>, 30초 안에 나옵니다.
             </p>
 
             {/* 조건 → 결과 로테이션 데모 (모바일은 여기, PC는 우측 컬럼에 크게) */}
-            <div className="lg:hidden bg-white border border-teal-100 rounded-3xl p-4 shadow-sm mb-7 min-h-[104px] flex flex-col justify-center">
+            <div className="lg:hidden w-full max-w-xs mx-auto bg-white border border-teal-100 rounded-3xl p-4 shadow-sm mb-7 min-h-[104px] flex flex-col justify-center">
               <div key={comboIdx} className="animate-fade-in">
                 <div className="flex items-center justify-center gap-1.5 flex-wrap mb-2.5">
                   {combo.chips.map((c) => (
@@ -223,7 +223,7 @@ export default function Landing() {
               </div>
             </div>
 
-            <div className="flex flex-col gap-3 w-full max-w-xs mb-3 mx-auto lg:mx-0">
+            <div className="flex flex-col gap-3 w-full max-w-xs mb-3 mx-auto lg:mx-0 lg:mb-5">
               <button
                 onClick={goToApp}
                 className="w-full bg-gradient-to-r from-[#3CDBC0] to-[#2AB5A0] text-white font-black text-lg py-4 rounded-xl cta-glow-mint active:scale-95 transition-all"
@@ -234,11 +234,11 @@ export default function Landing() {
             </div>
 
             {visitCount >= 50 && (
-              <p className="text-xs text-gray-400 mb-8">
-                지금까지 <strong className="text-[#2AB5A0]">{visitCount.toLocaleString()}번</strong>의 "어디 가지?" 고민이 MINT를 찾아왔어요
+              <p className="text-xs text-gray-400 mb-8 lg:mb-10">
+                지금까지 <strong className="text-[#2AB5A0]">{visitCount.toLocaleString()}번</strong>의 "어디서 만나지?" 고민이 MINT를 찾아왔어요
               </p>
             )}
-            {visitCount < 50 && <div className="mb-5" />}
+            {visitCount < 50 && <div className="mb-5 lg:mb-10" />}
 
             {/* 통계 3종 — CTA 버튼과 같은 폭에 가둬 균등 분배(양 끝이 버튼 좌우선에 정렬).
                 셀 사이 얇은 구분선으로 정돈된 인상을 준다. */}
@@ -257,8 +257,8 @@ export default function Landing() {
           </div>
 
           {/* 우 (PC 전용): 큰 데모 카드 + 결과 폰목업 */}
-          <div className="hidden lg:flex lg:flex-col lg:items-center lg:gap-6">
-            <div className="w-full max-w-md bg-white border border-teal-100 rounded-3xl p-6 shadow-lg shadow-teal-100">
+          <div className="hidden lg:flex lg:flex-col lg:items-center lg:gap-6 lg:pt-4 lg:w-full lg:max-w-xs lg:justify-self-center">
+            <div className="w-full bg-white border border-teal-100 rounded-3xl p-5 shadow-lg shadow-teal-100">
               <p className="text-xs font-bold tracking-widest text-[#3CDBC0] mb-4 text-center">조건만 고르면 이렇게</p>
               <div key={`lg-${comboIdx}`} className="animate-fade-in">
                 <div className="flex items-center justify-center gap-2 flex-wrap mb-4">
@@ -283,7 +283,7 @@ export default function Landing() {
                 </div>
               </div>
             </div>
-            <PhoneMockup src="/image/landing/result.webp" alt="MINT 추천 결과 예시" width="w-56" />
+            <PhoneMockup src="/image/landing/result.webp" alt="MINT 추천 결과 예시" width="w-full" />
           </div>
         </div>
       </section>
@@ -439,12 +439,12 @@ export default function Landing() {
 
           <div className="lg:grid lg:grid-cols-2 lg:gap-14 lg:items-center">
             {/* 스마트폰 목업 — 메뉴 콕 직접 입력 화면 */}
-            <div className="mb-8 lg:mb-0 lg:order-2">
+            <div className="mb-8 lg:mb-0 lg:order-1">
               <PhoneMockup src="/image/landing/menu-demo.webp" alt="'메뉴 콕!'에 #회&초밥 #파스타를 입력하는 화면" width="w-56 lg:w-72" />
             </div>
 
             {/* 설명 카드 2개 */}
-            <div className="flex flex-col gap-4 lg:order-1">
+            <div className="flex flex-col gap-4 lg:order-2">
               {/* 아무거나 */}
               <div className="rounded-2xl border-2 border-gray-100 bg-gray-50/50 p-5 lg:p-6">
                 <div className="flex items-center gap-2 mb-2">
@@ -758,7 +758,7 @@ export default function Landing() {
           <div className="flex items-center justify-center gap-2 flex-nowrap">
             <span className="bg-teal-50 border border-teal-200 text-[#2AB5A0] text-sm lg:text-base font-bold px-4 lg:px-5 py-2 lg:py-2.5 rounded-full whitespace-nowrap">🍃 조건 선택</span>
             <span className="text-[#3CDBC0] font-bold flex-shrink-0">→</span>
-            <span className="bg-teal-50 border border-teal-200 text-[#2AB5A0] text-sm lg:text-base font-bold px-4 lg:px-5 py-2 lg:py-2.5 rounded-full whitespace-nowrap">✨ AI 추천</span>
+            <span className="bg-teal-50 border border-teal-200 text-[#2AB5A0] text-sm lg:text-base font-bold px-4 lg:px-5 py-2 lg:py-2.5 rounded-full whitespace-nowrap">✨ 장소 추천</span>
             <span className="text-[#3CDBC0] font-bold flex-shrink-0">→</span>
             <div className="flex items-center gap-1.5 bg-teal-50 border border-teal-200 text-[#2AB5A0] text-sm lg:text-base font-bold px-3 lg:px-4 py-2 lg:py-2.5 rounded-full whitespace-nowrap flex-shrink-0">
               <KakaoTalkBubble className="w-4 h-4" />
@@ -814,7 +814,7 @@ export default function Landing() {
       ══════════════════════════════════════ */}
       <section className="bg-gradient-to-b from-[#F0FDF9] to-[#E8FBF3] fade-section">
         <div className="max-w-lg lg:max-w-3xl mx-auto px-6 py-16 lg:py-28 text-center">
-          <h2 className="text-3xl lg:text-6xl font-black text-gray-800 leading-tight mb-1">어디 가지?</h2>
+          <h2 className="text-3xl lg:text-6xl font-black text-gray-800 leading-tight mb-1">어디서 만나지?</h2>
           <h2 className="text-3xl lg:text-6xl font-black text-[#3CDBC0] leading-tight mb-3 lg:mb-4">MINT 하지, 뭐.</h2>
           <div className="flex items-center justify-center gap-2.5 mb-4 lg:mb-6">
             <span className="h-px w-6 bg-teal-200" />
@@ -833,7 +833,7 @@ export default function Landing() {
           </div>
           {visitCount >= 50 && (
             <p className="text-xs text-gray-400 mb-6">
-              지금까지 <strong className="text-[#2AB5A0]">{visitCount.toLocaleString()}번</strong>의 "어디 가지?" 고민이 MINT를 찾아왔어요
+              지금까지 <strong className="text-[#2AB5A0]">{visitCount.toLocaleString()}번</strong>의 "어디서 만나지?" 고민이 MINT를 찾아왔어요
             </p>
           )}
           <div className="flex justify-center gap-4 flex-wrap">
@@ -847,7 +847,7 @@ export default function Landing() {
               <svg className="w-3.5 h-3.5 text-[#CC785C]" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M12 2L9.5 9.5 2 12l7.5 2.5L12 22l2.5-7.5L22 12l-7.5-2.5z"/>
               </svg>
-              AI 추천
+              장소 추천
             </div>
             <div className="flex items-center gap-1 text-xs text-gray-400">
               <KakaoTalkBubble className="w-3.5 h-3.5" />
