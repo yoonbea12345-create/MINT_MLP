@@ -255,14 +255,14 @@ export default function Landing() {
           </div>
 
           {/* 우 (PC 전용): 입력 → 결과를 한눈에 보여주는 2단 목업 */}
-          <div className="hidden lg:block lg:relative lg:h-[650px] lg:w-full lg:justify-self-end">
-            <div className="absolute left-0 bottom-10 w-[248px] bg-white rounded-3xl shadow-xl shadow-teal-100 border-2 border-gray-100 overflow-hidden">
+          <div className="hidden lg:block lg:relative lg:h-[690px] lg:w-full lg:justify-self-end">
+            <div className="absolute left-0 bottom-0 w-[270px] bg-white rounded-3xl shadow-xl shadow-teal-100 border-2 border-gray-100 overflow-hidden">
               <div className="w-12 h-1 bg-gray-200 rounded-full mx-auto mt-2 mb-1" />
-              <div className="h-[410px] overflow-hidden">
+              <div className="h-[540px] overflow-hidden">
                 <img src="/image/landing/hero-purpose.webp" alt="MINT 목적 선택 화면 예시" className="w-full block" loading="lazy" />
               </div>
             </div>
-            <div className="absolute right-0 top-0 w-[310px]">
+            <div className="absolute right-0 bottom-0 w-[310px]">
               <PhoneMockup src="/image/landing/hero-result.webp" alt="MINT 첫 추천 결과 예시" width="w-full" />
             </div>
           </div>
