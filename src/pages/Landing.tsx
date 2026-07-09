@@ -89,6 +89,21 @@ function PhoneMockup({ src, alt, width = 'w-56' }: { src: string; alt: string; w
   );
 }
 
+// 히어로 전용 디바이스 프레임 — 얇은 흰 베젤 + 깊은 그림자로 실제 폰처럼
+function HeroPhone({ src, alt, className = '', featured = false }: { src: string; alt: string; className?: string; featured?: boolean }) {
+  return (
+    <div
+      className={`rounded-[2.1rem] bg-white p-1.5 ring-1 ring-black/5 ${
+        featured ? '' : 'shadow-2xl shadow-teal-900/10'
+      } ${className}`}
+    >
+      <div className="overflow-hidden rounded-[1.7rem] bg-white">
+        <img src={src} alt={alt} className="block w-full" loading="lazy" />
+      </div>
+    </div>
+  );
+}
+
 function KakaoTalkBubble({ className = 'w-6 h-6' }: { className?: string }) {
   return (
     <svg className={className} viewBox="0 0 120 108" fill="none">
@@ -254,16 +269,41 @@ export default function Landing() {
             </div>
           </div>
 
-          {/* 우 (PC 전용): 입력 → 결과를 한눈에 보여주는 2단 목업 */}
-          <div className="hidden lg:block lg:relative lg:h-[690px] lg:w-full lg:justify-self-end">
-            <div className="absolute left-0 bottom-0 w-[270px] bg-white rounded-3xl shadow-xl shadow-teal-100 border-2 border-gray-100 overflow-hidden">
-              <div className="w-12 h-1 bg-gray-200 rounded-full mx-auto mt-2 mb-1" />
-              <div className="h-[540px] overflow-hidden">
-                <img src="/image/landing/hero-purpose.webp" alt="MINT 목적 선택 화면 예시" className="w-full block" loading="lazy" />
-              </div>
+          {/* 우 (PC 전용): 입력 → 결과 2단 레이어드 목업 + 플로팅 UI */}
+          <div className="hidden lg:block lg:relative lg:h-[660px] lg:w-full lg:justify-self-end">
+            {/* 배경 글로우 */}
+            <div aria-hidden className="absolute inset-0 pointer-events-none">
+              <div className="absolute top-6 right-8 h-72 w-72 rounded-full bg-[#3CDBC0]/25 blur-3xl" />
+              <div className="absolute bottom-2 left-0 h-64 w-64 rounded-full bg-[#8FEAD9]/30 blur-3xl" />
             </div>
-            <div className="absolute right-0 bottom-0 w-[310px]">
-              <PhoneMockup src="/image/landing/hero-result.webp" alt="MINT 첫 추천 결과 예시" width="w-full" />
+
+            {/* 뒤: 입력(조건 선택) 화면 */}
+            <HeroPhone
+              src="/image/landing/hero-purpose.webp"
+              alt="MINT 조건 선택 화면 예시"
+              className="absolute left-0 top-2 w-[228px] rotate-[-8deg] z-10"
+            />
+
+            {/* 앞: 추천 결과 화면 — 주인공 */}
+            <HeroPhone
+              src="/image/landing/hero-result.webp"
+              alt="MINT 첫 추천 결과 예시"
+              featured
+              className="absolute right-0 bottom-0 w-[298px] rotate-[3deg] z-20 shadow-[0_35px_70px_-20px_rgba(42,181,160,0.5)]"
+            />
+
+            {/* 플로팅: 상단 배지 — 입력→결과를 잇는 위치 */}
+            <div className="absolute left-[33%] top-6 z-30 flex items-center gap-1.5 rounded-full bg-[#3CDBC0] px-3.5 py-2 text-xs font-black text-white shadow-lg shadow-[#3CDBC0]/40 rotate-[-4deg]">
+              🎯 조건 100% 반영
+            </div>
+
+            {/* 플로팅: 하단 스탯 카드 */}
+            <div className="absolute left-1 bottom-9 z-30 flex items-center gap-2.5 rounded-2xl bg-white/95 px-4 py-3 shadow-xl shadow-teal-900/10 ring-1 ring-black/5 backdrop-blur rotate-[-3deg]">
+              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#E8F8F5] text-lg">⚡</span>
+              <span className="text-left">
+                <span className="block text-[13px] font-black leading-none text-gray-800">30초 만에 완성</span>
+                <span className="mt-1 block text-[11px] leading-none text-gray-400">조건 4개 → 딱 3곳</span>
+              </span>
             </div>
           </div>
         </div>
