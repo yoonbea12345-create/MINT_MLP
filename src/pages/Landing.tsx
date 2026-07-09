@@ -281,7 +281,7 @@ export default function Landing() {
             <HeroPhone
               src="/image/landing/hero-purpose.webp"
               alt="MINT 조건 선택 화면 예시"
-              className="absolute left-0 top-2 w-[228px] rotate-[-8deg] z-10"
+              className="absolute left-0 top-1 w-[256px] rotate-[-7deg] z-10"
             />
 
             {/* 앞: 추천 결과 화면 — 주인공 */}
