@@ -1004,8 +1004,9 @@ export default function Home() {
           )}
         </div>
 
-        {/* 콘텐츠 */}
+        {/* 콘텐츠 — 짧은 스텝은 세로 중앙정렬(빈 공간 제거), 길면 정상 스크롤 */}
         <div key={step} className="flex-1 min-h-0 overflow-y-auto animate-fade-in-up">
+          <div className="min-h-full flex flex-col justify-center">
 
           {/* Step 0: 모임 유형 선택 */}
           {step === 0 && (
@@ -1294,6 +1295,7 @@ export default function Home() {
               })()}
             </div>
           )}
+          </div>
         </div>
 
         {/* 에러 */}
