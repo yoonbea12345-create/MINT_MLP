@@ -115,6 +115,7 @@ export default function Home() {
   const [appMode, setAppMode] = useState<AppMode>('mode-select');
   const [groupSize, setGroupSize] = useState<'2명' | '3~4명' | '5명 이상'>('2명');
   const [customOccasion, setCustomOccasion] = useState('');
+  const [etcRelOpen, setEtcRelOpen] = useState(false); // '기타 콕!' 자유입력 모드
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [expectedCount, setExpectedCount] = useState<number>(3);
   const [groupMembers, setGroupMembers] = useState<GroupMember[]>([]);
@@ -234,6 +235,8 @@ export default function Home() {
       if (d.meetingLocation) setMeetingLocation(d.meetingLocation);
       if (d.budget !== undefined) setBudget(d.budget);
       if (typeof d.customOccasion === 'string') setCustomOccasion(d.customOccasion);
+      // 기타 콕! 자유입력 모드 복원 (occasion만 있고 relation 없으면 기타콕으로 입력한 것)
+      if (d.purpose?.occasion && !d.purpose?.relation) setEtcRelOpen(true);
       if (Array.isArray(d.locations)) setLocations(d.locations);
     } catch { /* 손상된 초안 무시 */ }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1155,79 +1158,78 @@ export default function Home() {
             </div>
           )}
 
-          {/* Step 1 (혼자): 관계 + 특별한날 */}
+          {/* Step 1 (혼자): 오늘 모임 성격 — 한 줄 4개 (친목/데이트/가족/기타 콕!) */}
           {step === 1 && !isGroup && (() => {
-            const RELATION_OPTIONS = [
-              { value: '친구들', emoji: '👥' },
-              { value: '연인', emoji: '💑' },
-              { value: '가족', emoji: '👨‍👩‍👧' },
-              { value: '직장동료', emoji: '💼' },
-            ];
-            const OCCASION_OPTIONS = [
-              { value: '생일', emoji: '🎂' },
-              { value: '기념일', emoji: '💕' },
-              { value: '소개팅', emoji: '💫' },
-              { value: '축하', emoji: '🎉' },
-              { value: '위로', emoji: '🤗' },
+            // relation 값은 recommend.ts의 키워드 매핑과 호환되게 매핑(연인·가족은 전용 키워드 있음)
+            const REL_OPTIONS = [
+              { key: '친목', relation: '친구들', emoji: '🍻' },
+              { key: '데이트', relation: '연인', emoji: '💑' },
+              { key: '가족', relation: '가족', emoji: '👨‍👩‍👧' },
             ];
             const curRelation = purpose?.relation ?? null;
-            const curOccasion = purpose?.occasion ?? null;
-            function toggleRel(v: string) {
-              setPurpose((prev) => {
-                const base = prev ?? { first: null, firstRaw: null, second: '없음', secondRaw: '없음', relation: null, occasion: null };
-                return { ...base, relation: base.relation === v ? null : v };
-              });
-            }
-            function toggleOcc(v: string) {
+            function pickRel(relation: string) {
+              setEtcRelOpen(false);
               setCustomOccasion('');
               setPurpose((prev) => {
                 const base = prev ?? { first: null, firstRaw: null, second: '없음', secondRaw: '없음', relation: null, occasion: null };
-                return { ...base, occasion: base.occasion === v ? null : v };
+                // 같은 걸 다시 누르면 해제
+                const next = base.relation === relation ? null : relation;
+                return { ...base, relation: next, occasion: null };
               });
             }
-            function handleCustomOccasion(text: string) {
+            function openEtc() {
+              setEtcRelOpen(true);
+              setPurpose((prev) => {
+                const base = prev ?? { first: null, firstRaw: null, second: '없음', secondRaw: '없음', relation: null, occasion: null };
+                return { ...base, relation: null };
+              });
+            }
+            // 기타 콕! 자유 입력 — 메뉴 콕과 동일하게 사용자가 직접 상황을 적어 추천에 반영(occasion으로 전달)
+            function handleEtcText(text: string) {
               setCustomOccasion(text);
               setPurpose((prev) => {
                 const base = prev ?? { first: null, firstRaw: null, second: '없음', secondRaw: '없음', relation: null, occasion: null };
                 return { ...base, occasion: text.trim() ? text : null };
               });
             }
-            const isPresetOccasion = OCCASION_OPTIONS.some((o) => o.value === curOccasion);
             return (
-              <div className="px-4 flex flex-col gap-5 pt-3 pb-4">
-                <div>
-                  <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-2.5">오늘 모임은요?</p>
-                  <div className="grid grid-cols-4 gap-2">
-                    {RELATION_OPTIONS.map((opt) => (
-                      <button key={opt.value} onClick={() => toggleRel(opt.value)}
-                        className={`flex flex-col items-center justify-center gap-1 h-[64px] rounded-xl border-2 transition-all active:scale-[0.97] ${curRelation === opt.value ? 'border-[#3CDBC0] bg-[#E8F8F5]' : 'border-gray-200 bg-white hover:border-[#3CDBC0]/50'}`}>
-                        <span className="text-lg leading-none">{opt.emoji}</span>
-                        <span className={`text-[11px] font-bold leading-none ${curRelation === opt.value ? 'text-[#2AB5A0]' : 'text-gray-600'}`}>{opt.value}</span>
+              <div className="px-4 flex flex-col gap-3 pt-3 pb-4">
+                <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest">오늘 모임은?</p>
+                <div className="grid grid-cols-4 gap-2">
+                  {REL_OPTIONS.map((opt) => {
+                    const selected = !etcRelOpen && curRelation === opt.relation;
+                    return (
+                      <button key={opt.key} onClick={() => pickRel(opt.relation)}
+                        className={`flex flex-col items-center justify-center gap-1 h-[72px] rounded-2xl border-2 transition-all active:scale-[0.97] ${selected ? 'border-[#3CDBC0] bg-[#E8F8F5] shadow-md shadow-[#3CDBC0]/20' : 'border-gray-200 bg-white hover:border-[#3CDBC0]/50'}`}>
+                        <span className="text-xl leading-none">{opt.emoji}</span>
+                        <span className={`text-xs font-bold leading-none ${selected ? 'text-[#2AB5A0]' : 'text-gray-700'}`}>{opt.key}</span>
                       </button>
-                    ))}
-                  </div>
+                    );
+                  })}
+                  <button onClick={openEtc}
+                    className={`flex flex-col items-center justify-center gap-1 h-[72px] rounded-2xl border-2 transition-all active:scale-[0.97] ${etcRelOpen ? 'border-[#3CDBC0] bg-[#E8F8F5] shadow-md shadow-[#3CDBC0]/20' : 'border-gray-200 bg-white hover:border-[#3CDBC0]/50'}`}>
+                    <span className="text-xl leading-none">🎯</span>
+                    <span className={`text-xs font-bold leading-none ${etcRelOpen ? 'text-[#2AB5A0]' : 'text-gray-700'}`}>기타 콕!</span>
+                  </button>
                 </div>
-                <div>
-                  <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-2.5">특별한 날인가요?</p>
-                  <div className="grid grid-cols-5 gap-2">
-                    {OCCASION_OPTIONS.map((opt) => (
-                      <button key={opt.value} onClick={() => toggleOcc(opt.value)}
-                        className={`flex flex-col items-center justify-center gap-1 h-[64px] rounded-xl border-2 transition-all active:scale-[0.97] ${curOccasion === opt.value ? 'border-[#3CDBC0] bg-[#E8F8F5]' : 'border-gray-200 bg-white hover:border-[#3CDBC0]/50'}`}>
-                        <span className="text-base leading-none">{opt.emoji}</span>
-                        <span className={`text-[11px] font-bold leading-none ${curOccasion === opt.value ? 'text-[#2AB5A0]' : 'text-gray-600'}`}>{opt.value}</span>
-                      </button>
-                    ))}
+
+                {etcRelOpen && (
+                  <div className="animate-fade-in-up">
+                    <input
+                      type="text"
+                      autoFocus
+                      value={customOccasion}
+                      onChange={(e) => handleEtcText(e.target.value)}
+                      placeholder="🔎 상황을 직접 적어요 (예: 회식, 상견례, 생일, 졸업)"
+                      className={`w-full border-2 rounded-xl px-4 py-3 text-sm text-gray-700 placeholder-gray-400 focus:outline-none focus:border-[#3CDBC0] transition-colors ${
+                        customOccasion.trim() ? 'border-[#3CDBC0] bg-[#E8F8F5]' : 'border-gray-200'
+                      }`}
+                    />
+                    <p className="text-[11px] text-gray-400 mt-1.5">적은 상황을 반영해 분위기·메뉴를 맞춰 추천해요</p>
                   </div>
-                  <input
-                    type="text"
-                    value={customOccasion}
-                    onChange={(e) => handleCustomOccasion(e.target.value)}
-                    placeholder="직접 입력 (예: 졸업식, 취직 축하)"
-                    className={`w-full border-2 rounded-xl px-4 py-3 text-sm text-gray-700 placeholder-gray-400 focus:outline-none focus:border-[#3CDBC0] transition-colors mt-2 ${
-                      customOccasion && !isPresetOccasion ? 'border-[#3CDBC0] bg-[#E8F8F5]' : 'border-gray-200'
-                    }`}
-                  />
-                </div>
+                )}
+
+                <p className="text-[11px] text-[#2AB5A0] font-medium mt-1">모두 선택사항 · 고를수록 추천이 정확해져요</p>
               </div>
             );
           })()}
