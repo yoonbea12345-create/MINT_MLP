@@ -28,6 +28,39 @@ import { encodeHostContext } from '../utils/groupLink';
 
 type Step = 0 | 1 | 2 | 3;
 type View = 'steps' | 'result' | 'reserve';
+
+// 스텝2(관계) 2층 — 관계를 고르면 문맥에 맞는 '특별한 날' 칩이 등장한다.
+// occasion 값은 api/recommend.ts의 OCCASION_EXTRA_KEYWORDS·OCCASION_HINT 키(생일/기념일/소개팅/축하/위로)에 맞춘다.
+// occasion: null 은 "평범/그냥" — 특별 처리 없이 순수 관계만 반영.
+interface OccChip { key: string; occasion: string | null; emoji: string; }
+const OCCASION_BY_RELATION: Record<string, OccChip[]> = {
+  '친구들': [
+    { key: '축하할 일', occasion: '축하', emoji: '🎉' },
+    { key: '위로가 필요', occasion: '위로', emoji: '🫂' },
+    { key: '오랜만에',   occasion: null,   emoji: '👋' },
+    { key: '그냥 한잔',  occasion: null,   emoji: '🍺' },
+  ],
+  '연인': [
+    { key: '기념일',      occasion: '기념일', emoji: '💐' },
+    { key: '소개팅·썸',   occasion: '소개팅', emoji: '💘' },
+    { key: '생일',        occasion: '생일',   emoji: '🎂' },
+    { key: '평범한 데이트', occasion: null,   emoji: '💑' },
+  ],
+  '가족': [
+    { key: '생일',      occasion: '생일', emoji: '🎂' },
+    { key: '축하할 일', occasion: '축하', emoji: '🎉' },
+    { key: '명절·모임', occasion: null,   emoji: '🍱' },
+    { key: '그냥 식사', occasion: null,   emoji: '🍚' },
+  ],
+};
+// 미리보기 한 줄 — 유저가 자기 선택의 효과를 즉시 본다(입력 부담 0). OCCASION_HINT를 친근하게 축약.
+const OCCASION_PREVIEW: Record<string, string> = {
+  '생일':   '프라이빗룸·케이크 반입 OK 위주로 찾을게요 🎂',
+  '기념일': '분위기 있는 조용한 좌석 위주로 찾을게요 🥂',
+  '소개팅': '대화하기 좋은 조용한 곳 위주로 찾을게요 ☕',
+  '축하':   '신나는 분위기·파티 가능한 곳 위주로 찾을게요 🎉',
+  '위로':   '조용하고 편안하게 오래 머물 곳 위주로 찾을게요 🌙',
+};
 // 'mode-select' = 유형 미선택 상태(step 0), 'solo' = 혼자, 'group' = 다같이(호스트)
 type AppMode = 'mode-select' | 'solo' | 'group';
 
@@ -116,6 +149,7 @@ export default function Home() {
   const [groupSize, setGroupSize] = useState<'2명' | '3~4명' | '5명 이상'>('2명');
   const [customOccasion, setCustomOccasion] = useState('');
   const [etcRelOpen, setEtcRelOpen] = useState(false); // '기타 콕!' 자유입력 모드
+  const [occasionChip, setOccasionChip] = useState<string | null>(null); // 스텝2 2층에서 고른 '특별한 날' 칩 key(선택 표시용)
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [expectedCount, setExpectedCount] = useState<number>(3);
   const [groupMembers, setGroupMembers] = useState<GroupMember[]>([]);
@@ -238,6 +272,11 @@ export default function Home() {
       if (typeof d.customOccasion === 'string') setCustomOccasion(d.customOccasion);
       // 기타 콕! 자유입력 모드 복원 (occasion만 있고 relation 없으면 기타콕으로 입력한 것)
       if (d.purpose?.occasion && !d.purpose?.relation) setEtcRelOpen(true);
+      // 스텝2 2층 칩 복원 — 관계+occasion이 매핑 칩과 일치하면 선택 표시 되살림
+      if (d.purpose?.relation && d.purpose?.occasion) {
+        const chip = OCCASION_BY_RELATION[d.purpose.relation]?.find((c) => c.occasion === d.purpose.occasion);
+        if (chip) setOccasionChip(chip.key);
+      }
       if (Array.isArray(d.locations)) setLocations(d.locations);
     } catch { /* 손상된 초안 무시 */ }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -932,6 +971,9 @@ export default function Home() {
                 setResultTravelTimes(null);
                 setLocations([]);
                 setPurpose(null);
+                setOccasionChip(null);
+                setEtcRelOpen(false);
+                setCustomOccasion('');
                 setVibe({});
                 setBudget(null);
                 setKeywords([]);
@@ -1182,9 +1224,14 @@ export default function Home() {
               { key: '가족', relation: '가족', emoji: '👨‍👩‍👧' },
             ];
             const curRelation = purpose?.relation ?? null;
+            const occChips = curRelation ? (OCCASION_BY_RELATION[curRelation] ?? []) : [];
+            const previewHint = occasionChip
+              ? (OCCASION_PREVIEW[OCCASION_BY_RELATION[curRelation ?? '']?.find((c) => c.key === occasionChip)?.occasion ?? ''] ?? null)
+              : null;
             function pickRel(relation: string) {
               setEtcRelOpen(false);
               setCustomOccasion('');
+              setOccasionChip(null); // 관계가 바뀌면 2층 선택 초기화
               setPurpose((prev) => {
                 const base = prev ?? { first: null, firstRaw: null, second: '없음', secondRaw: '없음', relation: null, occasion: null };
                 // 같은 걸 다시 누르면 해제
@@ -1192,8 +1239,20 @@ export default function Home() {
                 return { ...base, relation: next, occasion: null };
               });
             }
+            // 스텝2 2층 — '특별한 날' 칩. 같은 칩 재클릭 시 해제. occasion 값은 recommend.ts 키에 매핑.
+            function pickOccasion(chip: OccChip) {
+              setOccasionChip((cur) => {
+                const isOff = cur === chip.key;
+                setPurpose((prev) => {
+                  const base = prev ?? { first: null, firstRaw: null, second: '없음', secondRaw: '없음', relation: null, occasion: null };
+                  return { ...base, occasion: isOff ? null : chip.occasion };
+                });
+                return isOff ? null : chip.key;
+              });
+            }
             function openEtc() {
               setEtcRelOpen(true);
+              setOccasionChip(null);
               setPurpose((prev) => {
                 const base = prev ?? { first: null, firstRaw: null, second: '없음', secondRaw: '없음', relation: null, occasion: null };
                 return { ...base, relation: null };
@@ -1227,6 +1286,32 @@ export default function Home() {
                     <span className={`text-xs font-bold leading-none ${etcRelOpen ? 'text-[#2AB5A0]' : 'text-gray-700'}`}>기타 콕!</span>
                   </button>
                 </div>
+
+                {/* 2층 — 관계를 고르면 문맥형 '특별한 날' 칩이 부드럽게 등장(선택사항) */}
+                {occChips.length > 0 && !etcRelOpen && (
+                  <div className="animate-fade-in-up flex flex-col gap-2 pt-1">
+                    <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest">오늘 좀 특별해요?</p>
+                    <div className="grid grid-cols-4 gap-2">
+                      {occChips.map((chip) => {
+                        const on = occasionChip === chip.key;
+                        return (
+                          <button key={chip.key} onClick={() => pickOccasion(chip)}
+                            className={`flex flex-col items-center justify-center gap-1 h-[64px] rounded-2xl border-2 transition-all active:scale-[0.97] ${on ? 'border-[#3CDBC0] bg-[#E8F8F5] shadow-md shadow-[#3CDBC0]/20' : 'border-gray-200 bg-white hover:border-[#3CDBC0]/50'}`}>
+                            <span className="text-lg leading-none">{chip.emoji}</span>
+                            <span className={`text-[11px] font-bold leading-none text-center px-0.5 ${on ? 'text-[#2AB5A0]' : 'text-gray-700'}`}>{chip.key}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                    {/* 살아있는 미리보기 — 선택 효과를 즉시 보여줌(입력 부담 0) */}
+                    {previewHint && (
+                      <div className="animate-fade-in-up flex items-center gap-1.5 rounded-xl bg-[#E8F8F5] px-3 py-2 mt-0.5">
+                        <span className="text-sm">✨</span>
+                        <span className="text-[12px] font-medium text-[#2AB5A0] leading-snug">{previewHint}</span>
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 {etcRelOpen && (
                   <div className="animate-fade-in-up">
