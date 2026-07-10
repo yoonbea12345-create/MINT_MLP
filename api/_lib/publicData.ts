@@ -25,35 +25,36 @@ export async function fetchStoresInRadius(lat: number, lng: number, radiusM: num
   const serviceKey = process.env.PUBLIC_DATA_SERVICE_KEY;
   if (!serviceKey) return [];
 
-  const results: PublicStore[] = [];
-  try {
-    for (let pageNo = 1; pageNo <= 3; pageNo++) {
+  // 정부 API가 느려 순차 3페이지가 추천 지연의 큰 부분이었다 → 2페이지 병렬 + 페이지당 2.5초 타임아웃.
+  // L0은 상위 30곳만 쓰므로 200곳이면 충분(끊겨도 있는 만큼만 사용, 없으면 L0가 조용히 스킵됨).
+  const fetchPage = async (pageNo: number): Promise<StoreListItem[]> => {
+    try {
       const url = `https://apis.data.go.kr/B553077/api/open/sdsc2/storeListInRadius?serviceKey=${serviceKey}&cx=${lng}&cy=${lat}&radius=${radiusM}&type=json&numOfRows=100&pageNo=${pageNo}&indsLclsCd=I2`;
-      const res = await fetch(url);
-      if (!res.ok) break;
-
-      const data = await res.json() as {
-        header?: { resultCode?: string };
-        body?: { items?: StoreListItem[] };
-      };
-      if (data.header?.resultCode === '03') break; // NODATA_ERROR — 더 이상 결과 없음
-
-      const items = data.body?.items ?? [];
-      for (const it of items) {
-        if (!it.lat || !it.lon) continue;
-        results.push({
-          name: it.bizesNm,
-          category: it.indsSclsNm,
-          address: it.rdnmAdr || it.lnoAdr || '',
-          lat: it.lat,
-          lng: it.lon,
-          regionCode: it.signguCd,
-        });
-      }
-      if (items.length < 100) break; // 마지막 페이지
+      const res = await fetch(url, { signal: AbortSignal.timeout(2500) });
+      if (!res.ok) return [];
+      const data = await res.json() as { header?: { resultCode?: string }; body?: { items?: StoreListItem[] } };
+      if (data.header?.resultCode === '03') return []; // NODATA
+      return data.body?.items ?? [];
+    } catch (e) {
+      console.error(`[publicData] page ${pageNo} failed`, e);
+      return [];
     }
-  } catch (e) {
-    console.error('[publicData] fetchStoresInRadius failed', e);
+  };
+
+  const results: PublicStore[] = [];
+  const pages = await Promise.all([fetchPage(1), fetchPage(2)]);
+  for (const items of pages) {
+    for (const it of items) {
+      if (!it.lat || !it.lon) continue;
+      results.push({
+        name: it.bizesNm,
+        category: it.indsSclsNm,
+        address: it.rdnmAdr || it.lnoAdr || '',
+        lat: it.lat,
+        lng: it.lon,
+        regionCode: it.signguCd,
+      });
+    }
   }
   return results;
 }

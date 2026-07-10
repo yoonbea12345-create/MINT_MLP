@@ -430,14 +430,12 @@ async function searchNaverMulti(
       cityAreas.forEach((area, idx) => queries.push({ q: `${area} ${groupPrefix}${budgetPrefix}${kw}`, areaIdx: idx }));
     });
   } else {
-    // 기본: 1순위×(extra+10), 2순위×5, 3순위×3
-    if (searchAreas[0]) keywords.forEach((kw) => queries.push({ q: `${searchAreas[0]} ${groupPrefix}${budgetPrefix}${kw}`, areaIdx: 0 }));
-    if (searchAreas[1]) keywords.slice(0, 5).forEach((kw) => queries.push({ q: `${searchAreas[1]} ${groupPrefix}${budgetPrefix}${kw}`, areaIdx: 1 }));
-    if (searchAreas[2]) keywords.slice(0, 3).forEach((kw) => queries.push({ q: `${searchAreas[2]} ${groupPrefix}${budgetPrefix}${kw}`, areaIdx: 2 }));
+    // 기본: 1순위×8, 2순위×3 (3순위 제거로 쿼리 수·429·지연 축소 — 후보 풀은 50캡·반경필터라 충분)
+    if (searchAreas[0]) keywords.slice(0, 8).forEach((kw) => queries.push({ q: `${searchAreas[0]} ${groupPrefix}${budgetPrefix}${kw}`, areaIdx: 0 }));
+    if (searchAreas[1]) keywords.slice(0, 3).forEach((kw) => queries.push({ q: `${searchAreas[1]} ${groupPrefix}${budgetPrefix}${kw}`, areaIdx: 1 }));
     // 사용자 지정 키워드(편의시설 칩·직접 입력)를 목적 힌트와 결합해 후보 검색에 직접 반영
-    for (const kw of userKeywords.slice(0, 5)) {
+    for (const kw of userKeywords.slice(0, 3)) {
       if (searchAreas[0]) queries.push({ q: `${searchAreas[0]} ${kw} ${categoryHint}`, areaIdx: 0 });
-      if (searchAreas[1]) queries.push({ q: `${searchAreas[1]} ${kw} ${categoryHint}`, areaIdx: 1 });
     }
   }
 
