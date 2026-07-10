@@ -481,12 +481,15 @@ export default function Home() {
       if (region) {
         handleMidpointSelect(region);
       } else if (loc.lat != null && loc.lng != null) {
-        // 직접 검색으로 좌표가 확정된 지역 — 그 좌표를 중심으로 추천 (핵심 수정)
+        // 직접 검색으로 좌표가 확정된 지역 — 검색한 지역명을 네이버 검색 1순위로, 그 좌표를 중심으로 추천.
+        // findNearestAreas만 쓰면 전국 목록(ALL_AREAS)에 없는 지역은 엉뚱한 프리셋(먼 서울 등)으로
+        // 스냅돼 딴 동네 맛집이 검색된다 → 반드시 검색한 실제 지역명(loc.area)을 검색어로 앞세운다.
         const midpoint = { lat: loc.lat, lng: loc.lng };
-        const nearestAreas = findNearestAreas(midpoint, 3);
-        setMidpointData({ midpoint, areaName: loc.area, nearestAreas });
+        const nearby = findNearestAreas(midpoint, 3).filter((a) => a !== loc.area);
+        const searchAreas = [loc.area, ...nearby].slice(0, 3);
+        setMidpointData({ midpoint, areaName: loc.area, nearestAreas: searchAreas });
         setResultTravelTimes(null);
-        handleRecommend(midpoint, nearestAreas, validLocs);
+        handleRecommend(midpoint, searchAreas, validLocs);
       } else {
         // 좌표 없는 텍스트만(구버전·자동완성 미선택) — 최후 폴백
         const coords = validLocs.map((l) => ({ lat: l.lat!, lng: l.lng! }));
