@@ -949,33 +949,42 @@ rank 1이 반드시 가장 높아야 하며, 장소마다 솔직하고 차별화
   "lng": 0
 }`;
 
+    // 시 전체 추천: 파이널리스트를 넉넉히 받아 한 구 물량을 넘기게 한다 → 여러 구가 강제로 섞임.
+    // (spreadByGu가 최종 순위를 구별 라운드로빈으로 재배열하므로, 파이널리스트가 여러 구를 담기만 하면 됨)
+    const cityWideSel = regionScope?.level === 'city';
+    const finalistPer = cityWideSel ? 9 : FINALIST_COUNT_PER_PURPOSE;
+    const finalistSingle = cityWideSel ? 12 : FINALIST_COUNT_SINGLE;
+    const guSpreadLine = cityWideSel
+      ? `\n- ⭐ 시 전체 추천이므로 선택하는 곳들을 여러 행정구(구/군)에 최대한 고르게 분산하세요. 후보 주소의 구 이름을 보고 한 구에 몰지 말고 최소 3개 이상 서로 다른 구가 포함되게 선택.`
+      : '';
+
     const prompt = effectiveTwoPurposes
-      ? `당신은 한국 모임 장소 큐레이터입니다. 1차·2차 코스 장소 후보를 각각 선호 순서대로 ${FINALIST_COUNT_PER_PURPOSE}곳씩 추천해주세요.
+      ? `당신은 한국 모임 장소 큐레이터입니다. 1차·2차 코스 장소 후보를 각각 선호 순서대로 ${finalistPer}곳씩 추천해주세요.
 ${naverSection}
 ${commonInfo}
 ${fitScoreGuide}
 
-## 응답 구성 (${hasNaverData ? `1차 목록에서 ${FINALIST_COUNT_PER_PURPOSE}곳 + 2차 목록에서 ${FINALIST_COUNT_PER_PURPOSE}곳, ` : ''}총 ${FINALIST_COUNT_PER_PURPOSE * 2}곳)
-- purposeSlot 1(1차 "${purposeFirstLabel}") ${FINALIST_COUNT_PER_PURPOSE}곳: slotRank 1이 가장 적합, 내림차순. 같은 슬롯 내 ${hasNaverData ? 'sourceIndex' : '장소'} 중복 금지
-- purposeSlot 2(2차 "${purposeSecondLabel}") ${FINALIST_COUNT_PER_PURPOSE}곳: slotRank 1이 가장 적합, 내림차순. 같은 슬롯 내 ${hasNaverData ? 'sourceIndex' : '장소'} 중복 금지
-- 각 슬롯의 slotRank 1은 서로 도보 15분 이내로 이어질 수 있는 조합을 우선 고려
+## 응답 구성 (${hasNaverData ? `1차 목록에서 ${finalistPer}곳 + 2차 목록에서 ${finalistPer}곳, ` : ''}총 ${finalistPer * 2}곳)
+- purposeSlot 1(1차 "${purposeFirstLabel}") ${finalistPer}곳: slotRank 1이 가장 적합, 내림차순. 같은 슬롯 내 ${hasNaverData ? 'sourceIndex' : '장소'} 중복 금지
+- purposeSlot 2(2차 "${purposeSecondLabel}") ${finalistPer}곳: slotRank 1이 가장 적합, 내림차순. 같은 슬롯 내 ${hasNaverData ? 'sourceIndex' : '장소'} 중복 금지
+- 각 슬롯의 slotRank 1은 서로 도보 15분 이내로 이어질 수 있는 조합을 우선 고려${guSpreadLine}
 
 ## 응답 형식 (JSON만, 다른 텍스트 없이)
 {"places": [
-  ${Array.from({ length: FINALIST_COUNT_PER_PURPOSE }, (_, i) => finalistSchema(i + 1, 1)).join(',\n  ')},
-  ${Array.from({ length: FINALIST_COUNT_PER_PURPOSE }, (_, i) => finalistSchema(i + 1, 2)).join(',\n  ')}
+  ${Array.from({ length: finalistPer }, (_, i) => finalistSchema(i + 1, 1)).join(',\n  ')},
+  ${Array.from({ length: finalistPer }, (_, i) => finalistSchema(i + 1, 2)).join(',\n  ')}
 ]}`
-      : `당신은 한국 모임 장소 큐레이터입니다. "${purposeFirstLabel}" 장소 후보를 선호 순서대로 ${FINALIST_COUNT_SINGLE}곳 추천해주세요.
+      : `당신은 한국 모임 장소 큐레이터입니다. "${purposeFirstLabel}" 장소 후보를 선호 순서대로 ${finalistSingle}곳 추천해주세요.
 ${naverSection}
 ${commonInfo}
 ${fitScoreGuide}
 
-## 응답 구성 (${hasNaverData ? '1차 목록에서 ' : ''}서로 다른 ${FINALIST_COUNT_SINGLE}곳, purposeSlot은 항상 1)
-- slotRank 1이 가장 적합, 내림차순. ${hasNaverData ? 'sourceIndex' : '장소'} 중복 금지
+## 응답 구성 (${hasNaverData ? '1차 목록에서 ' : ''}서로 다른 ${finalistSingle}곳, purposeSlot은 항상 1)
+- slotRank 1이 가장 적합, 내림차순. ${hasNaverData ? 'sourceIndex' : '장소'} 중복 금지${guSpreadLine}
 
 ## 응답 형식 (JSON만, 다른 텍스트 없이)
 {"places": [
-  ${Array.from({ length: FINALIST_COUNT_SINGLE }, (_, i) => finalistSchema(i + 1, 1)).join(',\n  ')}
+  ${Array.from({ length: finalistSingle }, (_, i) => finalistSchema(i + 1, 1)).join(',\n  ')}
 ]}`;
 
     // 파이널리스트 12곳 JSON이 잘리지 않도록 넉넉하게. non-streaming이라 timeout 여유 안에서 8192.
