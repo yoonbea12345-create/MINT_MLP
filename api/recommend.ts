@@ -1,7 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk';
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { clientIp, checkRateLimit, validateRecommendBody } from './_lib/guard.js';
-import { getBubbleScoreCached, getBubbleScoresCacheOnly } from './_lib/blogBuzz.js';
+import { getBubbleScoresCacheOnly } from './_lib/blogBuzz.js';
 import { fetchStoresInRadius, matchStoreToPlace, lookupYearsAlive, computeLocalGem } from './_lib/publicData.js';
 import { getSupabaseAdmin } from './_lib/supabaseAdmin.js';
 import { placeKey } from './_lib/placeKey.js';
@@ -58,8 +58,10 @@ const MIDPOINT_RADIUS_KM = 1.5;
 // L1(블로그 버즈)·L3(괴리 보정) 재채점을 위해 Claude가 먼저 확정 표시 개수보다
 // 넉넉히 파이널리스트를 뽑게 한 뒤, 재채점 후 최종 표시 개수로 슬라이스한다.
 // 표시는 단일 3곳 / 이중 6곳이라, 재정렬 풀은 8·5면 충분하다(출력 토큰 절감).
-const FINALIST_COUNT_SINGLE = 8;
-const FINALIST_COUNT_PER_PURPOSE = 5;
+// 표시는 단일 3곳 / 이중 6곳. 재채점 여유분만 남기고 축소해 Claude 출력 토큰을 줄인다(속도).
+// (시 전체는 구 골고루 위해 별도로 12/9로 확대 — cityWideSel 분기 참고)
+const FINALIST_COUNT_SINGLE = 6;
+const FINALIST_COUNT_PER_PURPOSE = 4;
 
 function distKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
   const R = 6371;
@@ -625,28 +627,54 @@ function formatNaverPlaces(places: (NaverPlace & { _isPublicGem?: boolean; _buzz
   }).join('\n');
 }
 
+// 결과 표시 후처리(카카오 장소 URL + 대표 사진)를 분리한 경량 핸들러.
+// 메인 추천 응답을 이 왕복만큼 앞당기고, 클라이언트가 결과를 그린 뒤 채워 넣는다.
+// (Vercel Hobby 함수 12개 상한 때문에 새 엔드포인트가 아니라 stage 분기로 처리)
+async function handleEnrich(req: VercelRequest, res: VercelResponse) {
+  const body = req.body as { places?: unknown };
+  const raw = Array.isArray(body.places) ? body.places : [];
+  const places = raw
+    .filter((p): p is { placeName: string; lat: number; lng: number; area?: string } =>
+      !!p && typeof p === 'object'
+      && typeof (p as { placeName?: unknown }).placeName === 'string'
+      && (p as { placeName: string }).placeName.length <= 80
+      && typeof (p as { lat?: unknown }).lat === 'number'
+      && typeof (p as { lng?: unknown }).lng === 'number')
+    .slice(0, 6);
+  const kakaoRestKey = process.env.VITE_KAKAO_REST_API_KEY;
+  const naverImgId = process.env.NAVER_CLIENT_ID;
+  const naverImgSecret = process.env.NAVER_CLIENT_SECRET;
+  const enriched = await Promise.all(places.map(async (p) => {
+    const hasCoords = !!p.lat && !!p.lng && p.lat !== 0;
+    const [placeUrl, imageUrl] = await Promise.all([
+      kakaoRestKey && hasCoords ? searchKakaoPlaceUrl(p.placeName, p.lat, p.lng, kakaoRestKey) : Promise.resolve(null),
+      naverImgId && naverImgSecret
+        ? fetchPlaceImage(p.placeName, toSearchName(typeof p.area === 'string' ? p.area : ''), naverImgId, naverImgSecret)
+        : Promise.resolve(null),
+    ]);
+    return { placeName: p.placeName, kakaoPlaceUrl: placeUrl ?? undefined, imageUrl: imageUrl ?? undefined };
+  }));
+  return res.status(200).json({ enriched });
+}
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') return res.status(405).end();
+
+  // 후처리 분리 요청(사진·URL) — 검증/레이트리밋 없이 가볍게 처리
+  if (req.body?.stage === 'enrich') return handleEnrich(req, res);
 
   // 입력 검증 — 임의 페이로드로 인한 예외/프롬프트 오염 차단
   const invalidMsg = validateRecommendBody(req.body);
   if (invalidMsg) return res.status(400).json({ error: invalidMsg });
 
-  // 레이트리밋 — IP당 분당 5회, 전체 일일 상한(기본 500회, env로 조정)
-  const gate = await checkRateLimit(
+  // 레이트리밋 — IP당 분당 5회, 전체 일일 상한. 데이터 fetch와 병렬로 돌리고 Claude(과금) 직전에 확인.
+  const gatePromise = checkRateLimit(
     getSupabaseAdmin(),
     'recommend',
     clientIp(req),
     5,
     Number(process.env.RECOMMEND_DAILY_CAP ?? 500),
   );
-  if (!gate.allowed) {
-    return res.status(429).json({
-      error: gate.reason === 'daily'
-        ? '오늘 추천 요청이 몰려서 잠시 쉬어가고 있어요. 내일 다시 만나요!'
-        : '요청이 너무 잦아요. 잠시 후 다시 시도해주세요.',
-    });
-  }
 
   try {
     const { input, midpoint, congestionData } = req.body;
@@ -997,6 +1025,17 @@ ${fitScoreGuide}
     // A/B 실측(2026-07-06, 18회): sonnet-5는 opus-4-8과 목적적합률·키워드반영률·성공률 전 항목
     // 동률에 AI 구간 18% 빠르고 비용 절반 — 후보 선별+L3 재정렬 구조라 모델 상한에 둔감.
     const model = benchModel ?? 'claude-sonnet-5';
+
+    // 레이트리밋 확인 — 과금되는 Claude 호출 직전에. (데이터 fetch와 병렬로 이미 돌고 있었음)
+    const gate = await gatePromise;
+    if (!gate.allowed) {
+      return res.status(429).json({
+        error: gate.reason === 'daily'
+          ? '오늘 추천 요청이 몰려서 잠시 쉬어가고 있어요. 내일 다시 만나요!'
+          : '요청이 너무 잦아요. 잠시 후 다시 시도해주세요.',
+      });
+    }
+
     const aiStart = Date.now();
     let message;
     try {
@@ -1079,17 +1118,19 @@ ${fitScoreGuide}
       }
     }
 
-    // L1: 파이널리스트 전체에 대해 블로그 버즈 분석 (캐시 우선, 실패 시 개별 0점 폴백)
+    // L1: 파이널리스트 버즈 점수를 캐시에서 '한 번에' 조회(대량). 라이브 블로그 fetch를 응답 경로에서
+    // 제거해 지연을 없앤다. 캐시 미스는 0점(=감점 없음, 기존 실패 폴백과 동일) — 야간 크론이 캐시를 채운다.
     try {
-      await Promise.all(
-        finalists.map(async (place) => {
-          const buzz = await getBubbleScoreCached(place.placeName, place.address, primaryArea);
-          place.bubbleScore = buzz.bubbleScore;
-          place.buzzCount = buzz.buzzCount;
-        })
+      const cache = await getBubbleScoresCacheOnly(
+        finalists.map((p) => ({ name: p.placeName, address: p.address })),
       );
+      for (const place of finalists) {
+        const hit = cache.get(`${place.placeName}|${place.address}`);
+        place.bubbleScore = hit?.bubbleScore ?? 0;
+        place.buzzCount = hit?.buzzCount ?? 0;
+      }
     } catch (e) {
-      console.error('[recommend] L1 buzz analysis failed', e);
+      console.error('[recommend] L1 buzz cache lookup failed', e);
     }
 
     // L3: naverRank(네이버 거리순 검색 결과에서의 위치 — 원 노출순위 프록시)와
@@ -1186,25 +1227,8 @@ ${fitScoreGuide}
       delete p.purposeSlot;
     }
 
-    // Kakao 장소 URL + 대표 사진 병렬 보강 (표시 확정된 3~6곳만 — 추가 왕복 1회 안에 처리)
-    const kakaoRestKey = process.env.VITE_KAKAO_REST_API_KEY;
-    const naverImgId = process.env.NAVER_CLIENT_ID;
-    const naverImgSecret = process.env.NAVER_CLIENT_SECRET;
-    await Promise.all(
-      places.map(async (place) => {
-        const hasCoords = place.lat && place.lng && place.lat !== 0 && place.lng !== 0;
-        const [placeUrl, imageUrl] = await Promise.all([
-          kakaoRestKey && hasCoords
-            ? searchKakaoPlaceUrl(place.placeName, place.lat!, place.lng!, kakaoRestKey)
-            : Promise.resolve(null),
-          naverImgId && naverImgSecret
-            ? fetchPlaceImage(place.placeName, toSearchName(typeof place.area === 'string' ? place.area : primaryArea), naverImgId, naverImgSecret)
-            : Promise.resolve(null),
-        ]);
-        if (placeUrl) place.kakaoPlaceUrl = placeUrl;
-        if (imageUrl) place.imageUrl = imageUrl;
-      })
-    );
+    // 카카오 장소 URL + 대표 사진은 응답을 막지 않도록 분리 — 클라이언트가 결과를 그린 뒤
+    // stage:'enrich' 호출로 채워 넣는다(초기 로딩 단축). area는 클라이언트 병합에 쓰이므로 유지.
 
     // 혼잡도 정직화: 서울 실시간 데이터가 실제로 있을 때만 노출, 없으면 필드 제거
     // (기존에는 Claude가 지어낸 혼잡도가 그대로 나갔다 — 실측 아닌 값은 보여주지 않는다)

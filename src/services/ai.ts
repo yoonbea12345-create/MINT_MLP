@@ -85,3 +85,31 @@ export async function getAIRecommendation(
     weather: (data.weather ?? null) as WeatherSummary | null,
   };
 }
+
+// 결과 표시 후 사진·카카오URL을 채우는 후처리 호출 (초기 로딩을 앞당기려 분리)
+export interface PlaceEnrichment {
+  placeName: string;
+  kakaoPlaceUrl?: string;
+  imageUrl?: string;
+}
+
+export async function enrichPlaces(
+  places: { placeName: string; lat?: number; lng?: number; area?: string }[],
+): Promise<PlaceEnrichment[]> {
+  try {
+    const payload = places
+      .filter((p) => p.placeName && p.lat && p.lng)
+      .map((p) => ({ placeName: p.placeName, lat: p.lat, lng: p.lng, area: p.area }));
+    if (payload.length === 0) return [];
+    const res = await fetch('/api/recommend', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ stage: 'enrich', places: payload }),
+    });
+    if (!res.ok) return [];
+    const data = await res.json();
+    return Array.isArray(data.enriched) ? (data.enriched as PlaceEnrichment[]) : [];
+  } catch {
+    return [];
+  }
+}

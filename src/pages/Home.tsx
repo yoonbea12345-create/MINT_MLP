@@ -15,7 +15,7 @@ import type { VibeWeights } from '../components/RetryWeightModal';
 import Reserve from './Reserve';
 import { PRESET_REGIONS, findNearestAreas, findBalancedAreas } from '../services/midpoint';
 import type { PresetRegion, Coordinates } from '../services/midpoint';
-import { getAIRecommendation } from '../services/ai';
+import { getAIRecommendation, enrichPlaces } from '../services/ai';
 import type { PlaceRecommendation, UserInput, WeatherSummary, RegionScope } from '../services/ai';
 import { saveResultSnapshot, loadResultSnapshot, clearResultSnapshot, saveHistory } from '../utils/history';
 import { computeTravelTimes } from '../services/travelTime';
@@ -154,6 +154,7 @@ export default function Home() {
   const [showCompromiseToast, setShowCompromiseToast] = useState(false);
 
   const travelReqRef = useRef(0);
+  const enrichReqRef = useRef(0);
   const isGroup = appMode === 'group';
 
   // 그룹 참여 링크 — 호스트가 정한 코스·지역을 쿼리에 실어 게스트에게 전달
@@ -613,10 +614,10 @@ export default function Home() {
       // AI 호출 동안 25→90% 타이머 (Claude 응답이 단일 fetch라 내부 진행도 불가)
       aiProgressInterval = setInterval(() => {
         setLoadingProgress((prev) => {
-          if (prev >= 90) return prev;
-          // 초반엔 빠르게, 90% 가까울수록 느리게
-          const gap = 90 - prev;
-          return prev + gap * 0.04;
+          if (prev >= 92) return prev;
+          // 초반엔 빠르게, 92% 가까울수록 느리게 (후처리 분리로 총 소요가 짧아져 살짝 가속)
+          const gap = 92 - prev;
+          return prev + gap * 0.055;
         });
       }, 250);
 
@@ -630,6 +631,20 @@ export default function Home() {
       if (changeReason) {
         setChangeNote(buildChangeNote(prevFirst, recommendation[0], midpoint, changeReason));
       }
+
+      // 사진·카카오URL 후처리 — 결과를 먼저 그린 뒤 별도 호출로 채운다(초기 로딩 단축).
+      // 재추천 레이스 방지용 reqId 가드 (오래된 응답이 새 결과를 덮지 않게).
+      const enrichId = ++enrichReqRef.current;
+      enrichPlaces(recommendation.map((p) => ({ placeName: p.placeName, lat: p.lat, lng: p.lng, area: p.area })))
+        .then((enriched) => {
+          if (enrichId !== enrichReqRef.current || enriched.length === 0) return;
+          setResult((prev) => prev
+            ? prev.map((p) => {
+                const e = enriched.find((x) => x.placeName === p.placeName);
+                return e ? { ...p, kakaoPlaceUrl: e.kakaoPlaceUrl ?? p.kakaoPlaceUrl, imageUrl: e.imageUrl ?? p.imageUrl } : p;
+              })
+            : prev);
+        });
 
       let pickedTreasurer: string | null = null;
       const namedLocs = locations.filter((l) => l.name);
