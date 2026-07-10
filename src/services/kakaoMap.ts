@@ -182,9 +182,10 @@ interface Cand { s: RegionSuggestion; components: string[]; own: string; idx: nu
 function buildCandidates(p: Parsed, idx: number): Cand[] {
   const out: Cand[] = [];
   const cityName = p.si ? p.siShort : p.sido; // 3단계(도)면 시가 도시 단위, 아니면 광역시
-  // CITY
+  // CITY — 라벨은 3단계(도 산하 시)면 "부천시 전체", 광역시면 "인천 전체"
+  const cityLabel = `${cityName}${p.si ? '시' : ''} 전체`;
   out.push({
-    s: { level: 'city', kind: 'region', label: `${cityName} 전체`, query: cityName, sido: p.sido,
+    s: { level: 'city', kind: 'region', label: cityLabel, query: cityName, sido: p.sido,
       matchTokens: [cityName], searchAreas: [cityName], lat: p.lat, lng: p.lng },
     components: [cityName], own: cityName, idx,
   });
@@ -229,9 +230,12 @@ function scoreCand(qTokens: string[], cand: Cand): number | null {
   for (const t of qTokens) {
     if (!cand.components.some((c) => matchQuality(t, c) > 0)) return null;
   }
+  // ownQ = 입력 마지막 토큰이 후보의 '자기 레벨명'(city=시명, district=구명, dong=동명)과 맞는 정도.
+  // 이걸 최우선으로 둬야 "인천"만 치면 city('인천 전체')가 최상단에 뜬다(과거엔 동 base가 높아 밀렸음).
+  // ownQ=0(무관하게 상위 토큰만 걸린 후보)은 아래로 내려 drill-down용으로만 노출.
   const ownQ = matchQuality(qTokens[qTokens.length - 1], cand.own);
-  const base = { dong: 300, district: 200, city: 100 }[cand.s.level];
-  return base + ownQ * 60 - cand.idx; // 카카오 인기순(idx 작을수록) 가산
+  const levelTie = { city: 3, district: 2, dong: 1 }[cand.s.level]; // 동률(ownQ 같음) 시 상위 행정단위 우선
+  return ownQ * 100 + levelTie * 5 - cand.idx * 0.2; // idx=카카오 인기순 미세 가산
 }
 
 const regionCache = new Map<string, RegionSuggestion[]>();
