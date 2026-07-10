@@ -1,5 +1,6 @@
 {
   "outputDirectory": "dist/web",
+  "regions": ["icn1"],
   "functions": {
     "api/recommend.ts": {
       "maxDuration": 60
