@@ -892,9 +892,12 @@ ${formatNaverPlaces(naverSecondPlaces)}` : ''}
     const excludeFoodsLine = excludeFoods.length > 0
       ? `\n- 🚫 못 먹는 음식(절대 제외): ${excludeFoods.join(', ')} ← 이 음식/재료가 주력 메뉴이거나 피하기 어려운 장소는 fitScore와 무관하게 절대 선택 금지 (편식·알레르기 하드 제약)`
       : '';
-    const hasMenuCombo = /&/.test(purpose.first) || /&/.test(purpose.second ?? '');
-    const menuComboLine = hasMenuCombo
-      ? `\n- 🍽️ 메뉴 조합 규칙: "A&B" 표기는 A와 B를 한 곳에서 함께 즐길 수 있는 장소를 원한다는 뜻 → 그 메뉴들을 모두 취급하는 단일 장소를 하나의 후보로 우선 선택(각각 다른 집으로 분리 금지). 쉼표(,)로 나뉜 메뉴는 서로 다른 장소로 분산 추천.`
+    const hasAmpCombo = /&/.test(purpose.first) || /&/.test(purpose.second ?? '');
+    // 쉼표(,)로 나뉜 메뉴(예: "보쌈,파스타")는 서로 다른 메뉴 → 장소를 골고루 분산해야 하는데,
+    // 기존엔 이 지시가 & 조합일 때만 떠서 한 메뉴로 쏠렸다. 쉼표 입력에도 분산 지시를 노출.
+    const hasCommaMenu = /,/.test(purpose.first) || /,/.test(purpose.second ?? '');
+    const menuComboLine = (hasAmpCombo || hasCommaMenu)
+      ? `\n- 🍽️ 메뉴 규칙: "A&B"(앰퍼샌드)는 A·B를 한 곳에서 함께 파는 단일 장소를 우선 선택(각각 다른 집으로 분리 금지). "A,B"(쉼표)는 서로 다른 메뉴이므로 각 메뉴를 취급하는 장소를 골고루 분산 추천(예: 보쌈집 + 파스타집 각각). 절대 한 메뉴로만 몰지 말 것.`
       : '';
     const genreLine = firstGenre || secondGenre
       ? `\n- 장르 지정: ${[
@@ -1017,8 +1020,8 @@ ${fitScoreGuide}
     const MAX_TOKENS = 8192;
     // 모델 A/B 실험용 오버라이드 — 관리자 키 일치 시에만 (일반 사용자 요청에는 영향 없음)
     const benchModel = typeof req.body._benchModel === 'string'
-      && ((!!process.env.ADMIN_PASSWORD && req.headers['x-admin-key'] === process.env.ADMIN_PASSWORD)
-        || req.body._benchKey === 'mint-bench-2607') // 임시 A/B(모델 비교)용 — 테스트 후 제거
+      && !!process.env.ADMIN_PASSWORD
+      && req.headers['x-admin-key'] === process.env.ADMIN_PASSWORD
       ? req.body._benchModel : null;
     // 후보 선별+L3 재정렬 구조라 모델 상한에 둔감 → 로딩 최적화를 위해 가장 빠른 haiku-4.5로.
     // (Claude는 서버가 준 실존 후보에서 '선택·채점'만 하므로 저지연 모델로도 품질 유지)
