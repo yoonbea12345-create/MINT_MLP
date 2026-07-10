@@ -88,6 +88,114 @@ function filterByRadius(places: NaverPlace[], midLat: number, midLng: number): N
   return withDist.sort((a, b) => a._dist - b._dist);
 }
 
+// ── 행정단위 스코프(시/구/동) ──
+// 클라이언트가 선택한 행정단위에 맞춰 추천 범위를 고정한다. 고정 반경 대신
+// "결과 주소에 그 시/구/동 이름이 들어있는지"로 걸러 '구 전체 / 동 전체'가 진짜로 성립하게 한다.
+interface RegionScope {
+  level: 'city' | 'district' | 'dong';
+  matchTokens: string[];   // 결과 주소에 모두 포함돼야 하는 행정 토큰 (예: ['인천','미추홀구'])
+  centerLat: number;
+  centerLng: number;
+}
+
+function stripSpace(s: string): string {
+  return (s || '').replace(/\s/g, '');
+}
+
+// 주소에 matchTokens가 모두 들어있는 장소만 통과 (공백 무시 부분매칭)
+function filterByAddressTokens<T extends NaverPlace>(places: T[], tokens: string[]): T[] {
+  const toks = tokens.map(stripSpace).filter(Boolean);
+  if (!toks.length) return places;
+  return places.filter((p) => {
+    const a = stripSpace(p.address);
+    return toks.every((t) => a.includes(t));
+  });
+}
+
+// 주소에서 구/군 토큰 추출 (시 전체 추천 시 '구 골고루' 분산용)
+function guOfAddress(address: string): string {
+  const t = (address || '').trim().split(/\s+/).find((tok) => /(구|군)$/.test(tok));
+  return t ?? '';
+}
+
+// 행정단위 스코프 적용: 주소매칭 우선, 부족하면 레벨별 반경으로 보완(빈 결과 방지)
+function scopePlaces(raw: NaverPlace[], scope: RegionScope | null, midLat: number, midLng: number): NaverPlace[] {
+  if (!scope) return filterByRadius(raw, midLat, midLng);
+  const byAddr = filterByAddressTokens(raw, scope.matchTokens);
+  if (byAddr.length >= 3) return byAddr;
+  // 주소매칭이 부족하면(희소 지역) 레벨에 맞는 반경으로 보완 — 그래도 근처 위주
+  const km = scope.level === 'city' ? 15 : scope.level === 'district' ? 6 : 2.5;
+  const withDist = raw.map((p) => ({ ...p, _d: distKm(scope.centerLat, scope.centerLng, p.lat, p.lng) }));
+  const near = withDist.filter((p) => p._d <= km).sort((a, b) => a._d - b._d);
+  const seen = new Set(byAddr.map((p) => `${p.name}|${p.address}`));
+  const merged = [...byAddr];
+  for (const p of near) {
+    const k = `${p.name}|${p.address}`;
+    if (!seen.has(k)) { seen.add(k); merged.push(p); }
+  }
+  if (merged.length > 0) return merged;
+  return withDist.sort((a, b) => a._d - b._d);
+}
+
+// 카카오 로컬 좌표+반경 음식점/카페 검색 — 네이버가 희소한 동이어도 좌표 기반으로 후보를 보장.
+// (네이버 지역검색은 키워드 기반이라 좌표 스코프가 없음 → 카카오로 지오코드 커버리지 확보)
+async function fetchKakaoLocalFood(
+  lat: number, lng: number, radiusM: number, restApiKey: string,
+): Promise<NaverPlace[]> {
+  const cats = ['FD6', 'CE7']; // 음식점, 카페
+  const out: NaverPlace[] = [];
+  const seen = new Set<string>();
+  for (const cat of cats) {
+    for (let page = 1; page <= 3; page++) {
+      try {
+        const url = `https://dapi.kakao.com/v2/local/search/category.json?category_group_code=${cat}&x=${lng}&y=${lat}&radius=${Math.min(radiusM, 20000)}&size=15&page=${page}&sort=distance`;
+        const res = await fetch(url, { headers: { Authorization: `KakaoAK ${restApiKey}` } });
+        if (!res.ok) break;
+        const data = await res.json() as {
+          documents?: { place_name: string; category_name: string; road_address_name?: string; address_name?: string; x: string; y: string }[];
+          meta?: { is_end?: boolean };
+        };
+        for (const d of data.documents ?? []) {
+          const key = `${d.place_name}|${d.road_address_name || d.address_name}`;
+          if (seen.has(key)) continue;
+          seen.add(key);
+          out.push({
+            name: d.place_name,
+            category: d.category_name,
+            address: d.road_address_name || d.address_name || '',
+            lat: parseFloat(d.y),
+            lng: parseFloat(d.x),
+          });
+        }
+        if (data.meta?.is_end) break;
+      } catch { break; }
+    }
+  }
+  return out;
+}
+
+// 시 전체 추천 시 구/군이 한쪽에 쏠리지 않게 골고루 섞는다(점수순 유지하며 라운드로빈).
+function spreadByGu<T extends { address: string }>(sorted: T[]): T[] {
+  const groups = new Map<string, T[]>();
+  for (const p of sorted) {
+    const gu = guOfAddress(p.address) || '__none__';
+    if (!groups.has(gu)) groups.set(gu, []);
+    groups.get(gu)!.push(p);
+  }
+  if (groups.size <= 1) return sorted;
+  const buckets = [...groups.values()];
+  const out: T[] = [];
+  let added = true;
+  while (added) {
+    added = false;
+    for (const b of buckets) {
+      const next = b.shift();
+      if (next) { out.push(next); added = true; }
+    }
+  }
+  return out;
+}
+
 // 목적별 검색 키워드 (각 10개, 병렬 쿼리로 최대 50개 장소 확보)
 const PURPOSE_KEYWORDS: Record<string, string[]> = {
   '밥':    ['맛집', '식당', '한식', '일식당', '고깃집', '파스타', '이탈리안', '삼겹살', '스시', '해산물'],
@@ -503,6 +611,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     const { input, midpoint, congestionData } = req.body;
 
+    // 행정단위 스코프(선택) — 있으면 시/구/동 범위로 결과를 고정한다.
+    const regionScope: RegionScope | null = (() => {
+      const rs = req.body.regionScope;
+      if (!rs || typeof rs !== 'object') return null;
+      const r = rs as Record<string, unknown>;
+      if (r.level !== 'city' && r.level !== 'district' && r.level !== 'dong') return null;
+      if (!Array.isArray(r.matchTokens)) return null;
+      const tokens = r.matchTokens.filter((t): t is string => typeof t === 'string' && !!t.trim());
+      if (!tokens.length) return null;
+      if (typeof r.centerLat !== 'number' || typeof r.centerLng !== 'number') return null;
+      return { level: r.level, matchTokens: tokens, centerLat: r.centerLat, centerLng: r.centerLng };
+    })();
+
     const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
     const now = new Date();
@@ -557,10 +678,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const midLat: number = midpoint?.lat ?? 37.5665;
     const midLng: number = midpoint?.lng ?? 126.9780;
 
-    // 검색 지역 목록 (primaryArea + nearestAreas, 최대 3개)
-    const searchAreas = areaList.slice(0, 3);
+    // 검색 지역 목록. 시 전체 추천은 클라이언트가 유명상권 여러 곳을 보내므로 더 넉넉히 사용.
+    const searchAreas = areaList.slice(0, regionScope?.level === 'city' ? 6 : 3);
 
-    const [weather, naverFirstRaw, naverSecondRaw, publicStores, congestionResolved] = await Promise.all([
+    // 동/구 단위 선택 시: 네이버가 희소해도 그 범위가 비지 않게 카카오 좌표+반경 검색으로 보강.
+    // (네이버 지역검색은 좌표 스코프가 없어 카카오로 지오코드 커버리지를 보장)
+    const kakaoRestKeyEarly = process.env.VITE_KAKAO_REST_API_KEY;
+    const kakaoSupplementRadius = regionScope?.level === 'dong' ? 2500 : regionScope?.level === 'district' ? 6000 : 0;
+
+    const [weather, naverFirstRaw, naverSecondRaw, publicStores, congestionResolved, kakaoLocalRaw] = await Promise.all([
       fetchWeather(midLat, midLng),
       searchNaverMulti(purpose.first, searchAreas, groupSize, midLat, midLng, occasion, relation, budget, keywords, firstGenre),
       hasTwoPurposes && purpose.second
@@ -573,13 +699,23 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       clientCongestion.length
         ? Promise.resolve(clientCongestion)
         : fetchCongestion(areaList).catch(() => [] as { areaName: string; level: string }[]),
+      regionScope && kakaoSupplementRadius > 0 && kakaoRestKeyEarly
+        ? fetchKakaoLocalFood(regionScope.centerLat, regionScope.centerLng, kakaoSupplementRadius, kakaoRestKeyEarly)
+            .catch((e) => { console.error('[recommend] kakao local supplement failed', e); return [] as NaverPlace[]; })
+        : Promise.resolve([] as NaverPlace[]),
     ]);
     const congestionSummary = congestionResolved.map((c) => `${c.areaName}: ${c.level}`).join(', ');
-    // 기하학적 중간지점 반경 이내 장소만 사용 + 편식 음식 전문점 사전 제거
+    if (regionScope) {
+      console.log(`[recommend] regionScope level=${regionScope.level} tokens=${regionScope.matchTokens.join('/')} kakaoSupplement=${kakaoLocalRaw.length} naverRaw=${naverFirstRaw.length}`);
+    }
+    // 스코프가 있으면 행정단위(주소)로, 없으면 기존 반경으로 후보를 좁힌다. + 편식 전문점 사전 제거.
+    // 카카오 좌표 보강분은 네이버 원본에 합쳐 함께 스코프/편식 필터를 태운다.
+    const firstRawScoped = regionScope ? [...naverFirstRaw, ...kakaoLocalRaw] : naverFirstRaw;
+    const secondRawScoped = regionScope ? [...naverSecondRaw, ...kakaoLocalRaw] : naverSecondRaw;
     const naverFirstPlaces: (NaverPlace & { _isPublicGem?: boolean })[] =
-      filterExcludedFoods(filterByRadius(naverFirstRaw, midLat, midLng), excludeTokens);
+      filterExcludedFoods(scopePlaces(firstRawScoped, regionScope, midLat, midLng), excludeTokens);
     const naverSecondPlaces: (NaverPlace & { _isPublicGem?: boolean })[] =
-      naverSecondRaw.length ? filterExcludedFoods(filterByRadius(naverSecondRaw, midLat, midLng), excludeTokens) : [];
+      (hasTwoPurposes && secondRawScoped.length) ? filterExcludedFoods(scopePlaces(secondRawScoped, regionScope, midLat, midLng), excludeTokens) : [];
     if (excludeTokens.length > 0) {
       console.log(`[recommend] excludeFoods=${excludeFoods.join(',')} → first ${naverFirstPlaces.length}, second ${naverSecondPlaces.length}`);
     }
@@ -964,8 +1100,12 @@ ${fitScoreGuide}
     const numScore = (p: FinalistPlace) =>
       typeof p.finalScore === 'number' ? p.finalScore
       : typeof p.fitScore === 'number' ? p.fitScore : 0;
-    const bySlot = (slot: number) =>
-      finalists.filter((p) => p.purposeSlot === slot).sort((a, b) => numScore(b) - numScore(a));
+    // 시 전체 추천이면 점수순을 유지하되 구/군이 한쪽에 쏠리지 않게 골고루 섞는다.
+    const cityWide = regionScope?.level === 'city';
+    const bySlot = (slot: number) => {
+      const sorted = finalists.filter((p) => p.purposeSlot === slot).sort((a, b) => numScore(b) - numScore(a));
+      return cityWide ? spreadByGu(sorted) : sorted;
+    };
 
     let places: FinalistPlace[];
     if (effectiveTwoPurposes) {

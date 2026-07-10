@@ -88,6 +88,39 @@ export async function searchNeighborhoods(keyword: string): Promise<Neighborhood
   return out;
 }
 
+// 행정단위(시/구/동) 계층 자동완성 — 서버(/api/region-suggest)가 카카오 REST로 계층 제안을 만든다.
+export type RegionLevel = 'city' | 'district' | 'dong';
+export interface RegionSuggestion {
+  level: RegionLevel;
+  label: string;
+  query: string;
+  sido: string;
+  gu?: string;
+  dong?: string;
+  matchTokens: string[];
+  searchAreas: string[];
+  lat: number;
+  lng: number;
+}
+
+const regionCache = new Map<string, RegionSuggestion[]>();
+
+export async function searchRegions(q: string): Promise<RegionSuggestion[]> {
+  const key = q.trim();
+  if (!key) return [];
+  if (regionCache.has(key)) return regionCache.get(key)!;
+  try {
+    const res = await fetch(`/api/region-suggest?q=${encodeURIComponent(key)}`);
+    if (!res.ok) return [];
+    const data = await res.json() as { suggestions?: RegionSuggestion[] };
+    const out = Array.isArray(data.suggestions) ? data.suggestions : [];
+    regionCache.set(key, out);
+    return out;
+  } catch {
+    return [];
+  }
+}
+
 // 동네 이름("대구 수성구 대흥동") → 동 대표 좌표. 실패 시 null.
 export async function geocodeArea(area: string): Promise<{ lat: number; lng: number } | null> {
   try {

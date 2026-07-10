@@ -14,9 +14,32 @@ export interface RegionSuggestion {
   gu?: string;          // "미추홀구" (도-시-구 구조면 "수원시 팔달구")
   dong?: string;        // "학익동"
   matchTokens: string[];// 결과 주소 필터용 (모두 포함돼야 함)
+  searchAreas: string[];// 네이버 검색에 쓸 지역 프리픽스들 (시=유명상권 여러 곳, 구/동=그 자체)
   lat: number;
   lng: number;
 }
+
+// 시 전체 추천 시 '유명상권 우선'으로 검색할 대표 상권 (구를 흩어 배치 → 구 골고루).
+// 없는 도시는 카카오에서 찾은 구들로 폴백.
+const FAMOUS_AREAS: Record<string, string[]> = {
+  '서울': ['강남역', '홍대', '성수동', '종로', '잠실', '여의도'],
+  '인천': ['부평', '송도', '구월동', '인천 차이나타운', '청라'],
+  '부산': ['서면', '해운대', '남포동', '광안리', '전포동'],
+  '대구': ['동성로', '수성못', '들안길', '앞산카페거리'],
+  '대전': ['둔산동', '은행동', '유성온천', '봉명동'],
+  '광주': ['상무지구', '충장로', '첨단', '수완지구'],
+  '울산': ['삼산동', '성남동', '무거동'],
+  '세종': ['나성동', '조치원', '어진동'],
+  '수원': ['수원역', '인계동', '광교', '영통'],
+  '성남': ['판교', '서현역', '모란'],
+  '용인': ['수지', '기흥역', '동백'],
+  '고양': ['일산', '정발산', '화정'],
+  '창원': ['상남동', '마산', '진해'],
+  '청주': ['성안길', '복대동', '율량동'],
+  '천안': ['불당동', '천안역', '두정동'],
+  '전주': ['한옥마을', '객사', '신시가지'],
+  '제주': ['제주시청', '연동', '노형동', '중문'],
+};
 
 // 광역 접미사 제거 → 짧은 표기(주소 부분매칭에 유리). "인천광역시"→"인천", "강원특별자치도"→"강원"
 function shortSido(s: string): string {
@@ -173,6 +196,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         query: nk,
         sido: p.sido, gu: p.gu, dong: p.dong,
         matchTokens: [p.gu || p.sido, p.dong].filter(Boolean),
+        searchAreas: [nk],
         lat: p.lat, lng: p.lng,
       });
     }
@@ -186,19 +210,32 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         query: dk,
         sido: p.sido, gu: p.gu,
         matchTokens: [p.sido, p.gu].filter(Boolean),
+        searchAreas: [dk],
         lat: p.lat, lng: p.lng,
       });
     }
   }
 
-  // 시(도) 레벨은 항상 후보에 (특히 1토큰 입력 시 최상단)
+  // 시(도) 레벨은 항상 후보에 (특히 1토큰 입력 시 최상단). 유명상권 우선, 없으면 카카오에서 찾은 구들로.
   for (const [c, p] of cityList) {
+    const famous = FAMOUS_AREAS[c];
+    let areas: string[];
+    if (famous && famous.length) {
+      areas = famous.map((a) => (a.includes(c) ? a : `${c} ${a}`)).slice(0, 6);
+    } else {
+      const gus = distList
+        .filter(([, dp]) => dp.sido === c && dp.gu)
+        .map(([, dp]) => `${c} ${dp.gu}`);
+      areas = [...new Set(gus)].slice(0, 5);
+      if (!areas.length) areas = [c];
+    }
     suggestions.push({
       level: 'city',
       label: `${c} 전체`,
       query: c,
       sido: c,
       matchTokens: [c],
+      searchAreas: areas,
       lat: p.lat, lng: p.lng,
     });
   }

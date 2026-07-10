@@ -85,8 +85,20 @@ export function validateRecommendBody(body: unknown): string | null {
 
   // 혼잡도 서버 병렬 조회용 지역명 목록 (선택 — 구버전 클라이언트는 congestionData만 보냄)
   if (b.areas != null) {
-    if (!Array.isArray(b.areas) || b.areas.length > 5) return invalid;
+    if (!Array.isArray(b.areas) || b.areas.length > 8) return invalid;
     for (const a of b.areas) if (!isShortStr(a, 40)) return invalid;
+  }
+
+  // 행정단위 스코프(선택) — 시/구/동 단위로 추천 범위를 고정. 없으면 기존 반경 방식.
+  if (b.regionScope != null) {
+    const rs = b.regionScope;
+    if (!rs || typeof rs !== 'object') return invalid;
+    const r = rs as Record<string, unknown>;
+    if (r.level !== 'city' && r.level !== 'district' && r.level !== 'dong') return invalid;
+    if (!Array.isArray(r.matchTokens) || r.matchTokens.length < 1 || r.matchTokens.length > 4) return invalid;
+    for (const t of r.matchTokens) if (!isShortStr(t, 20)) return invalid;
+    if (!isFiniteNum(r.centerLat) || !isFiniteNum(r.centerLng)) return invalid;
+    if (r.centerLat < 33 || r.centerLat > 39 || r.centerLng < 124 || r.centerLng > 132) return invalid;
   }
 
   if (input.keywords != null) {

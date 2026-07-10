@@ -49,18 +49,27 @@ export interface RecommendationResult {
   weather: WeatherSummary | null;
 }
 
+// 행정단위 스코프 — 시/구/동 단위로 추천 범위를 고정 (있을 때만 전송)
+export interface RegionScope {
+  level: 'city' | 'district' | 'dong';
+  matchTokens: string[];
+  centerLat: number;
+  centerLng: number;
+}
+
 export async function getAIRecommendation(
   input: UserInput,
   midpoint: Coordinates,
   congestionData: AreaCongestion[],
   excludeNames: string[] = [],
-  areas: string[] = []
+  areas: string[] = [],
+  regionScope: RegionScope | null = null,
 ): Promise<RecommendationResult> {
   const res = await fetch('/api/recommend', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     // areas를 보내면 혼잡도는 서버가 네이버 검색과 병렬로 조회 (클라이언트 왕복 1회 절감)
-    body: JSON.stringify({ input, midpoint, congestionData, excludeNames, areas }),
+    body: JSON.stringify({ input, midpoint, congestionData, excludeNames, areas, ...(regionScope ? { regionScope } : {}) }),
   });
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));

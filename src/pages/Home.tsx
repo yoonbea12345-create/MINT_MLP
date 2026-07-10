@@ -16,7 +16,7 @@ import Reserve from './Reserve';
 import { PRESET_REGIONS, findNearestAreas, findBalancedAreas } from '../services/midpoint';
 import type { PresetRegion, Coordinates } from '../services/midpoint';
 import { getAIRecommendation } from '../services/ai';
-import type { PlaceRecommendation, UserInput, WeatherSummary } from '../services/ai';
+import type { PlaceRecommendation, UserInput, WeatherSummary, RegionScope } from '../services/ai';
 import { saveResultSnapshot, loadResultSnapshot, clearResultSnapshot, saveHistory } from '../utils/history';
 import { computeTravelTimes } from '../services/travelTime';
 import { trackSessionDuration, trackEvent } from '../utils/analytics';
@@ -143,6 +143,7 @@ export default function Home() {
     midpoint: Coordinates;
     areaName: string;
     nearestAreas: string[];
+    scope?: RegionScope | null;   // 행정단위(시/구/동) 스코프 — 재추천 시에도 같은 범위 유지
   } | null>(null);
   const [resultTravelTimes, setResultTravelTimes] = useState<ResultTravelTimes | null>(null);
   const [treasurer, setTreasurer] = useState<string | null>(null);
@@ -480,10 +481,22 @@ export default function Home() {
       const validLocs = locations.filter((l) => l.lat != null && l.lng != null);
       if (region) {
         handleMidpointSelect(region);
+      } else if (loc.scope && loc.lat != null && loc.lng != null) {
+        // 시/구/동 단위로 검색·확정된 지역 — 그 행정단위 범위 안에서만 추천.
+        // searchAreas(시=유명상권 여러 곳, 구/동=그 자체)로 네이버를 검색하고,
+        // regionScope(matchTokens)로 결과 주소를 그 범위로 고정한다.
+        const midpoint = { lat: loc.lat, lng: loc.lng };
+        const scope: RegionScope = {
+          level: loc.scope.level,
+          matchTokens: loc.scope.matchTokens,
+          centerLat: loc.lat,
+          centerLng: loc.lng,
+        };
+        setMidpointData({ midpoint, areaName: loc.area, nearestAreas: loc.scope.searchAreas, scope });
+        setResultTravelTimes(null);
+        handleRecommend(midpoint, loc.scope.searchAreas, validLocs, undefined, [], undefined, scope);
       } else if (loc.lat != null && loc.lng != null) {
-        // 직접 검색으로 좌표가 확정된 지역 — 검색한 지역명을 네이버 검색 1순위로, 그 좌표를 중심으로 추천.
-        // findNearestAreas만 쓰면 전국 목록(ALL_AREAS)에 없는 지역은 엉뚱한 프리셋(먼 서울 등)으로
-        // 스냅돼 딴 동네 맛집이 검색된다 → 반드시 검색한 실제 지역명(loc.area)을 검색어로 앞세운다.
+        // (구버전 폴백) 스코프 없이 좌표만 있는 경우 — 검색한 지역명을 검색어 1순위로.
         const midpoint = { lat: loc.lat, lng: loc.lng };
         const nearby = findNearestAreas(midpoint, 3).filter((a) => a !== loc.area);
         const searchAreas = [loc.area, ...nearby].slice(0, 3);
@@ -532,6 +545,7 @@ export default function Home() {
     vibeWeights?: Record<string, number>,
     excludeNames: string[] = [],
     changeReason?: ChangeReason,
+    scope: RegionScope | null = null,
   ) {
     // 재추천이면 이전 1순위를 기억해뒀다가 "뭐가 달라졌는지" 한 줄에 사용
     const prevFirst = changeReason ? result?.[0] ?? null : null;
@@ -604,7 +618,7 @@ export default function Home() {
       }, 250);
 
       // 실제 마일스톤 2: AI 추천 완료 (재추천 시 이전 장소 제외)
-      const { places: recommendation, weather } = await getAIRecommendation(input, midpoint, [], excludeNames, nearestAreas);
+      const { places: recommendation, weather } = await getAIRecommendation(input, midpoint, [], excludeNames, nearestAreas, scope);
       clearInterval(aiProgressInterval);
       setLoadingProgress(100); // 실제 완료
 
@@ -666,7 +680,7 @@ export default function Home() {
     const exclude = currentExclude();
     setTreasurer(null);
     setResultTravelTimes(null);
-    handleRecommend(midpointData.midpoint, midpointData.nearestAreas, validLocs, undefined, exclude, 'retry');
+    handleRecommend(midpointData.midpoint, midpointData.nearestAreas, validLocs, undefined, exclude, 'retry', midpointData.scope ?? null);
   }
 
   // 🎚️ 취향 직접 조절 = 슬라이더 모달 진입
@@ -690,7 +704,7 @@ export default function Home() {
     });
     setTreasurer(null);
     setResultTravelTimes(null);
-    handleRecommend(midpointData.midpoint, midpointData.nearestAreas, validLocs, labeledWeights, exclude, 'adjust');
+    handleRecommend(midpointData.midpoint, midpointData.nearestAreas, validLocs, labeledWeights, exclude, 'adjust', midpointData.scope ?? null);
   }
 
   function handleReject(reason: 'expensive' | 'far' | 'vibe') {
@@ -728,7 +742,7 @@ export default function Home() {
       rejectWeights['새로운 분위기'] = 5;
     }
 
-    handleRecommend(midpointData.midpoint, midpointData.nearestAreas, validLocs, rejectWeights, exclude, reason);
+    handleRecommend(midpointData.midpoint, midpointData.nearestAreas, validLocs, rejectWeights, exclude, reason, midpointData.scope ?? null);
   }
 
   function handleShare() {

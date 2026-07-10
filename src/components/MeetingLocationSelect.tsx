@@ -1,13 +1,19 @@
 import { useState, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { searchNeighborhoods, geocodeArea } from '../services/kakaoMap';
-import type { Neighborhood } from '../services/kakaoMap';
+import { searchRegions } from '../services/kakaoMap';
+import type { RegionSuggestion, RegionLevel } from '../services/kakaoMap';
+
+export interface RegionScopeInfo {
+  level: RegionLevel;
+  matchTokens: string[];
+  searchAreas: string[];
+}
 
 export type MeetingLocation =
   | { type: 'auto' }
-  // 직접 입력 지역은 실제 좌표(lat/lng)를 함께 담아야 추천이 그 지역으로 검색된다.
+  // 직접 입력 지역은 실제 좌표(lat/lng) + 행정단위 스코프(scope)를 담아 그 시/구/동 범위로 추천된다.
   // 프리셋 지역(regionId 있음)은 좌표가 서비스(PRESET_REGIONS)에 있어 생략 가능.
-  | { type: 'manual'; regionId: string; area: string; lat?: number; lng?: number };
+  | { type: 'manual'; regionId: string; area: string; lat?: number; lng?: number; scope?: RegionScopeInfo };
 
 interface Props {
   value: MeetingLocation | null;
@@ -29,33 +35,44 @@ const MORE_REGIONS = [
   { id: 'jamsil',   label: '잠실/송파',   desc: '잠실역·롯데월드'       },
 ];
 
-// 동네(시/구/동) 자동완성 드롭다운 (body 포털 + fixed 위치)
+// 레벨 배지 라벨/색상 — 시(전체)/구/동 범위를 한눈에
+const LEVEL_BADGE: Record<RegionLevel, { text: string; cls: string }> = {
+  city:     { text: '시 전체', cls: 'bg-[#E8F8F5] text-[#2AB5A0]' },
+  district: { text: '구 전체', cls: 'bg-blue-50 text-blue-500' },
+  dong:     { text: '동',      cls: 'bg-amber-50 text-amber-600' },
+};
+
+// 행정단위(시/구/동) 자동완성 드롭다운 (body 포털 + fixed 위치)
 function SuggestionDropdown({
   suggestions,
   anchorEl,
   onPick,
 }: {
-  suggestions: Neighborhood[];
+  suggestions: RegionSuggestion[];
   anchorEl: HTMLDivElement | null;
-  onPick: (nb: Neighborhood) => void;
+  onPick: (s: RegionSuggestion) => void;
 }) {
   if (!suggestions.length || !anchorEl) return null;
   const rect = anchorEl.getBoundingClientRect();
   return createPortal(
     <div
-      style={{ position: 'fixed', top: rect.bottom + 4, left: rect.left, width: rect.width, zIndex: 9999 }}
+      style={{ position: 'fixed', top: rect.bottom + 4, left: rect.left, width: rect.width, zIndex: 9999, maxHeight: 320, overflowY: 'auto' }}
       className="bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden"
     >
-      {suggestions.map((nb) => (
-        <button
-          key={nb.area}
-          onMouseDown={() => onPick(nb)}
-          className="w-full text-left px-4 py-3 hover:bg-[#E8F8F5] transition-colors border-b border-gray-100 last:border-0 flex items-center gap-2"
-        >
-          <span className="text-sm">📍</span>
-          <span className="text-sm font-medium text-gray-800">{nb.area}</span>
-        </button>
-      ))}
+      {suggestions.map((s) => {
+        const badge = LEVEL_BADGE[s.level];
+        return (
+          <button
+            key={`${s.level}:${s.label}`}
+            onMouseDown={() => onPick(s)}
+            className="w-full text-left px-4 py-3 hover:bg-[#E8F8F5] transition-colors border-b border-gray-100 last:border-0 flex items-center gap-2"
+          >
+            <span className="text-sm">📍</span>
+            <span className="text-sm font-medium text-gray-800 flex-1 truncate">{s.label}</span>
+            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full flex-shrink-0 ${badge.cls}`}>{badge.text}</span>
+          </button>
+        );
+      })}
     </div>,
     document.body
   );
@@ -65,12 +82,13 @@ export default function MeetingLocationSelect({ value, onSelect }: Props) {
   const [search, setSearch] = useState(
     value?.type === 'manual' && value.regionId === '' ? value.area : ''
   );
-  const [suggestions, setSuggestions] = useState<Neighborhood[]>([]);
+  const [suggestions, setSuggestions] = useState<RegionSuggestion[]>([]);
   const [searching, setSearching] = useState(false);
   const [showMore, setShowMore] = useState(false);
 
   const wrapperRef = useRef<HTMLDivElement | null>(null);
   const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const reqSeq = useRef(0);
 
   // 직접 입력 검색으로 좌표가 확정된 상태인지
   const customSelected =
@@ -82,23 +100,29 @@ export default function MeetingLocationSelect({ value, onSelect }: Props) {
     if (searchTimer.current) clearTimeout(searchTimer.current);
     if (v.trim().length < 1) return;
     setSearching(true);
+    const seq = ++reqSeq.current;
     searchTimer.current = setTimeout(async () => {
       try {
-        const results = await searchNeighborhoods(v.trim());
-        setSuggestions(results);
+        const results = await searchRegions(v.trim());
+        if (seq === reqSeq.current) setSuggestions(results);
       } catch { /* ignore */ }
-      finally { setSearching(false); }
-    }, 200);
+      finally { if (seq === reqSeq.current) setSearching(false); }
+    }, 220);
   }
 
-  // 동네(시/구/동) 선택 → 동 대표 좌표로 스냅해 확정 (스냅 실패 시 제안 좌표 사용)
-  async function pickPlace(nb: Neighborhood) {
-    setSearch(nb.area);
+  // 시/구/동 제안 선택 → 그 행정단위 스코프로 확정 (추천이 그 범위 안에서만 검색됨)
+  function pickPlace(s: RegionSuggestion) {
+    setSearch(s.label);
     setSuggestions([]);
-    setSearching(true);
-    const c = await geocodeArea(nb.area);
     setSearching(false);
-    onSelect({ type: 'manual', regionId: '', area: nb.area, lat: c?.lat ?? nb.lat, lng: c?.lng ?? nb.lng });
+    onSelect({
+      type: 'manual',
+      regionId: '',
+      area: s.label,
+      lat: s.lat,
+      lng: s.lng,
+      scope: { level: s.level, matchTokens: s.matchTokens, searchAreas: s.searchAreas },
+    });
   }
 
   function isManualSelected(regionId: string) {
@@ -144,7 +168,7 @@ export default function MeetingLocationSelect({ value, onSelect }: Props) {
           </div>
           <div className="flex-1">
             <div className="font-black text-gray-800 text-base">직접 입력하기</div>
-            <div className="text-xs text-gray-400 mt-0.5">만날 지역을 검색해서 선택</div>
+            <div className="text-xs text-gray-400 mt-0.5">시·구·동 단위로 검색 (범위만큼 추천)</div>
           </div>
         </div>
 
@@ -154,7 +178,7 @@ export default function MeetingLocationSelect({ value, onSelect }: Props) {
             type="text"
             value={search}
             onChange={(e) => handleSearchChange(e.target.value)}
-            placeholder="예: 대흥동, 홍대, 강남, 성수동..."
+            placeholder="예: 인천 · 인천 미추홀구 · 인천 미추홀구 학익동"
             className={`w-full pl-4 pr-9 py-3 rounded-xl border-2 text-sm text-gray-700 placeholder-gray-400 focus:outline-none transition-colors bg-white ${
               customSelected ? 'border-[#3CDBC0] bg-[#E8F8F5]' : 'border-[#3CDBC0] focus:ring-2 focus:ring-[#3CDBC0]/20'
             }`}
@@ -172,7 +196,7 @@ export default function MeetingLocationSelect({ value, onSelect }: Props) {
           <SuggestionDropdown suggestions={suggestions} anchorEl={wrapperRef.current} onPick={pickPlace} />
         </div>
         {customSelected && (
-          <p className="-mt-2 text-xs text-[#2AB5A0] font-medium">📍 {(value as { area: string }).area} 주변으로 추천해요</p>
+          <p className="-mt-2 text-xs text-[#2AB5A0] font-medium">📍 {(value as { area: string }).area} 범위 안에서 추천해요</p>
         )}
 
         {/* 핫 지역 */}
