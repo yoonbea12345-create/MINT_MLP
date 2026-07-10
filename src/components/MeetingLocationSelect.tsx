@@ -1,7 +1,8 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { searchRegions } from '../services/kakaoMap';
+import { searchRegions, matchHotplaces } from '../services/kakaoMap';
 import type { RegionSuggestion, RegionLevel } from '../services/kakaoMap';
+import { ensureKakaoMaps } from '../utils/kakaoLoader';
 
 export interface RegionScopeInfo {
   level: RegionLevel;
@@ -42,6 +43,12 @@ const LEVEL_BADGE: Record<RegionLevel, { text: string; cls: string }> = {
   dong:     { text: '동',      cls: 'bg-amber-50 text-amber-600' },
 };
 
+function badgeFor(s: RegionSuggestion): { text: string; cls: string } {
+  if (s.kind === 'hotplace') return { text: '🔥 핫플', cls: 'bg-rose-50 text-rose-500' };
+  if (s.kind === 'station') return { text: '🚇 역', cls: 'bg-indigo-50 text-indigo-500' };
+  return LEVEL_BADGE[s.level];
+}
+
 // 행정단위(시/구/동) 자동완성 드롭다운 (body 포털 + fixed 위치)
 function SuggestionDropdown({
   suggestions,
@@ -60,7 +67,7 @@ function SuggestionDropdown({
       className="bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden"
     >
       {suggestions.map((s) => {
-        const badge = LEVEL_BADGE[s.level];
+        const badge = badgeFor(s);
         return (
           <button
             key={`${s.level}:${s.label}`}
@@ -90,24 +97,30 @@ export default function MeetingLocationSelect({ value, onSelect }: Props) {
   const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const reqSeq = useRef(0);
 
+  // 카카오 SDK 프리로드 — 첫 타이핑에서 스크립트 로딩 지연이 없게 미리 붙인다
+  useEffect(() => { ensureKakaoMaps().catch(() => {}); }, []);
+
   // 직접 입력 검색으로 좌표가 확정된 상태인지
   const customSelected =
     value?.type === 'manual' && value.regionId === '' && value.lat != null && value.lng != null;
 
   function handleSearchChange(v: string) {
     setSearch(v);
-    setSuggestions([]);
     if (searchTimer.current) clearTimeout(searchTimer.current);
-    if (v.trim().length < 1) return;
+    const t = v.trim();
+    if (t.length < 1) { setSuggestions([]); setSearching(false); return; }
+    // 1단계(즉시): 핫플레이스는 네트워크 없이 같은 프레임에 바로 노출
+    setSuggestions(matchHotplaces(t));
     setSearching(true);
     const seq = ++reqSeq.current;
+    // 2단계(150ms 디바운스): 카카오 결과까지 합쳐 갱신 (팝업을 비우지 않고 교체)
     searchTimer.current = setTimeout(async () => {
       try {
-        const results = await searchRegions(v.trim());
-        if (seq === reqSeq.current) setSuggestions(results);
+        const results = await searchRegions(t);
+        if (seq === reqSeq.current && results.length) setSuggestions(results);
       } catch { /* ignore */ }
       finally { if (seq === reqSeq.current) setSearching(false); }
-    }, 220);
+    }, 150);
   }
 
   // 시/구/동 제안 선택 → 그 행정단위 스코프로 확정 (추천이 그 범위 안에서만 검색됨)
