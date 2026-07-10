@@ -1020,9 +1020,10 @@ ${fitScoreGuide}
       && !!process.env.ADMIN_PASSWORD
       && req.headers['x-admin-key'] === process.env.ADMIN_PASSWORD
       ? req.body._benchModel : null;
-    // A/B 실측(2026-07-06, 18회): sonnet-5는 opus-4-8과 목적적합률·키워드반영률·성공률 전 항목
-    // 동률에 AI 구간 18% 빠르고 비용 절반 — 후보 선별+L3 재정렬 구조라 모델 상한에 둔감.
-    const model = benchModel ?? 'claude-sonnet-5';
+    // 후보 선별+L3 재정렬 구조라 모델 상한에 둔감 → 로딩 최적화를 위해 가장 빠른 haiku-4.5로.
+    // (Claude는 서버가 준 실존 후보에서 '선택·채점'만 하므로 저지연 모델로도 품질 유지)
+    // 이전: sonnet-5(2026-07-06 A/B로 opus-4-8과 동률·저지연이었으나 haiku가 더 빠름).
+    const model = benchModel ?? 'claude-haiku-4-5-20251001';
 
     // 레이트리밋 확인 — 과금되는 Claude 호출 직전에. (데이터 fetch와 병렬로 이미 돌고 있었음)
     const gate = await gatePromise;
