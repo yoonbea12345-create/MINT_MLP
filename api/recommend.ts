@@ -417,11 +417,16 @@ async function searchNaverMulti(
   // 쿼리 빌드 — 각 쿼리에 소속 지역 인덱스(areaIdx)를 붙여 나중에 구별 균형 소싱에 쓴다.
   const queries: { q: string; areaIdx: number }[] = [];
   if (balanced) {
-    // 시 전체: 여러 유명상권(구)에 키워드를 고르게 분배 — 한 구 쏠림 방지
-    const per = keywords.slice(0, 6);
-    searchAreas.slice(0, 6).forEach((area, idx) => {
-      per.forEach((kw) => queries.push({ q: `${area} ${groupPrefix}${budgetPrefix}${kw}`, areaIdx: idx }));
-      userKeywords.slice(0, 2).forEach((kw) => queries.push({ q: `${area} ${kw} ${categoryHint}`, areaIdx: idx }));
+    // 시 전체: 여러 유명상권(구)에 키워드를 고르게 분배 — 한 구 쏠림 방지.
+    // 쿼리 순서를 '키워드 바깥·지역 안쪽'으로 인터리브해서, 네이버 QPS로 뒷부분이 잘려도
+    // 각 구가 고르게 남게 한다(지역별로 몰아 넣으면 앞 구만 채워짐).
+    const cityAreas = searchAreas.slice(0, 6);
+    const per = keywords.slice(0, 5);
+    per.forEach((kw) => {
+      cityAreas.forEach((area, idx) => queries.push({ q: `${area} ${groupPrefix}${budgetPrefix}${kw}`, areaIdx: idx }));
+    });
+    userKeywords.slice(0, 2).forEach((kw) => {
+      cityAreas.forEach((area, idx) => queries.push({ q: `${area} ${kw} ${categoryHint}`, areaIdx: idx }));
     });
   } else {
     // 기본: 1순위×(extra+10), 2순위×5, 3순위×3
