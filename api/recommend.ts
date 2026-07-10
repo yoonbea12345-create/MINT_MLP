@@ -201,6 +201,48 @@ function spreadByGu<T extends { address: string }>(sorted: T[]): T[] {
   return out;
 }
 
+// 시 전체 2코스: 대표 1차·2차(rank1·rank2)가 걸어서 이어지는 한 쌍이 되도록 선택.
+// (시 전체는 구 골고루 분산 탓에 1차·2차가 먼 구로 갈라져 코스가 비현실적이 되던 걸 교정)
+const PAIR_MAX_KM = 2.0;        // 하드캡(도보 ~30분 / 택시 기본요금 거리)
+const PAIR_WALK_PENALTY = 0.5;  // 점(0~110 스케일)/도보 1분
+const PAIR_SCORE_FLOOR = 15;    // 1패스: 각 슬롯 최고점 대비 허용 하락폭
+
+function pickClosePrimaryPair(
+  first: FinalistPlace[], second: FinalistPlace[], numScore: (p: FinalistPlace) => number,
+): { f: FinalistPlace; s: FinalistPlace } | null {
+  const ok = (p: FinalistPlace) =>
+    typeof p.lat === 'number' && typeof p.lng === 'number' && p.lat !== 0 && p.lng !== 0;
+  const topF = first.length ? Math.max(...first.map(numScore)) : 0;
+  const topS = second.length ? Math.max(...second.map(numScore)) : 0;
+
+  const scan = (applyFloor: boolean) => {
+    let best: { f: FinalistPlace; s: FinalistPlace; obj: number; km: number } | null = null;
+    for (const f of first) {
+      if (!ok(f)) continue;
+      if (applyFloor && numScore(f) < topF - PAIR_SCORE_FLOOR) continue;
+      for (const s of second) {
+        if (!ok(s)) continue;
+        if (applyFloor && numScore(s) < topS - PAIR_SCORE_FLOOR) continue;
+        // 같은 가게가 1차·2차 양쪽 후보에 있을 수 있음(예: 술↔술) — 자기 자신 쌍 금지
+        if (f.placeName === s.placeName && f.address === s.address) continue;
+        const km = distKm(f.lat as number, f.lng as number, s.lat as number, s.lng as number);
+        if (km > PAIR_MAX_KM) continue;
+        const obj = numScore(f) + numScore(s) - PAIR_WALK_PENALTY * (km / 4) * 60;
+        if (!best || obj > best.obj
+            || (obj === best.obj && (km < best.km
+            || (km === best.km && numScore(f) > numScore(best.f))))) {
+          best = { f, s, obj, km };
+        }
+      }
+    }
+    return best;
+  };
+
+  // 1패스: 품질 하한 적용 → 2패스: 하한 해제. 둘 다 없으면 2km 내 쌍 없음 → null(폴백).
+  const hit = scan(true) ?? scan(false);
+  return hit ? { f: hit.f, s: hit.s } : null;
+}
+
 // 목적별 검색 키워드 (각 10개, 병렬 쿼리로 최대 50개 장소 확보)
 const PURPOSE_KEYWORDS: Record<string, string[]> = {
   '밥':    ['맛집', '식당', '한식', '일식당', '고깃집', '파스타', '이탈리안', '삼겹살', '스시', '해산물'],
@@ -1201,15 +1243,27 @@ ${fitScoreGuide}
 
     let places: FinalistPlace[];
     if (effectiveTwoPurposes) {
-      const firstSorted = bySlot(1);
+      const firstSorted = bySlot(1);   // cityWide면 이미 spreadByGu 순서
       const secondSorted = bySlot(2);
+
+      // 시 전체: 대표 1차·2차는 걸어서 이어지는 쌍으로 교체(코스 정합성). 나머지 3~6위는
+      // spreadByGu 순서 그대로 → 구 분산(다양성)은 대안 슬롯이 담당. 비-city는 기존과 동일.
+      let f0 = firstSorted[0];
+      let s0 = secondSorted[0];
+      if (cityWide) {
+        const pair = pickClosePrimaryPair(firstSorted, secondSorted, numScore);
+        if (pair) { f0 = pair.f; s0 = pair.s; }
+      }
+      const restFirst = firstSorted.filter((p) => p !== f0);
+      const restSecond = secondSorted.filter((p) => p !== s0);
+
       places = ([
-        firstSorted[0] && { ...firstSorted[0], rank: 1 },
-        secondSorted[0] && { ...secondSorted[0], rank: 2 },
-        firstSorted[1] && { ...firstSorted[1], rank: 3 },
-        firstSorted[2] && { ...firstSorted[2], rank: 4 },
-        secondSorted[1] && { ...secondSorted[1], rank: 5 },
-        secondSorted[2] && { ...secondSorted[2], rank: 6 },
+        f0            && { ...f0,            rank: 1 },
+        s0            && { ...s0,            rank: 2 },
+        restFirst[0]  && { ...restFirst[0],  rank: 3 },
+        restFirst[1]  && { ...restFirst[1],  rank: 4 },
+        restSecond[0] && { ...restSecond[0], rank: 5 },
+        restSecond[1] && { ...restSecond[1], rank: 6 },
       ].filter(Boolean) as FinalistPlace[]);
     } else {
       places = bySlot(1)
