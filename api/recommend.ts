@@ -11,7 +11,8 @@ import { fetchCongestion } from './_lib/congestion.js';
 interface NaverPlace {
   name: string;
   category: string;
-  address: string;
+  address: string;   // 표시용 (도로명 우선)
+  jibun?: string;    // 지번주소 — 동(법정동) 이름이 들어있어 동 단위 스코프 매칭에 사용
   lat: number;
   lng: number;
 }
@@ -102,13 +103,14 @@ function stripSpace(s: string): string {
   return (s || '').replace(/\s/g, '');
 }
 
-// 주소에 matchTokens가 모두 들어있는 장소만 통과 (공백 무시 부분매칭)
+// 주소에 matchTokens가 모두 들어있는 장소만 통과 (공백 무시 부분매칭).
+// 도로명주소엔 동 이름이 없으므로 지번(jibun)까지 함께 본다 — 동 단위 스코프의 핵심.
 function filterByAddressTokens<T extends NaverPlace>(places: T[], tokens: string[]): T[] {
   const toks = tokens.map(stripSpace).filter(Boolean);
   if (!toks.length) return places;
   return places.filter((p) => {
-    const a = stripSpace(p.address);
-    return toks.every((t) => a.includes(t));
+    const hay = stripSpace(p.address) + '|' + stripSpace(p.jibun ?? '');
+    return toks.every((t) => hay.includes(t));
   });
 }
 
@@ -163,6 +165,7 @@ async function fetchKakaoLocalFood(
             name: d.place_name,
             category: d.category_name,
             address: d.road_address_name || d.address_name || '',
+            jibun: d.address_name || d.road_address_name || '', // 지번(동 포함)
             lat: parseFloat(d.y),
             lng: parseFloat(d.x),
           });
@@ -345,6 +348,7 @@ async function fetchNaverQuery(
         .replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'"),
       category: item.category,
       address: item.roadAddress || item.address,
+      jibun: item.address || item.roadAddress, // 지번(동 포함) — 동 단위 스코프 매칭용
       lat: parseInt(item.mapy) / 1e7,
       lng: parseInt(item.mapx) / 1e7,
     }));
@@ -371,6 +375,7 @@ async function searchNaverMulti(
   budget?: string | null,
   userKeywords: string[] = [],
   genre?: string | null,
+  balanced = false, // 시 전체 추천: 지역(구)별로 후보를 고르게 소싱 (한 구 쏠림 방지)
 ): Promise<NaverPlace[]> {
   const clientId     = process.env.NAVER_CLIENT_ID;
   const clientSecret = process.env.NAVER_CLIENT_SECRET;
@@ -403,50 +408,76 @@ async function searchNaverMulti(
 
   const searchAreas  = areas.map(toSearchName).filter(Boolean);
 
-  // 쿼리 빌드: 1순위×(extra+10), 2순위×5, 3순위×3
-  const queries: string[] = [];
-  if (searchAreas[0]) keywords.forEach((kw) => queries.push(`${searchAreas[0]} ${groupPrefix}${budgetPrefix}${kw}`));
-  if (searchAreas[1]) keywords.slice(0, 5).forEach((kw) => queries.push(`${searchAreas[1]} ${groupPrefix}${budgetPrefix}${kw}`));
-  if (searchAreas[2]) keywords.slice(0, 3).forEach((kw) => queries.push(`${searchAreas[2]} ${groupPrefix}${budgetPrefix}${kw}`));
-
-  // 사용자 지정 키워드(편의시설 칩·직접 입력)를 목적 힌트와 결합해 후보 검색에 직접 반영
-  // — 프롬프트의 "필수 키워드"는 후보 풀에 해당 장소가 있어야만 작동하기 때문
   const categoryHint = genre && GENRE_KEYWORDS[genre]
     ? genre
     : isCustomPurpose
       ? (customSearchKeywords[0] ?? '맛집')
       : ({ '밥': '맛집', '술': '술집', '카페': '카페' } as Record<string, string>)[purpose] ?? '맛집';
-  for (const kw of userKeywords.slice(0, 5)) {
-    if (searchAreas[0]) queries.push(`${searchAreas[0]} ${kw} ${categoryHint}`);
-    if (searchAreas[1]) queries.push(`${searchAreas[1]} ${kw} ${categoryHint}`);
+
+  // 쿼리 빌드 — 각 쿼리에 소속 지역 인덱스(areaIdx)를 붙여 나중에 구별 균형 소싱에 쓴다.
+  const queries: { q: string; areaIdx: number }[] = [];
+  if (balanced) {
+    // 시 전체: 여러 유명상권(구)에 키워드를 고르게 분배 — 한 구 쏠림 방지
+    const per = keywords.slice(0, 6);
+    searchAreas.slice(0, 6).forEach((area, idx) => {
+      per.forEach((kw) => queries.push({ q: `${area} ${groupPrefix}${budgetPrefix}${kw}`, areaIdx: idx }));
+      userKeywords.slice(0, 2).forEach((kw) => queries.push({ q: `${area} ${kw} ${categoryHint}`, areaIdx: idx }));
+    });
+  } else {
+    // 기본: 1순위×(extra+10), 2순위×5, 3순위×3
+    if (searchAreas[0]) keywords.forEach((kw) => queries.push({ q: `${searchAreas[0]} ${groupPrefix}${budgetPrefix}${kw}`, areaIdx: 0 }));
+    if (searchAreas[1]) keywords.slice(0, 5).forEach((kw) => queries.push({ q: `${searchAreas[1]} ${groupPrefix}${budgetPrefix}${kw}`, areaIdx: 1 }));
+    if (searchAreas[2]) keywords.slice(0, 3).forEach((kw) => queries.push({ q: `${searchAreas[2]} ${groupPrefix}${budgetPrefix}${kw}`, areaIdx: 2 }));
+    // 사용자 지정 키워드(편의시설 칩·직접 입력)를 목적 힌트와 결합해 후보 검색에 직접 반영
+    for (const kw of userKeywords.slice(0, 5)) {
+      if (searchAreas[0]) queries.push({ q: `${searchAreas[0]} ${kw} ${categoryHint}`, areaIdx: 0 });
+      if (searchAreas[1]) queries.push({ q: `${searchAreas[1]} ${kw} ${categoryHint}`, areaIdx: 1 });
+    }
   }
 
   // 네이버 QPS 제한(초당 10회) — 1·2차 검색이 병렬로 돌므로 호출당 5개씩 끊어 실행
-  const batches: NaverPlace[][] = [];
+  const batches: { places: NaverPlace[]; areaIdx: number }[] = [];
   for (let i = 0; i < queries.length; i += 5) {
     if (i > 0) await new Promise((r) => setTimeout(r, 350));
     const chunk = await Promise.all(
-      queries.slice(i, i + 5).map((q) => fetchNaverQuery(q, clientId, clientSecret)),
+      queries.slice(i, i + 5).map(async (item) => ({ places: await fetchNaverQuery(item.q, clientId, clientSecret), areaIdx: item.areaIdx })),
     );
     batches.push(...chunk);
   }
 
-  // 중복 제거 (이름+주소 기준)
+  // 중복 제거 (이름+주소 기준) + 지역별 그룹핑
   const seen = new Set<string>();
-  const all: (NaverPlace & { dist: number })[] = [];
+  const byArea = new Map<number, (NaverPlace & { dist: number })[]>();
   for (const batch of batches) {
-    for (const p of batch) {
+    for (const p of batch.places) {
       const key = `${p.name}|${p.address}`;
       if (seen.has(key) || !p.lat || !p.lng) continue;
       seen.add(key);
       const dist = Math.hypot(p.lat - midLat, p.lng - midLng);
-      all.push({ ...p, dist });
+      if (!byArea.has(batch.areaIdx)) byArea.set(batch.areaIdx, []);
+      byArea.get(batch.areaIdx)!.push({ ...p, dist });
     }
   }
 
-  // 거리 가까운 순으로만 정렬 (프랜차이즈 여부 무관 — Claude가 상황 맞게 판단)
-  all.sort((a, b) => a.dist - b.dist);
+  if (balanced) {
+    // 구별 라운드로빈으로 최대 50개 — 각 지역(구)에서 가까운 순으로 번갈아 뽑아 골고루 채운다
+    for (const arr of byArea.values()) arr.sort((a, b) => a.dist - b.dist);
+    const buckets = [...byArea.values()];
+    const out: (NaverPlace & { dist: number })[] = [];
+    let added = true;
+    while (added && out.length < 50) {
+      added = false;
+      for (const b of buckets) {
+        const next = b.shift();
+        if (next) { out.push(next); added = true; if (out.length >= 50) break; }
+      }
+    }
+    return out;
+  }
 
+  // 기본: 거리 가까운 순으로 정렬 후 50개
+  const all = [...byArea.values()].flat();
+  all.sort((a, b) => a.dist - b.dist);
   return all.slice(0, 50);
 }
 
@@ -688,9 +719,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const [weather, naverFirstRaw, naverSecondRaw, publicStores, congestionResolved, kakaoLocalRaw] = await Promise.all([
       fetchWeather(midLat, midLng),
-      searchNaverMulti(purpose.first, searchAreas, groupSize, midLat, midLng, occasion, relation, budget, keywords, firstGenre),
+      searchNaverMulti(purpose.first, searchAreas, groupSize, midLat, midLng, occasion, relation, budget, keywords, firstGenre, regionScope?.level === 'city'),
       hasTwoPurposes && purpose.second
-        ? searchNaverMulti(purpose.second, searchAreas, groupSize, midLat, midLng, occasion, relation, budget, keywordsSecond.length ? keywordsSecond : keywords, secondGenre)
+        ? searchNaverMulti(purpose.second, searchAreas, groupSize, midLat, midLng, occasion, relation, budget, keywordsSecond.length ? keywordsSecond : keywords, secondGenre, regionScope?.level === 'city')
         : Promise.resolve([]),
       fetchStoresInRadius(midLat, midLng, MIDPOINT_RADIUS_KM * 1000).catch((e) => {
         console.error('[recommend] L0 public data fetch failed', e);
