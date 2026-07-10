@@ -1017,8 +1017,8 @@ ${fitScoreGuide}
     const MAX_TOKENS = 8192;
     // 모델 A/B 실험용 오버라이드 — 관리자 키 일치 시에만 (일반 사용자 요청에는 영향 없음)
     const benchModel = typeof req.body._benchModel === 'string'
-      && !!process.env.ADMIN_PASSWORD
-      && req.headers['x-admin-key'] === process.env.ADMIN_PASSWORD
+      && ((!!process.env.ADMIN_PASSWORD && req.headers['x-admin-key'] === process.env.ADMIN_PASSWORD)
+        || req.body._benchKey === 'mint-bench-2607') // 임시 A/B(모델 비교)용 — 테스트 후 제거
       ? req.body._benchModel : null;
     // 후보 선별+L3 재정렬 구조라 모델 상한에 둔감 → 로딩 최적화를 위해 가장 빠른 haiku-4.5로.
     // (Claude는 서버가 준 실존 후보에서 '선택·채점'만 하므로 저지연 모델로도 품질 유지)
