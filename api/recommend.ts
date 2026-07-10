@@ -328,9 +328,10 @@ async function fetchNaverQuery(
     const res = await fetch(url, {
       headers: { 'X-Naver-Client-Id': clientId, 'X-Naver-Client-Secret': clientSecret },
     });
-    if (res.status === 429 && attempt === 0) {
-      await new Promise((r) => setTimeout(r, 700 + Math.random() * 500));
-      return fetchNaverQuery(query, clientId, clientSecret, 1);
+    // 429(초당 호출 제한) — 시 전체 검색은 쿼리가 많아 429가 잦다. 백오프하며 최대 3회 재시도.
+    if (res.status === 429 && attempt < 3) {
+      await new Promise((r) => setTimeout(r, 500 * (attempt + 1) + Math.random() * 400));
+      return fetchNaverQuery(query, clientId, clientSecret, attempt + 1);
     }
     if (!res.ok) {
       const errText = await res.text().catch(() => '');
@@ -420,13 +421,11 @@ async function searchNaverMulti(
     // 시 전체: 여러 유명상권(구)에 키워드를 고르게 분배 — 한 구 쏠림 방지.
     // 쿼리 순서를 '키워드 바깥·지역 안쪽'으로 인터리브해서, 네이버 QPS로 뒷부분이 잘려도
     // 각 구가 고르게 남게 한다(지역별로 몰아 넣으면 앞 구만 채워짐).
-    const cityAreas = searchAreas.slice(0, 6);
-    const per = keywords.slice(0, 5);
+    // 구당 키워드를 3개로 줄여 총 쿼리 수를 낮춘다(네이버 429 방지). 구 스프레드가 우선.
+    const cityAreas = searchAreas.slice(0, 5);
+    const per = keywords.slice(0, 3);
     per.forEach((kw) => {
       cityAreas.forEach((area, idx) => queries.push({ q: `${area} ${groupPrefix}${budgetPrefix}${kw}`, areaIdx: idx }));
-    });
-    userKeywords.slice(0, 2).forEach((kw) => {
-      cityAreas.forEach((area, idx) => queries.push({ q: `${area} ${kw} ${categoryHint}`, areaIdx: idx }));
     });
   } else {
     // 기본: 1순위×(extra+10), 2순위×5, 3순위×3
@@ -440,12 +439,15 @@ async function searchNaverMulti(
     }
   }
 
-  // 네이버 QPS 제한(초당 10회) — 1·2차 검색이 병렬로 돌므로 호출당 5개씩 끊어 실행
+  // 네이버 QPS 제한(초당 10회) — 1·2차 검색이 병렬로 돌므로 끊어 실행.
+  // 시 전체(balanced)는 쿼리가 많아 더 작게·느리게 끊어 429를 줄인다.
+  const chunkSize = balanced ? 4 : 5;
+  const gapMs = balanced ? 550 : 350;
   const batches: { places: NaverPlace[]; areaIdx: number }[] = [];
-  for (let i = 0; i < queries.length; i += 5) {
-    if (i > 0) await new Promise((r) => setTimeout(r, 350));
+  for (let i = 0; i < queries.length; i += chunkSize) {
+    if (i > 0) await new Promise((r) => setTimeout(r, gapMs));
     const chunk = await Promise.all(
-      queries.slice(i, i + 5).map(async (item) => ({ places: await fetchNaverQuery(item.q, clientId, clientSecret), areaIdx: item.areaIdx })),
+      queries.slice(i, i + chunkSize).map(async (item) => ({ places: await fetchNaverQuery(item.q, clientId, clientSecret), areaIdx: item.areaIdx })),
     );
     batches.push(...chunk);
   }
