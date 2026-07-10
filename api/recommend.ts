@@ -441,8 +441,10 @@ async function searchNaverMulti(
 
   // 네이버 QPS 제한(초당 10회) — 1·2차 검색이 병렬로 돌므로 끊어 실행.
   // 시 전체(balanced)는 쿼리가 많아 더 작게·느리게 끊어 429를 줄인다.
-  const chunkSize = balanced ? 4 : 5;
-  const gapMs = balanced ? 550 : 350;
+  // 시 전체는 1·2차가 병렬로 도는 걸 감안해 배치를 작게(2개)·느리게(500ms) — 합산 QPS를
+  // 네이버 한도 아래로 눌러 뒤쪽 구가 429로 잘리는 걸 막는다.
+  const chunkSize = balanced ? 2 : 5;
+  const gapMs = balanced ? 500 : 350;
   const batches: { places: NaverPlace[]; areaIdx: number }[] = [];
   for (let i = 0; i < queries.length; i += chunkSize) {
     if (i > 0) await new Promise((r) => setTimeout(r, gapMs));
@@ -1266,6 +1268,12 @@ ${fitScoreGuide}
         : {}),
       // 모델 실험 시에만 측정 메타 노출
       ...(benchModel ? { _bench: { model, aiMs, outputTokens: message.usage?.output_tokens ?? null } } : {}),
+      // 스코프 진단 — 요청에 _diag가 있을 때만: 후보 풀의 구 분포(시 전체 구 스프레드 확인용)
+      ...(req.body._diag ? { _diag: (() => {
+        const g: Record<string, number> = {};
+        for (const p of naverFirstPlaces) { const gu = guOfAddress(p.address) || '기타'; g[gu] = (g[gu] ?? 0) + 1; }
+        return { poolSize: naverFirstPlaces.length, poolGus: g };
+      })() } : {}),
     });
   } catch (e) {
     console.error('[recommend] failed', e);
