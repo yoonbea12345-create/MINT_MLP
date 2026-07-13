@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { trackEvent } from '../utils/analytics';
+import { navigateInApp, requestAppFullscreen } from '../utils/fullscreen';
 import CertShowcase from '../components/CertShowcase';
 
 interface BeforeInstallPromptEvent extends Event {
@@ -66,9 +67,10 @@ function useInstallPrompt() {
   return { canInstall, triggerInstall, isIOS, guide, setGuide };
 }
 
-function goToApp() {
+async function goToApp() {
   trackEvent('cta_click');
-  window.location.pathname = '/app';
+  await requestAppFullscreen();
+  navigateInApp('/app');
 }
 
 // ── 모바일 히어로: 조건 → 결과 예시 바 ──

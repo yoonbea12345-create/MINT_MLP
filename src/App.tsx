@@ -1,4 +1,5 @@
-import { Component, lazy, Suspense, type ReactNode } from 'react';
+import { Component, lazy, Suspense, useEffect, useState, type ReactNode } from 'react';
+import { requestAppFullscreen } from './utils/fullscreen';
 
 // 페이지별 코드 스플리팅 — 랜딩만 보는 방문자가 Home/Admin 번들까지 받지 않도록
 const Home = lazy(() => import('./pages/Home'));
@@ -38,12 +39,34 @@ function PageLoading() {
 }
 
 function Router() {
-  const path = window.location.pathname;
+  const [locationKey, setLocationKey] = useState(() => `${window.location.pathname}${window.location.search}`);
+
+  useEffect(() => {
+    const syncLocation = () => setLocationKey(`${window.location.pathname}${window.location.search}`);
+    window.addEventListener('popstate', syncLocation);
+    return () => window.removeEventListener('popstate', syncLocation);
+  }, []);
+
+  const path = locationKey.split('?')[0];
+
+  // URL로 MVP/초대 화면에 바로 들어온 경우 자동 전체화면은 브라우저가 차단하므로 첫 터치에서 전환한다.
+  useEffect(() => {
+    if (path !== '/app' && path !== '/join') return;
+    if (
+      document.fullscreenElement ||
+      window.matchMedia('(display-mode: fullscreen)').matches
+    ) return;
+
+    const enterFullscreen = () => { void requestAppFullscreen(); };
+    window.addEventListener('pointerdown', enterFullscreen, { capture: true, once: true });
+    return () => window.removeEventListener('pointerdown', enterFullscreen, { capture: true });
+  }, [path]);
+
   if (path === '/admin') return <Admin />;
   if (path === '/pilot-admin') return <PilotAdmin />;
   if (path === '/pilot') return <Pilot />;
   if (path === '/join') return <MemberInput />;
-  if (path === '/shared' || window.location.search.includes('data=')) return <SharedResult />;
+  if (path === '/shared' || locationKey.includes('data=')) return <SharedResult />;
   if (path === '/app') return <Home />;
   return <Landing />;
 }

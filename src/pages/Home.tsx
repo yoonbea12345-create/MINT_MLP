@@ -1061,7 +1061,7 @@ export default function Home() {
 
   // 입력 플로우
   return (
-    <div className="h-[100dvh] bg-[#F5FBF8] overflow-hidden">
+    <div className="h-[100dvh] bg-[#F5FBF8] overflow-hidden" style={{ height: 'var(--mint-app-height, 100dvh)' }}>
       <div className="h-full max-w-md mx-auto flex flex-col">
 
         {/* 헤더 — 노치/상단 안전영역 반영(인앱·일반 세로모드에선 16px 그대로) */}

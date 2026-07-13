@@ -357,7 +357,7 @@ export default function MemberInput() {
   const stepLabels = [showLocation ? '출발지' : '이름', '분위기', '취향', '완료'];
 
   return (
-    <div className="h-[100dvh] bg-[#F5FBF8] flex flex-col overflow-hidden">
+    <div className="h-[100dvh] bg-[#F5FBF8] flex flex-col overflow-hidden" style={{ height: 'var(--mint-app-height, 100dvh)' }}>
       {/* 헤더 */}
       <div className="flex-shrink-0 text-center pt-4 px-4">
         <h1 className="text-2xl font-black text-[#2AB5A0] tracking-tight">MINT</h1>
