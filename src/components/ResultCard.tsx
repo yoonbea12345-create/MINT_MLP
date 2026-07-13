@@ -4,6 +4,7 @@ import { congestionDotClass } from '../services/seoulData';
 import type { CongestionLevel } from '../services/seoulData';
 import MiniMap from './MiniMap';
 import type { MapPin } from './MiniMap';
+import { findUshulang } from '../data/ushulang';
 
 // 깨진 이미지는 흔적 없이 숨긴다 (네이버 썸네일 만료 대응)
 function hideOnError(e: React.SyntheticEvent<HTMLImageElement>) {
@@ -113,7 +114,7 @@ function AltsSection({ alts, accentColor = '#3CDBC0', label }: { alts: PlaceReco
                 <span className="text-[10px] font-black text-white px-2 py-0.5 rounded-full shrink-0" style={{ background: accentColor }}>
                   #{idx + 2}
                 </span>
-                <p className="text-sm font-black text-gray-800 truncate">{p.placeName}</p>
+                <p className="text-sm font-black text-gray-800 truncate">{findUshulang(p) && '📮 '}{p.placeName}</p>
               </div>
               <p className="text-xs text-gray-400">{p.category}</p>
             </div>
@@ -182,11 +183,14 @@ function FitScoreBar({ score, className = '' }: { score?: number; className?: st
 
 function PlaceCard({ place, extraResults = [], gradient, shadowColor }: CardProps) {
   const [moreVisible, setMoreVisible] = useState(false);
+  const [ushuOpen, setUshuOpen] = useState(false);
   const openStatus = parseOpenStatus(place.openingHours);
   const cong = congestionInfo(place.congestionLevel);
   const url = kakaoUrl(place);
+  const ushu = findUshulang(place); // 우슐랭 인증 여부(부산·울산·경남 245곳, 3중 게이트 통과 시에만)
 
   return (
+    <>
     <div
       className={`rounded-2xl text-white overflow-hidden cursor-pointer active:scale-[0.99] transition-transform shadow-xl ${shadowColor}`}
       style={{ background: gradient }}
@@ -203,11 +207,22 @@ function PlaceCard({ place, extraResults = [], gradient, shadowColor }: CardProp
         />
       )}
       <div className="py-3 px-4">
-        {/* 카테고리 + 혼잡도 */}
-        <div className="flex items-center justify-between mb-1.5">
-          <span className="text-xs font-black bg-white/30 text-white px-3 py-0.5 rounded-full border border-white/30">
-            {place.category}
-          </span>
+        {/* 카테고리 (+ 우슐랭 인증) + 혼잡도 */}
+        <div className="flex items-center justify-between gap-2 mb-1.5">
+          <div className="flex items-center gap-1.5 min-w-0">
+            <span className="text-xs font-black bg-white/30 text-white px-3 py-0.5 rounded-full border border-white/30 truncate">
+              {place.category}
+            </span>
+            {ushu && (
+              <button
+                onClick={(e) => { e.stopPropagation(); setUshuOpen(true); }}
+                className="text-[11px] font-black bg-white text-[#DA291C] px-2.5 py-0.5 rounded-full shadow-sm shrink-0 active:scale-95 transition-transform"
+                aria-label="우슐랭 인증 맛집 안내 열기"
+              >
+                📮 우슐랭
+              </button>
+            )}
+          </div>
           {place.congestionLevel && (
             <div className="flex items-center gap-1">
               <span className={`${cong.dot} text-xs leading-none`}>●</span>
@@ -285,7 +300,7 @@ function PlaceCard({ place, extraResults = [], gradient, shadowColor }: CardProp
             >
               <div className="flex items-start justify-between mb-1">
                 <div>
-                  <p className="text-sm font-black">{p.placeName}</p>
+                  <p className="text-sm font-black">{findUshulang(p) && '📮 '}{p.placeName}</p>
                   <p className="text-xs text-white/70">{p.category}</p>
                 </div>
                 <div className="flex items-center gap-2 flex-shrink-0">
@@ -315,6 +330,38 @@ function PlaceCard({ place, extraResults = [], gradient, shadowColor }: CardProp
           ))}
         </div>
       )}
+    </div>
+    {ushu && ushuOpen && <UshulangSheet onClose={() => setUshuOpen(false)} />}
+    </>
+  );
+}
+
+// 우슐랭 인증 안내 바텀시트 — 카드 루트가 overflow-hidden이라 카드 밖 형제로 띄운다(잘림 방지).
+function UshulangSheet({ onClose }: { onClose: () => void }) {
+  return (
+    <div
+      className="fixed inset-0 z-50 bg-black/40"
+      onClick={(e) => { e.stopPropagation(); onClose(); }}
+    >
+      <div
+        className="fixed bottom-0 left-0 right-0 z-50 max-w-md mx-auto bg-white rounded-t-3xl px-6 pt-6 pb-[max(2rem,calc(env(safe-area-inset-bottom)+0.75rem))] animate-fade-in-up"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <p className="text-4xl text-center">📮</p>
+        <h3 className="text-lg font-black text-gray-900 text-center mt-2">우슐랭 인증 맛집</h3>
+        <p className="text-sm text-gray-600 leading-relaxed text-center mt-2">
+          우체국 집배원이 직접 다니며 인정한 진짜 로컬 맛집이에요! 골목 구석구석을 가장 잘 아는 사람들의 추천이라 믿어도 좋아요 🐤
+        </p>
+        <p className="text-[11px] text-gray-400 text-center mt-3">
+          부산지방우정청 공식 가이드 · 부산·울산·경남 245곳
+        </p>
+        <button
+          onClick={onClose}
+          className="w-full mt-5 py-3.5 rounded-2xl bg-[#3CDBC0] text-white font-black active:scale-[0.98] transition-transform"
+        >
+          좋아요, 믿고 가볼게요!
+        </button>
+      </div>
     </div>
   );
 }
