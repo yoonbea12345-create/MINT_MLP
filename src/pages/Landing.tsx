@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { trackEvent } from '../utils/analytics';
+import CertShowcase from '../components/CertShowcase';
 
 interface BeforeInstallPromptEvent extends Event {
   prompt(): Promise<void>;
@@ -755,6 +756,11 @@ export default function Landing() {
       </section>
 
       {/* ══════════════════════════════════════
+          CERTIFIED — 신뢰 큐레이션(인증 리스트 소개)
+      ══════════════════════════════════════ */}
+      <CertShowcase />
+
+      {/* ══════════════════════════════════════
           USE CASES — 이모지 타일 (모바일 2×2 / PC 4열)
       ══════════════════════════════════════ */}
       <section className="fade-section">
@@ -846,7 +852,7 @@ export default function Landing() {
               },
               {
                 q: '추천 장소는 믿을 수 있나요?',
-                a: '네이버에 등록된 실존 장소만 추천합니다. 여기에 실시간 혼잡도, 날씨, 블로그 버즈, 오래된 가게 가산점까지 반영해 AI가 최종 3곳을 골라줍니다.',
+                a: '네이버에 등록된 실존 장소만 추천합니다. 여기에 실시간 혼잡도, 날씨, 블로그 버즈, 오래된 가게 가산점까지 반영해 AI가 최종 3곳을 골라줍니다. 우체국·정부·미쉐린 가이드 등 공식 인증 리스트에 오른 곳은 인증 마크로 함께 알려드려요.',
               },
               {
                 q: '친구들과 어떻게 같이 정하나요?',
