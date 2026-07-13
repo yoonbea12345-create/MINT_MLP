@@ -246,7 +246,10 @@ export default function MemberInput() {
     .map((k) => VIBE_KEY_TO_LABEL[k] ?? k);
 
   if (phase === 'done') {
-    const total = expectedCount ?? members.length;
+    // 호스트는 코스·지역을 정한 첫 참여자로 항상 1명 포함(멤버 행은 아니지만 인원수엔 든다).
+    // 표시용 목록 맨 앞에 호스트 슬롯을 넣어 "N명 중 N명"이 호스트 포함 정원과 맞게 한다.
+    const displayMembers = [{ member_name: '호스트' }, ...members];
+    const total = expectedCount ?? displayMembers.length;
     return (
       <div className="min-h-[100dvh] flex flex-col items-center bg-[#F5FBF8] px-6 pt-12 pb-10">
         <div className="w-16 h-16 rounded-full bg-[#3CDBC0] flex items-center justify-center mb-5 shadow-lg shadow-[#3CDBC0]/30">
@@ -288,12 +291,12 @@ export default function MemberInput() {
         {/* 참여 현황 */}
         <div className="bg-white shadow-sm rounded-2xl px-6 py-5 w-full max-w-xs">
           <p className="text-xs text-gray-400 mb-3 text-center">
-            입력 현황 <span className="font-black text-[#2AB5A0]">{members.length}</span>
+            입력 현황 <span className="font-black text-[#2AB5A0]">{displayMembers.length}</span>
             <span className="text-gray-300"> / {total}</span>
           </p>
           <div className="flex flex-col gap-2">
             {Array.from({ length: total }).map((_, i) => {
-              const member = members[i];
+              const member = displayMembers[i];
               return (
                 <div
                   key={i}

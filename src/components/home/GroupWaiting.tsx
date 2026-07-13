@@ -40,15 +40,7 @@ export default function GroupWaiting({
         </div>
       </div>
 
-      {/* 나도 참여하기 */}
-      <button
-        onClick={() => { window.location.href = shareLink; }}
-        className="w-full py-3 rounded-2xl font-black text-sm transition-all active:scale-95 bg-[#E8F8F5] text-[#2AB5A0] border-2 border-[#3CDBC0]/40 hover:bg-[#d4f3ee]"
-      >
-        나도 참여하기 →
-      </button>
-
-      {/* 진행률 + 슬롯 */}
+      {/* 진행률 + 슬롯 (호스트는 항상 첫 슬롯으로 자동 포함 — 별도 참여 불필요) */}
       <div className="bg-white shadow-sm rounded-2xl p-4">
         <div className="flex items-center justify-between mb-3">
           <p className="text-xs text-gray-400">입력 현황</p>
@@ -81,10 +73,21 @@ export default function GroupWaiting({
         </div>
       </div>
 
-      {allVoted && (
+      {/* 추천 버튼 — 전원 완료를 기다리지 않고, 추천 가능(호스트+친구 1명 이상=2명 이상)해지면 바로 노출.
+          전원 완료면 축하 문구, 일부만 모였으면 "지금 받아도/더 기다려도 OK" 문구로 안내. */}
+      {canRecommend && (
         <div className="p-4 bg-[#E8F8F5] border border-[#3CDBC0]/40 rounded-2xl text-center">
-          <p className="text-base font-black text-[#2AB5A0]">🎉 전원 완료!</p>
-          <p className="text-xs text-[#2AB5A0]/70 mt-0.5">모두의 취향이 모였어요. 바로 추천받을 수 있어요.</p>
+          {allVoted ? (
+            <>
+              <p className="text-base font-black text-[#2AB5A0]">🎉 전원 완료!</p>
+              <p className="text-xs text-[#2AB5A0]/70 mt-0.5">모두의 취향이 모였어요. 바로 추천받을 수 있어요.</p>
+            </>
+          ) : (
+            <>
+              <p className="text-base font-black text-[#2AB5A0]">지금 바로 추천받을 수 있어요</p>
+              <p className="text-xs text-[#2AB5A0]/70 mt-0.5">더 기다렸다 다 모이면 받아도 좋고, 지금 받아도 좋아요.</p>
+            </>
+          )}
           <button
             onClick={onRecommend}
             disabled={!canRecommend || recommending}
@@ -94,7 +97,7 @@ export default function GroupWaiting({
                 : 'bg-gray-200 text-gray-400 cursor-not-allowed'
             }`}
           >
-            {recommending ? '추천 준비 중...' : `${members.length}명 취향으로 추천받기 →`}
+            {recommending ? '추천 준비 중...' : `${members.length}명으로 추천받기 →`}
           </button>
         </div>
       )}

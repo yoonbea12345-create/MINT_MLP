@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { aggregateVibe, splitMemberKeywords, EXCLUDE_FOOD_PREFIX, SECOND_VIBE_PREFIX } from './groupAggregate';
+import { aggregateVibe, aggregatePurpose, aggregateBudget, splitMemberKeywords, EXCLUDE_FOOD_PREFIX, SECOND_VIBE_PREFIX } from './groupAggregate';
 import type { GroupMember } from './groupAggregate';
 
 function member(keywords: string[]): GroupMember {
@@ -40,6 +40,30 @@ describe('splitMemberKeywords', () => {
       member(['단체룸', `${SECOND_VIBE_PREFIX}atm_quiet`]),
     ]);
     expect(keywords).toEqual(['단체룸']);
+  });
+});
+
+// 2명 모임(호스트 + 게스트 1명) — 새 추천 게이트는 게스트 멤버 1명만 있어도 진행하므로,
+// 단일 멤버로도 집계가 크래시 없이 유효한 입력을 만들어내는지 잠근다(회귀 방지).
+describe('단일 게스트 집계 (2명 모임)', () => {
+  const solo: GroupMember = {
+    member_name: '친구', location_name: '서면', location_lat: 35.15, location_lng: 129.06,
+    vibe_atmosphere: 'atm_cozy', vibe_budget: '2~4만원', vibe_keywords: ['조용한', `${EXCLUDE_FOOD_PREFIX}오이`],
+    purpose_first: '밥', purpose_second: '카페',
+  };
+
+  it('목적을 단일 멤버 값으로 집계한다', () => {
+    const p = aggregatePurpose([solo]);
+    expect(p?.first).toBe('밥');
+    expect(p?.second).toBe('카페');
+  });
+
+  it('예산·분위기·키워드가 유실 없이 집계된다', () => {
+    expect(aggregateBudget([solo])).toBe('2~4만원');
+    expect(aggregateVibe([solo])).toEqual({ 분위기: { first: 'atm_cozy', second: null } });
+    const { keywords, excludeFoods } = splitMemberKeywords([solo]);
+    expect(keywords).toEqual(['조용한']);
+    expect(excludeFoods).toEqual(['오이']);
   });
 });
 
