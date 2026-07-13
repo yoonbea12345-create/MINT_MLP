@@ -4,7 +4,14 @@ import { congestionDotClass } from '../services/seoulData';
 import type { CongestionLevel } from '../services/seoulData';
 import MiniMap from './MiniMap';
 import type { MapPin } from './MiniMap';
-import { findUshulang } from '../data/ushulang';
+import { findCertifications } from '../data/certifications';
+import type { CertSource } from '../data/certifications';
+
+// 매칭된 인증 이모지(최대 2개)를 리스트 행 앞에 붙일 접두사로 — 대안/더보기 행의 인증 표식.
+function certPrefix(place: { placeName?: string; address?: string; area?: string }): string {
+  const c = findCertifications(place).slice(0, 2);
+  return c.length ? c.map((m) => m.source.emoji).join('') + ' ' : '';
+}
 
 // 깨진 이미지는 흔적 없이 숨긴다 (네이버 썸네일 만료 대응)
 function hideOnError(e: React.SyntheticEvent<HTMLImageElement>) {
@@ -114,7 +121,7 @@ function AltsSection({ alts, accentColor = '#3CDBC0', label }: { alts: PlaceReco
                 <span className="text-[10px] font-black text-white px-2 py-0.5 rounded-full shrink-0" style={{ background: accentColor }}>
                   #{idx + 2}
                 </span>
-                <p className="text-sm font-black text-gray-800 truncate">{findUshulang(p) && '📮 '}{p.placeName}</p>
+                <p className="text-sm font-black text-gray-800 truncate">{certPrefix(p)}{p.placeName}</p>
               </div>
               <p className="text-xs text-gray-400">{p.category}</p>
             </div>
@@ -183,11 +190,13 @@ function FitScoreBar({ score, className = '' }: { score?: number; className?: st
 
 function PlaceCard({ place, extraResults = [], gradient, shadowColor }: CardProps) {
   const [moreVisible, setMoreVisible] = useState(false);
-  const [ushuOpen, setUshuOpen] = useState(false);
+  const [openCertId, setOpenCertId] = useState<string | null>(null);
   const openStatus = parseOpenStatus(place.openingHours);
   const cong = congestionInfo(place.congestionLevel);
   const url = kakaoUrl(place);
-  const ushu = findUshulang(place); // 우슐랭 인증 여부(부산·울산·경남 245곳, 3중 게이트 통과 시에만)
+  // 통과한 인증들(우슐랭·미쉐린·백년가게 …). 이름·시·도·구군 3중 게이트를 모두 넘긴 것만. 최대 2개 노출.
+  const certs = findCertifications(place).slice(0, 2);
+  const openCert = certs.find((c) => c.source.id === openCertId)?.source ?? null;
 
   return (
     <>
@@ -213,15 +222,17 @@ function PlaceCard({ place, extraResults = [], gradient, shadowColor }: CardProp
             <span className="text-xs font-black bg-white/30 text-white px-3 py-0.5 rounded-full border border-white/30 truncate">
               {place.category}
             </span>
-            {ushu && (
+            {certs.map((c) => (
               <button
-                onClick={(e) => { e.stopPropagation(); setUshuOpen(true); }}
-                className="text-[11px] font-black bg-white text-[#DA291C] px-2.5 py-0.5 rounded-full shadow-sm shrink-0 active:scale-95 transition-transform"
-                aria-label="우슐랭 인증 맛집 안내 열기"
+                key={c.source.id}
+                onClick={(e) => { e.stopPropagation(); setOpenCertId(c.source.id); }}
+                className="text-[11px] font-black bg-white px-2.5 py-0.5 rounded-full shadow-sm shrink-0 active:scale-95 transition-transform"
+                style={{ color: c.source.badgeTextColor }}
+                aria-label={`${c.source.label} 인증 안내 열기`}
               >
-                📮 우슐랭
+                {c.source.emoji} {c.source.label}
               </button>
-            )}
+            ))}
           </div>
           {place.congestionLevel && (
             <div className="flex items-center gap-1">
@@ -300,7 +311,7 @@ function PlaceCard({ place, extraResults = [], gradient, shadowColor }: CardProp
             >
               <div className="flex items-start justify-between mb-1">
                 <div>
-                  <p className="text-sm font-black">{findUshulang(p) && '📮 '}{p.placeName}</p>
+                  <p className="text-sm font-black">{certPrefix(p)}{p.placeName}</p>
                   <p className="text-xs text-white/70">{p.category}</p>
                 </div>
                 <div className="flex items-center gap-2 flex-shrink-0">
@@ -331,13 +342,13 @@ function PlaceCard({ place, extraResults = [], gradient, shadowColor }: CardProp
         </div>
       )}
     </div>
-    {ushu && ushuOpen && <UshulangSheet onClose={() => setUshuOpen(false)} />}
+    {openCert && <CertSheet source={openCert} onClose={() => setOpenCertId(null)} />}
     </>
   );
 }
 
-// 우슐랭 인증 안내 바텀시트 — 카드 루트가 overflow-hidden이라 카드 밖 형제로 띄운다(잘림 방지).
-function UshulangSheet({ onClose }: { onClose: () => void }) {
+// 인증 안내 바텀시트 — 소스별 문구를 그대로 렌더. 카드 루트가 overflow-hidden이라 카드 밖 형제로 띄운다(잘림 방지).
+function CertSheet({ source, onClose }: { source: CertSource; onClose: () => void }) {
   return (
     <div
       className="fixed inset-0 z-50 bg-black/40"
@@ -347,19 +358,24 @@ function UshulangSheet({ onClose }: { onClose: () => void }) {
         className="fixed bottom-0 left-0 right-0 z-50 max-w-md mx-auto bg-white rounded-t-3xl px-6 pt-6 pb-[max(2rem,calc(env(safe-area-inset-bottom)+0.75rem))] animate-fade-in-up"
         onClick={(e) => e.stopPropagation()}
       >
-        <p className="text-4xl text-center">📮</p>
-        <h3 className="text-lg font-black text-gray-900 text-center mt-2">우슐랭 인증 맛집</h3>
+        <p className="text-4xl text-center">{source.emoji}</p>
+        <h3 className="text-lg font-black text-gray-900 text-center mt-2">{source.sheetTitle}</h3>
         <p className="text-sm text-gray-600 leading-relaxed text-center mt-2">
-          우체국 집배원이 직접 다니며 인정한 진짜 로컬 맛집이에요! 골목 구석구석을 가장 잘 아는 사람들의 추천이라 믿어도 좋아요 🐤
+          {source.sheetBody}
         </p>
         <p className="text-[11px] text-gray-400 text-center mt-3">
-          부산지방우정청 공식 가이드 · 부산·울산·경남 245곳
+          {source.sourceLine}
         </p>
+        {source.disclaimer && (
+          <p className="text-[10px] text-gray-300 text-center mt-1.5 leading-relaxed">
+            {source.disclaimer}
+          </p>
+        )}
         <button
           onClick={onClose}
           className="w-full mt-5 py-3.5 rounded-2xl bg-[#3CDBC0] text-white font-black active:scale-[0.98] transition-transform"
         >
-          좋아요, 믿고 가볼게요!
+          {source.ctaLabel}
         </button>
       </div>
     </div>
