@@ -4,8 +4,8 @@ export default defineConfig({
   appName: 'mint',
   brand: {
     displayName: '민트',
-    primaryColor: '#3CDBC0',
-    icon: '',
+    primaryColor: '#F2FCF8',
+    icon: 'https://mint-mlp-4vm9.vercel.app/mint-splash-icon-512.png',
   },
   web: {
     host: 'localhost',

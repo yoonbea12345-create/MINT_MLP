@@ -17,19 +17,18 @@ type MintWindow = Window & {
 function useInstallPrompt() {
   const [prompt, setPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [isIOS, setIsIOS] = useState(false);
-  const [isAndroid, setIsAndroid] = useState(false);
   const [isInstalled, setIsInstalled] = useState(false);
   const [guide, setGuide] = useState<InstallGuide>(null);
 
   useEffect(() => {
     const w = window as MintWindow;
-    if (w.matchMedia('(display-mode: standalone)').matches) {
+    const launchedFromKakao = new URLSearchParams(window.location.search).get('from') === 'kakao';
+    if (w.matchMedia('(display-mode: standalone)').matches && !launchedFromKakao) {
       setIsInstalled(true);
       return;
     }
     const ua = navigator.userAgent;
     setIsIOS(/iPad|iPhone|iPod/.test(ua) && !w.MSStream);
-    setIsAndroid(/Android/.test(ua));
 
     // index.html이 리액트 마운트 전에 이미 잡아둔 프롬프트가 있으면 즉시 사용
     if (w.__mintInstallPrompt) setPrompt(w.__mintInstallPrompt);
@@ -62,8 +61,8 @@ function useInstallPrompt() {
     else setGuide('android');
   }
 
-  // 설치 안 된 모바일이면 항상 버튼 노출 — 프롬프트를 못 잡아도 수동 안내로 폴백
-  const canInstall = !isInstalled && (!!prompt || isIOS || isAndroid);
+  // 설치되지 않았다면 브라우저 종류와 관계없이 버튼 노출 — 카카오 인앱도 외부 브라우저 안내로 폴백
+  const canInstall = !isInstalled;
   return { canInstall, triggerInstall, isIOS, guide, setGuide };
 }
 
@@ -170,7 +169,7 @@ export default function Landing() {
         <polyline points="7 10 12 15 17 10"/>
         <line x1="12" y1="15" x2="12" y2="3"/>
       </svg>
-      {isIOS ? '홈 화면에 추가하기' : '앱으로 설치하기'}
+      {isIOS ? '홈 화면에 추가하기' : '앱으로 다운받기'}
     </button>
   );
 

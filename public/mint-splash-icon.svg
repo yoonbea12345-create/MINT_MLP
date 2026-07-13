@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <defs>
+    <radialGradient id="backdrop" cx="50%" cy="44%" r="60%">
+      <stop offset="0" stop-color="#FFFFFF"/>
+      <stop offset="0.62" stop-color="#F2FCF8"/>
+      <stop offset="1" stop-color="#DFF8F0"/>
+    </radialGradient>
+    <radialGradient id="halo" cx="50%" cy="50%" r="50%">
+      <stop offset="0" stop-color="#65E1C9" stop-opacity="0.42"/>
+      <stop offset="1" stop-color="#65E1C9" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="shadow" x="-30%" y="-30%" width="160%" height="170%">
+      <feDropShadow dx="0" dy="26" stdDeviation="24" flood-color="#258D7A" flood-opacity="0.18"/>
+    </filter>
+  </defs>
+  <circle cx="512" cy="512" r="456" fill="url(#backdrop)"/>
+  <circle cx="512" cy="512" r="352" fill="none" stroke="#2AB5A0" stroke-opacity="0.20" stroke-width="4"/>
+  <circle cx="512" cy="512" r="278" fill="none" stroke="#2AB5A0" stroke-opacity="0.16" stroke-width="4" stroke-dasharray="13 17"/>
+  <circle cx="512" cy="512" r="248" fill="url(#halo)"/>
+  <circle cx="744" cy="330" r="18" fill="#38CBB2" stroke="#FFFFFF" stroke-width="9"/>
+  <circle cx="284" cy="700" r="13" fill="#65DCC6" stroke="#FFFFFF" stroke-width="7"/>
+  <image href="image/mascot-bird-splash.png" x="302" y="302" width="420" height="420" preserveAspectRatio="xMidYMid meet" filter="url(#shadow)"/>
+</svg>
