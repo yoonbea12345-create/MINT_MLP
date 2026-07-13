@@ -1,7 +1,9 @@
-import { Component, lazy, Suspense, type ReactNode } from 'react';
+import { Component, lazy, Suspense, useEffect, useState, type ReactNode } from 'react';
+import AppSplash from './components/AppSplash';
 
 // 페이지별 코드 스플리팅 — 랜딩만 보는 방문자가 Home/Admin 번들까지 받지 않도록
-const Home = lazy(() => import('./pages/Home'));
+const loadHome = () => import('./pages/Home');
+const Home = lazy(loadHome);
 const Landing = lazy(() => import('./pages/Landing'));
 const SharedResult = lazy(() => import('./pages/SharedResult'));
 const Admin = lazy(() => import('./pages/Admin'));
@@ -37,6 +39,43 @@ function PageLoading() {
   );
 }
 
+const APP_SPLASH_SESSION_KEY = 'mint_app_splash_seen_v1';
+
+function AppHome() {
+  const isGroupReturn = new URLSearchParams(window.location.search).has('grp');
+  const [showSplash, setShowSplash] = useState(() => {
+    if (isGroupReturn) return false;
+    try {
+      return sessionStorage.getItem(APP_SPLASH_SESSION_KEY) !== '1';
+    } catch {
+      return true;
+    }
+  });
+  const [exiting, setExiting] = useState(false);
+
+  useEffect(() => {
+    if (!showSplash) return;
+
+    // 오프닝이 재생되는 동안 실제 앱 번들을 미리 받아 전환을 매끄럽게 한다.
+    void loadHome();
+    try {
+      sessionStorage.setItem(APP_SPLASH_SESSION_KEY, '1');
+    } catch { /* 저장소 접근이 막힌 웹뷰에서는 현재 진입에만 표시 */ }
+
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const exitTimer = window.setTimeout(() => setExiting(true), reducedMotion ? 350 : 1800);
+    const finishTimer = window.setTimeout(() => setShowSplash(false), reducedMotion ? 550 : 2250);
+
+    return () => {
+      window.clearTimeout(exitTimer);
+      window.clearTimeout(finishTimer);
+    };
+  }, [showSplash]);
+
+  if (showSplash) return <AppSplash exiting={exiting} />;
+  return <Home />;
+}
+
 function Router() {
   const path = window.location.pathname;
   if (path === '/admin') return <Admin />;
@@ -44,7 +83,7 @@ function Router() {
   if (path === '/pilot') return <Pilot />;
   if (path === '/join') return <MemberInput />;
   if (path === '/shared' || window.location.search.includes('data=')) return <SharedResult />;
-  if (path === '/app') return <Home />;
+  if (path === '/app') return <AppHome />;
   return <Landing />;
 }
 
