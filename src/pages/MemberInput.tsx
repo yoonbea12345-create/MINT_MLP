@@ -262,17 +262,28 @@ export default function MemberInput() {
         <h1 className="text-xl font-black text-gray-800 mb-1">제출 완료!</h1>
         <p className="text-sm text-gray-500 mb-6 text-center">
           {isHostDevice
-            ? '이제 호스트 화면으로 돌아가, 친구들이 모이면 추천을 받아보세요.'
+            ? members.length >= 2
+              ? `현재 ${members.length}명 입력 완료! 바로 장소를 추천받아보세요.`
+              : `현재 ${members.length}명 입력 완료 · 2명부터 추천받을 수 있어요.`
             : '호스트가 모두 모이면 장소를 추천받을 거예요.'}
         </p>
 
-        {/* 호스트 전용 — 입력 후 호스트 대기/추천 화면으로 복귀 */}
+        {/* 호스트 전용 — 완료 화면에서 바로 그룹 집계·추천 시작 */}
         {isHostDevice && (
           <button
-            onClick={() => { window.location.href = '/app'; }}
-            className="w-full max-w-xs mb-5 py-3.5 rounded-2xl bg-[#3CDBC0] text-white font-black text-sm shadow-lg shadow-[#3CDBC0]/30 active:scale-95 transition-transform"
+            onClick={() => {
+              if (sessionId && members.length >= 2) {
+                window.location.href = `/app?grp=${encodeURIComponent(sessionId)}`;
+              }
+            }}
+            disabled={members.length < 2}
+            className={`w-full max-w-xs mb-5 py-3.5 rounded-2xl font-black text-sm transition-all ${
+              members.length >= 2
+                ? 'bg-[#3CDBC0] text-white shadow-lg shadow-[#3CDBC0]/30 active:scale-95'
+                : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+            }`}
           >
-            호스트 화면으로 돌아가기 →
+            {members.length}명으로 추천받기 →
           </button>
         )}
 
