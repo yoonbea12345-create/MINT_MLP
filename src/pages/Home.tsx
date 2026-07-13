@@ -186,9 +186,11 @@ export default function Home() {
   const [changeNote, setChangeNote] = useState<string | null>(null);
   const [compromiseMessage, setCompromiseMessage] = useState<string | null>(null);
   const [showCompromiseToast, setShowCompromiseToast] = useState(false);
+  const [showVibeScrollHint, setShowVibeScrollHint] = useState(false);
 
   const travelReqRef = useRef(0);
   const enrichReqRef = useRef(0);
+  const stepScrollRef = useRef<HTMLDivElement>(null);
   const isGroup = appMode === 'group';
 
   // 그룹 참여 링크 — 호스트가 정한 코스·지역을 쿼리에 실어 게스트에게 전달
@@ -362,6 +364,31 @@ export default function Home() {
       }
     }
   }, [view]);
+
+  // 혼자 정하기 분위기 단계에서 아래 키워드 영역이 화면 밖에 있을 때만 스크롤 힌트를 보여준다.
+  useEffect(() => {
+    if (view !== 'steps' || step !== 3 || isGroup) {
+      setShowVibeScrollHint(false);
+      return;
+    }
+
+    const scrollArea = stepScrollRef.current;
+    if (!scrollArea) return;
+    const updateHint = () => {
+      const remaining = scrollArea.scrollHeight - scrollArea.scrollTop - scrollArea.clientHeight;
+      setShowVibeScrollHint(remaining > 28);
+    };
+
+    const frame = requestAnimationFrame(updateHint);
+    const observer = new ResizeObserver(updateHint);
+    observer.observe(scrollArea);
+    scrollArea.addEventListener('scroll', updateHint, { passive: true });
+    return () => {
+      cancelAnimationFrame(frame);
+      observer.disconnect();
+      scrollArea.removeEventListener('scroll', updateHint);
+    };
+  }, [view, step, isGroup]);
 
   // 그룹 대기 화면 폴링 — 입력 플로우(steps)에서만. 결과 화면에선 중단(불필요한 3초 폴링 낭비 방지)
   useEffect(() => {
@@ -1114,8 +1141,9 @@ export default function Home() {
         </div>
 
         {/* 콘텐츠 — 짧은 스텝은 세로 중앙정렬(빈 공간 제거), 길면 정상 스크롤 */}
-        <div key={step} className="flex-1 min-h-0 overflow-y-auto animate-fade-in-up">
-          <div className="min-h-full flex flex-col justify-center">
+        <div className="relative flex-1 min-h-0">
+          <div ref={stepScrollRef} key={step} className="h-full overflow-y-auto animate-fade-in-up">
+            <div className="min-h-full flex flex-col justify-center">
 
           {/* Step 0: 모임 유형 선택 */}
           {step === 0 && (
@@ -1449,7 +1477,21 @@ export default function Home() {
               })()}
             </div>
           )}
+            </div>
           </div>
+
+          {showVibeScrollHint && (
+            <div className="pointer-events-none absolute inset-x-0 bottom-0 z-20 flex justify-center bg-gradient-to-t from-[#F5FBF8] via-[#F5FBF8]/95 to-transparent px-4 pb-2 pt-9">
+              <button
+                type="button"
+                onClick={() => stepScrollRef.current?.scrollBy({ top: 240, behavior: 'smooth' })}
+                className="pointer-events-auto flex items-center gap-2 rounded-full border border-[#3CDBC0]/35 bg-white/95 px-4 py-2 text-xs font-bold text-[#2AB5A0] shadow-lg shadow-[#2AB5A0]/15 backdrop-blur"
+              >
+                키워드·못 먹는 음식도 더 있어요
+                <span className="animate-bounce text-sm leading-none" aria-hidden>↓</span>
+              </button>
+            </div>
+          )}
         </div>
 
         {/* 에러 */}
