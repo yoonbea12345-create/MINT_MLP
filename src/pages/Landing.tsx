@@ -8,7 +8,7 @@ interface BeforeInstallPromptEvent extends Event {
   userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
 }
 
-type InstallGuide = 'ios' | 'android' | null;
+type InstallGuide = 'ios' | null;
 
 type MintWindow = Window & {
   __mintInstallPrompt?: BeforeInstallPromptEvent | null;
@@ -23,8 +23,10 @@ function useInstallPrompt() {
 
   useEffect(() => {
     const w = window as MintWindow;
-    const launchedFromKakao = new URLSearchParams(window.location.search).get('from') === 'kakao';
-    if (w.matchMedia('(display-mode: standalone)').matches && !launchedFromKakao) {
+    if (
+      w.matchMedia('(display-mode: fullscreen)').matches ||
+      w.matchMedia('(display-mode: standalone)').matches
+    ) {
       setIsInstalled(true);
       return;
     }
@@ -50,20 +52,22 @@ function useInstallPrompt() {
 
   async function triggerInstall() {
     trackEvent('pwa_install_click');
-    // 네이티브 프롬프트가 잡혀 있으면 최우선 — 원탭 설치
-    if (prompt) {
-      await prompt.prompt();
-      const { outcome } = await prompt.userChoice;
-      if (outcome === 'accepted') setPrompt(null);
+    const w = window as MintWindow;
+    const nativePrompt = prompt ?? w.__mintInstallPrompt;
+    // Android/Chrome은 브라우저 네이티브 설치창만 사용한다.
+    if (nativePrompt) {
+      await nativePrompt.prompt();
+      await nativePrompt.userChoice;
+      w.__mintInstallPrompt = null;
+      setPrompt(null);
       return;
     }
-    // 프롬프트를 못 잡은 경우(크롬 휴리스틱 미충족·인앱 브라우저 등)엔 수동 안내
+    // iOS는 네이티브 설치 API가 없어 Safari 안내만 예외적으로 제공한다.
     if (isIOS) setGuide('ios');
-    else setGuide('android');
   }
 
-  // 설치되지 않았다면 브라우저 종류와 관계없이 버튼 노출 — 카카오 인앱도 외부 브라우저 안내로 폴백
-  const canInstall = !isInstalled;
+  // Android는 실제 네이티브 설치 이벤트가 준비된 경우에만 버튼을 노출한다.
+  const canInstall = !isInstalled && (isIOS || !!prompt);
   return { canInstall, triggerInstall, isIOS, guide, setGuide };
 }
 
@@ -1004,7 +1008,7 @@ export default function Landing() {
         </div>
       )}
 
-      {/* 홈 화면 추가 가이드 모달 — 네이티브 프롬프트를 못 쓸 때 플랫폼별 수동 안내 */}
+      {/* iOS는 beforeinstallprompt가 없어 Safari 홈 화면 추가 안내가 필요하다. */}
       {guide && (
         <div
           className="fixed inset-0 z-50 bg-black/50 flex items-end justify-center"
@@ -1017,23 +1021,14 @@ export default function Landing() {
             <div className="w-10 h-1 bg-gray-200 rounded-full mx-auto mb-5" />
             <h3 className="text-lg font-bold text-gray-800 mb-2">홈 화면에 추가하기</h3>
             <p className="text-sm text-gray-500 mb-5">
-              {guide === 'ios'
-                ? 'Safari에서 아래 순서를 따라하면 앱처럼 사용할 수 있어요.'
-                : '아래 순서를 따라하면 앱처럼 사용할 수 있어요.'}
+              Safari에서 아래 순서를 따라하면 앱처럼 사용할 수 있어요.
             </p>
             <div className="flex flex-col gap-3 mb-6">
-              {(guide === 'ios'
-                ? [
-                    { n: 1, t: 'Safari 하단 공유 버튼 탭', d: '화면 하단 가운데 □↑ 아이콘' },
-                    { n: 2, t: '홈 화면에 추가 선택', d: '스크롤해서 "홈 화면에 추가" 탭' },
-                    { n: 3, t: '추가 탭', d: "오른쪽 상단 '추가'를 탭하면 완료!" },
-                  ]
-                : [
-                    { n: 1, t: '우측 상단 ⋮ 메뉴 탭', d: '주소창 오른쪽의 점 3개 아이콘' },
-                    { n: 2, t: '"앱 설치" 또는 "홈 화면에 추가" 선택', d: '메뉴에서 해당 항목을 탭' },
-                    { n: 3, t: '"설치" 탭', d: '팝업에서 설치를 누르면 완료!' },
-                  ]
-              ).map(({ n, t, d }) => (
+              {[
+                { n: 1, t: 'Safari 하단 공유 버튼 탭', d: '화면 하단 가운데 □↑ 아이콘' },
+                { n: 2, t: '홈 화면에 추가 선택', d: '스크롤해서 "홈 화면에 추가" 탭' },
+                { n: 3, t: '추가 탭', d: "오른쪽 상단 '추가'를 탭하면 완료!" },
+              ].map(({ n, t, d }) => (
                 <div key={n} className="flex items-start gap-3">
                   <div className="w-7 h-7 rounded-full bg-[#3CDBC0] text-white text-xs font-black flex items-center justify-center flex-shrink-0">{n}</div>
                   <div>
@@ -1043,12 +1038,6 @@ export default function Landing() {
                 </div>
               ))}
             </div>
-            {guide === 'android' && (
-              <p className="text-[11px] text-gray-400 mb-4 leading-relaxed">
-                💡 카카오톡·인스타그램 등 인앱 브라우저에서는 설치가 안 돼요.
-                메뉴에서 <b>"다른 브라우저로 열기"</b>(Chrome)로 연 뒤 다시 시도해주세요.
-              </p>
-            )}
             <button
               onClick={() => setGuide(null)}
               className="w-full py-3.5 rounded-xl bg-[#3CDBC0] text-white font-bold text-sm active:scale-95 transition-all"
