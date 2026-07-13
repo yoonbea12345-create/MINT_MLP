@@ -11,6 +11,16 @@ export async function requestAppFullscreen(): Promise<boolean> {
   }
 }
 
+export async function exitAppFullscreen(): Promise<void> {
+  if (!document.fullscreenElement || !document.exitFullscreen) return;
+
+  try {
+    await document.exitFullscreen();
+  } catch {
+    // 브라우저가 해제를 거부해도 설치 안내는 계속 보여준다.
+  }
+}
+
 export function navigateInApp(path: string): void {
   window.history.pushState(null, '', path);
   window.dispatchEvent(new PopStateEvent('popstate'));

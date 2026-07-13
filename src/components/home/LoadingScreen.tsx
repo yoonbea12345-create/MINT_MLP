@@ -19,32 +19,11 @@ export default function LoadingScreen({ progress, message }: Props) {
       <div aria-hidden className="mint-splash__grain" />
 
       <div className="relative z-10 mx-auto flex min-h-[100dvh] w-full max-w-md flex-col px-6 pb-[max(1.75rem,env(safe-area-inset-bottom))] pt-[max(1.75rem,env(safe-area-inset-top))]">
-        <header className="mint-splash__enter flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <span className="mint-splash__brand-mark" aria-hidden>M</span>
-            <div>
-              <p className="text-[19px] font-black leading-none tracking-[-0.04em] text-[#24BCA4]">MINT</p>
-              <p className="mt-1 text-[8px] font-bold tracking-[0.22em] text-[#78AFA5]">MEET IN ONE TAP</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2 rounded-full border border-white/80 bg-white/65 px-3 py-1.5 shadow-sm shadow-[#2AB5A0]/5 backdrop-blur-md">
-            <span className="mint-splash__live-dot" aria-hidden />
-            <span className="text-[9px] font-extrabold tracking-[0.13em] text-[#4D8E82]">CURATING</span>
-          </div>
+        <header className="mint-splash__enter text-center">
+          <p className="pl-[0.3em] text-2xl font-black tracking-[0.3em] text-[#3CDBC0]">MINT</p>
         </header>
 
         <section className="flex flex-1 flex-col items-center justify-center py-5 text-center">
-          <div className="mint-splash__enter mint-splash__enter--delay-1">
-            <p className="text-[11px] font-extrabold tracking-[0.14em] text-[#2AB5A0]">고민은 여기까지</p>
-            <h1 className="mt-2.5 break-keep text-[30px] font-black leading-[1.18] tracking-[-0.055em] text-[#173D36]">
-              오늘 갈 곳은<br />
-              <span className="mint-splash__headline-accent">민트가 고르고 있어요</span>
-            </h1>
-            <p className="mx-auto mt-3 max-w-[285px] break-keep text-[13px] font-medium leading-relaxed text-[#6B8F88]">
-              모두의 조건을 한데 모아<br />딱 좋은 선택만 남기는 중이에요.
-            </p>
-          </div>
-
           <div className="mint-splash__scene mint-splash__enter mint-splash__enter--delay-2" aria-hidden>
             <div className="mint-splash__orbit mint-splash__orbit--one" />
             <div className="mint-splash__orbit mint-splash__orbit--two" />

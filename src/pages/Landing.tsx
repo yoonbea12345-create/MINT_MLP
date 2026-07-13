@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { trackEvent } from '../utils/analytics';
-import { navigateInApp, requestAppFullscreen } from '../utils/fullscreen';
+import { exitAppFullscreen, navigateInApp, requestAppFullscreen } from '../utils/fullscreen';
 import CertShowcase from '../components/CertShowcase';
 
 interface BeforeInstallPromptEvent extends Event {
@@ -8,7 +8,9 @@ interface BeforeInstallPromptEvent extends Event {
   userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
 }
 
-type InstallGuide = 'ios' | null;
+type InstallGuide = 'ios-safari' | 'ios-kakao' | null;
+
+const IOS_INSTALL_GUIDE_SEEN_KEY = 'mint_ios_install_guide_seen_v1';
 
 type MintWindow = Window & {
   __mintInstallPrompt?: BeforeInstallPromptEvent | null;
@@ -18,6 +20,7 @@ type MintWindow = Window & {
 function useInstallPrompt() {
   const [prompt, setPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [isIOS, setIsIOS] = useState(false);
+  const [isKakao, setIsKakao] = useState(false);
   const [isInstalled, setIsInstalled] = useState(false);
   const [guide, setGuide] = useState<InstallGuide>(null);
 
@@ -32,6 +35,7 @@ function useInstallPrompt() {
     }
     const ua = navigator.userAgent;
     setIsIOS(/iPad|iPhone|iPod/.test(ua) && !w.MSStream);
+    setIsKakao(/KAKAOTALK/i.test(ua));
 
     // index.html이 리액트 마운트 전에 이미 잡아둔 프롬프트가 있으면 즉시 사용
     if (w.__mintInstallPrompt) setPrompt(w.__mintInstallPrompt);
@@ -62,8 +66,16 @@ function useInstallPrompt() {
       setPrompt(null);
       return;
     }
-    // iOS는 네이티브 설치 API가 없어 Safari 안내만 예외적으로 제공한다.
-    if (isIOS) setGuide('ios');
+    // iOS는 자동 설치 API가 없다. 브라우저 메뉴가 보이도록 전체화면을 먼저 해제하고,
+    // 기기당 한 번만 Safari의 홈 화면 추가 순서를 안내한다.
+    if (isIOS) {
+      await exitAppFullscreen();
+      try {
+        if (localStorage.getItem(IOS_INSTALL_GUIDE_SEEN_KEY)) return;
+        localStorage.setItem(IOS_INSTALL_GUIDE_SEEN_KEY, '1');
+      } catch { /* 저장이 막힌 환경에서는 현재 방문 중 한 번 더 보일 수 있다. */ }
+      setGuide(isKakao ? 'ios-kakao' : 'ios-safari');
+    }
   }
 
   // Android는 실제 네이티브 설치 이벤트가 준비된 경우에만 버튼을 노출한다.
@@ -1008,32 +1020,48 @@ export default function Landing() {
         </div>
       )}
 
-      {/* iOS는 beforeinstallprompt가 없어 Safari 홈 화면 추가 안내가 필요하다. */}
+      {/* iOS는 자동 설치 API가 없어 Safari 홈 화면 추가 안내가 필요하다. */}
       {guide && (
         <div
-          className="fixed inset-0 z-50 bg-black/50 flex items-end justify-center"
+          className="fixed inset-0 z-50 flex items-end justify-center bg-black/50"
           onClick={() => setGuide(null)}
+          role="presentation"
         >
           <div
-            className="bg-white rounded-t-3xl w-full max-w-lg px-6 pt-6 pb-10"
+            className="w-full max-w-lg rounded-t-3xl bg-white px-6 pb-[max(2.5rem,env(safe-area-inset-bottom))] pt-6"
             onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="ios-install-title"
           >
             <div className="w-10 h-1 bg-gray-200 rounded-full mx-auto mb-5" />
-            <h3 className="text-lg font-bold text-gray-800 mb-2">홈 화면에 추가하기</h3>
-            <p className="text-sm text-gray-500 mb-5">
-              Safari에서 아래 순서를 따라하면 앱처럼 사용할 수 있어요.
+            <div className="mb-3 inline-flex rounded-full bg-[#E8F8F5] px-3 py-1 text-xs font-bold text-[#2AB5A0]">
+              전체화면을 해제했어요
+            </div>
+            <h3 id="ios-install-title" className="mb-2 break-keep text-xl font-black tracking-tight text-gray-800">
+              아이폰에서도 MINT를 앱처럼
+            </h3>
+            <p className="mb-5 break-keep text-sm leading-relaxed text-gray-500">
+              한 번만 추가해두면 다음부터 홈 화면에서 바로 시작할 수 있어요.
             </p>
             <div className="flex flex-col gap-3 mb-6">
-              {[
-                { n: 1, t: 'Safari 하단 공유 버튼 탭', d: '화면 하단 가운데 □↑ 아이콘' },
-                { n: 2, t: '홈 화면에 추가 선택', d: '스크롤해서 "홈 화면에 추가" 탭' },
-                { n: 3, t: '추가 탭', d: "오른쪽 상단 '추가'를 탭하면 완료!" },
-              ].map(({ n, t, d }) => (
+              {(guide === 'ios-kakao'
+                ? [
+                    { n: 1, t: 'Safari로 열기', d: '카카오톡 메뉴에서 Safari로 열어주세요.' },
+                    { n: 2, t: '공유 버튼 누르기', d: 'Safari 아래쪽의 □↑ 아이콘이에요.' },
+                    { n: 3, t: '홈 화면에 추가', d: '목록에서 선택한 뒤 오른쪽 위 추가를 눌러주세요.' },
+                  ]
+                : [
+                    { n: 1, t: '공유 버튼 누르기', d: 'Safari 아래쪽의 □↑ 아이콘이에요.' },
+                    { n: 2, t: '홈 화면에 추가', d: '공유 목록을 조금 내려서 선택해주세요.' },
+                    { n: 3, t: '추가 누르기', d: '오른쪽 위 추가를 누르면 끝이에요.' },
+                  ]
+              ).map(({ n, t, d }) => (
                 <div key={n} className="flex items-start gap-3">
                   <div className="w-7 h-7 rounded-full bg-[#3CDBC0] text-white text-xs font-black flex items-center justify-center flex-shrink-0">{n}</div>
-                  <div>
-                    <p className="text-sm font-bold text-gray-800">{t}</p>
-                    <p className="text-xs text-gray-400">{d}</p>
+                  <div className="min-w-0 break-keep">
+                    <p className="text-sm font-bold leading-snug text-gray-800">{t}</p>
+                    <p className="mt-0.5 text-xs leading-relaxed text-gray-400">{d}</p>
                   </div>
                 </div>
               ))}
@@ -1042,7 +1070,7 @@ export default function Landing() {
               onClick={() => setGuide(null)}
               className="w-full py-3.5 rounded-xl bg-[#3CDBC0] text-white font-bold text-sm active:scale-95 transition-all"
             >
-              확인
+              알겠어요
             </button>
           </div>
         </div>
