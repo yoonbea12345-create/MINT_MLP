@@ -16,6 +16,11 @@
   box-sizing: border-box;
 }
 
+html, body {
+  /* 카톡 인앱의 당겨서 새로고침으로 입력 상태가 초기화되는 사고 차단 (내부 스크롤엔 영향 없음) */
+  overscroll-behavior-y: none;
+}
+
 body {
   font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, sans-serif;
   background-color: var(--color-bg);
@@ -25,7 +30,10 @@ body {
 }
 
 #root {
+  /* dvh = 인앱 툴바를 제외한 실제 가시 높이. 100vh(툴바 포함 최대)로 늘어나 생기던
+     유령 스크롤 영역 제거. 첫 줄은 dvh 미지원 구형 웹뷰용 폴백(순서 유지). */
   min-height: 100vh;
+  min-height: 100dvh;
 }
 
 @keyframes fadeInUp {

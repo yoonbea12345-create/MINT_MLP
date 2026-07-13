@@ -1059,8 +1059,8 @@ export default function Home() {
     <div className="h-[100dvh] bg-[#F5FBF8] overflow-hidden">
       <div className="h-full max-w-md mx-auto flex flex-col">
 
-        {/* 헤더 */}
-        <div className="flex-shrink-0 text-center pt-4 px-4 relative">
+        {/* 헤더 — 노치/상단 안전영역 반영(인앱·일반 세로모드에선 16px 그대로) */}
+        <div className="flex-shrink-0 text-center pt-[max(1rem,env(safe-area-inset-top))] px-4 relative">
           <button
             onClick={() => { window.location.href = '/'; }}
             className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-[#2AB5A0] transition-colors p-1 text-lg"
@@ -1454,8 +1454,9 @@ export default function Home() {
           </div>
         )}
 
-        {/* 하단 버튼 */}
-        <div className="flex-shrink-0 px-4 pt-2 pb-8 flex flex-col gap-2">
+        {/* 하단 버튼 — 홈 인디케이터/네이티브 툴바와 겹치지 않게 안전영역 반영
+            (카톡 인앱 env=0 → 32px 그대로, 일반 브라우저에서만 더 벌어짐) */}
+        <div className="flex-shrink-0 px-4 pt-2 pb-[max(2rem,calc(env(safe-area-inset-bottom)+0.75rem))] flex flex-col gap-2">
           {step < 3 ? (
             <>
               <div className="flex gap-3">

@@ -446,7 +446,7 @@ export default function MemberInput() {
       )}
 
       {/* 하단 버튼 */}
-      <div className="flex-shrink-0 px-5 pt-2 pb-8 flex flex-col gap-2">
+      <div className="flex-shrink-0 px-5 pt-2 pb-[max(2rem,calc(env(safe-area-inset-bottom)+0.75rem))] flex flex-col gap-2">
         <div className="flex gap-3">
           <button
             onClick={() => {

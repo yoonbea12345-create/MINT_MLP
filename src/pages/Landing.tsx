@@ -949,7 +949,7 @@ export default function Landing() {
           onClick={() => setShowPrivacy(false)}
         >
           <div
-            className="bg-white rounded-t-3xl sm:rounded-3xl w-full max-w-lg max-h-[80vh] overflow-y-auto px-6 pt-6 pb-8"
+            className="bg-white rounded-t-3xl sm:rounded-3xl w-full max-w-lg max-h-[80vh] overflow-y-auto px-6 pt-6 pb-[max(2rem,calc(env(safe-area-inset-bottom)+0.75rem))]"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between mb-5">
