@@ -40,7 +40,18 @@ export default function GroupWaiting({
         </div>
       </div>
 
-      {/* 진행률 + 슬롯 (호스트는 항상 첫 슬롯으로 자동 포함 — 별도 참여 불필요) */}
+      {/* 호스트 본인도 참여자 — 자기 출발지·취향을 입력해 멤버로 합류(입력 후 호스트 화면으로 돌아옴) */}
+      <button
+        onClick={() => { window.location.href = shareLink; }}
+        className="w-full py-3 rounded-2xl font-black text-sm transition-all active:scale-95 bg-[#E8F8F5] text-[#2AB5A0] border-2 border-[#3CDBC0]/40 hover:bg-[#d4f3ee]"
+      >
+        내 취향도 입력하기 →
+      </button>
+      <p className="-mt-1.5 text-[11px] text-gray-400 text-center leading-relaxed">
+        입력을 마치면 이 화면으로 다시 돌아와 추천받을 수 있어요.
+      </p>
+
+      {/* 진행률 + 슬롯 */}
       <div className="bg-white shadow-sm rounded-2xl p-4">
         <div className="flex items-center justify-between mb-3">
           <p className="text-xs text-gray-400">입력 현황</p>

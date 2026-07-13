@@ -9,7 +9,6 @@ import type { VibeState } from '../components/VibeSelect';
 import { VIBE_KEY_TO_LABEL } from '../components/VibeSelect';
 import MeetingLocationSelect from '../components/MeetingLocationSelect';
 import type { MeetingLocation } from '../components/MeetingLocationSelect';
-import HostLocationInput from '../components/HostLocationInput';
 import ResultCard from '../components/ResultCard';
 import RetryWeightModal from '../components/RetryWeightModal';
 import type { VibeWeights } from '../components/RetryWeightModal';
@@ -165,8 +164,6 @@ export default function Home() {
   const [vibe, setVibe] = useState<VibeState>({});
   const [budget, setBudget] = useState<string | null>(null);
   const [meetingLocation, setMeetingLocation] = useState<MeetingLocation | null>(null);
-  // 그룹 auto(중간지점) 모드에서 호스트 본인의 출발지 — 게스트들과 함께 중간지점 계산에 포함.
-  const [hostLocation, setHostLocation] = useState<LocationEntry | null>(null);
   const [loading, setLoading] = useState(false);
   const [loadingMsg, setLoadingMsg] = useState(0);
   const [loadingProgress, setLoadingProgress] = useState(0);
@@ -293,7 +290,7 @@ export default function Home() {
       if (!raw) return;
       const g = JSON.parse(raw) as {
         savedAt?: number; sessionId?: string; expectedCount?: number;
-        purpose?: PurposeValue; meetingLocation?: MeetingLocation; hostLocation?: LocationEntry;
+        purpose?: PurposeValue; meetingLocation?: MeetingLocation;
       };
       if (!g.sessionId) return;
       if (typeof g.savedAt === 'number' && Date.now() - g.savedAt > GROUP_SESSION_TTL_MS) {
@@ -304,7 +301,6 @@ export default function Home() {
       if (typeof g.expectedCount === 'number') setExpectedCount(g.expectedCount);
       if (g.purpose) setPurpose(g.purpose);              // 호스트가 정한 코스 복원
       if (g.meetingLocation) setMeetingLocation(g.meetingLocation); // 호스트가 정한 지역 복원
-      if (g.hostLocation) setHostLocation(g.hostLocation); // auto 모드 호스트 출발지 복원
       setStep(2);                 // 공유·대기 화면(step 2)으로 되돌린다
       setAppMode('group');        // 폴링이 다시 붙어 멤버 현황을 서버에서 재수화한다
     } catch { /* 손상된 그룹 세션 무시 */ }
@@ -316,10 +312,10 @@ export default function Home() {
     if (appMode !== 'group' || !sessionId) return;
     try {
       localStorage.setItem(GROUP_SESSION_KEY, JSON.stringify({
-        savedAt: Date.now(), sessionId, expectedCount, purpose, meetingLocation, hostLocation,
+        savedAt: Date.now(), sessionId, expectedCount, purpose, meetingLocation,
       }));
     } catch { /* 저장 실패는 치명적이지 않음 */ }
-  }, [appMode, sessionId, expectedCount, purpose, meetingLocation, hostLocation]);
+  }, [appMode, sessionId, expectedCount, purpose, meetingLocation]);
 
   // 입력 초안 저장 — solo 모드로 입력 진행 중일 때만
   useEffect(() => {
@@ -406,7 +402,7 @@ export default function Home() {
   useEffect(() => {
     if (!isGroup || !sessionId || step !== 2) return;
     if (!new URLSearchParams(window.location.search).has('grp')) return;
-    if (groupMembers.length < 1 || !meetingLocation) return;
+    if (groupMembers.length < 2 || !meetingLocation) return;
     try { window.history.replaceState(null, '', '/app'); } catch { /* ignore */ }
     aggregateGroupMembers();
     setPendingGroupRecommend(true);
@@ -454,14 +450,13 @@ export default function Home() {
       return false; // mode-select
     }
     if (step === 1) {
-      // 그룹: 지역 선택 필수 + auto(중간지점)면 호스트 본인 출발지도 필수(중간지점 계산에 포함).
-      if (isGroup) return meetingLocation !== null && (meetingLocation.type !== 'auto' || hostLocation != null);
+      if (isGroup) return meetingLocation !== null; // 그룹: 지역 선택
       return true; // 혼자: 관계·특별한날은 선택사항
     }
     if (step === 2) {
-      // 그룹: 링크 생성 + 친구 1명 이상 입력(호스트 포함 2명 이상)이면 확정 가능.
-      // 호스트는 카운트에 항상 1명으로 포함되므로 멤버(게스트) 행이 1개만 있어도 총 2명이 된다.
-      if (isGroup) return !!sessionId && groupMembers.length >= 1;
+      // 그룹: 링크 생성 + 2명 이상 입력(호스트도 '내 취향 입력하기'로 자가참여해 멤버로 합류)하면 확정 가능.
+      // 전원(expectedCount)을 기다리지 않고 2명만 모여도 추천 진입 가능 — 버튼은 GroupWaiting에서 노출.
+      if (isGroup) return !!sessionId && groupMembers.length >= 2;
       // 혼자: 지역·장소
       return meetingLocation !== null && (meetingLocation.type === 'manual' || locations.length >= 2);
     }
@@ -471,14 +466,9 @@ export default function Home() {
   // 그룹 확정 진입 직전: 멤버들이 각자 낸 출발지·분위기·취향을 하나로 집계.
   // 코스·지역은 호스트가 정한 state(purpose·meetingLocation)를 그대로 쓴다(재집계하지 않음).
   function aggregateGroupMembers() {
-    const guestLocations: LocationEntry[] = groupMembers
+    const groupLocations: LocationEntry[] = groupMembers
       .filter((m) => m.location_lat != null && m.location_lng != null)
       .map((m) => ({ name: m.member_name, lat: m.location_lat!, lng: m.location_lng! }));
-    // auto(중간지점) 모드면 호스트 출발지를 맨 앞에 포함 — 호스트가 빠진 채 중심이 계산되던 문제 방지.
-    const groupLocations: LocationEntry[] =
-      meetingLocation?.type === 'auto' && hostLocation?.lat != null && hostLocation?.lng != null
-        ? [{ name: hostLocation.name || '나', lat: hostLocation.lat, lng: hostLocation.lng }, ...guestLocations]
-        : guestLocations;
     setLocations(groupLocations);
     setVibe(aggregateVibe(groupMembers));
     // 편식은 전원 합집합 — 한 명이라도 못 먹으면 그 음식은 제외. 키워드는 1차/2차 분리 집계.
@@ -490,18 +480,11 @@ export default function Home() {
   }
 
   function requestGroupRecommend() {
-    // 호스트(1) + 게스트 1명 이상이면 진행. meetingLocation은 step1에서 확정·persist되어 항상 존재.
-    if (!meetingLocation || groupMembers.length < 1) return;
+    // 2명 이상 입력이면 진행. meetingLocation은 step1에서 확정·persist되어 항상 존재.
+    if (!meetingLocation || groupMembers.length < 2) return;
     aggregateGroupMembers();
     setPendingGroupRecommend(true);
   }
-
-  // 대기 화면 표시용 멤버 목록 — 호스트를 항상 첫 슬롯(가상)으로 포함해 인원수/완료 표기가 "호스트 포함"과
-  // 일치하게 한다(예: 2명 모임 = 호스트 + 게스트1). 집계(aggregateGroupMembers)는 실제 groupMembers만 쓴다.
-  const groupDisplayMembers: GroupMember[] = [
-    { member_name: '나 (호스트)', location_name: null, location_lat: null, location_lng: null, vibe_atmosphere: null, vibe_budget: null },
-    ...groupMembers,
-  ];
 
   function handleNext() {
     // 그룹: 대기 화면에서 바로 추천으로 진입. 집계 state 반영 뒤 effect에서 추천을 시작한다.
@@ -1224,13 +1207,9 @@ export default function Home() {
           {step === 1 && isGroup && (
             <div className="pb-4">
               <MeetingLocationSelect value={meetingLocation} onSelect={setMeetingLocation} />
-              {/* auto 모드: 호스트 본인 출발지도 받아 중간지점에 포함(호스트 제외 계산 방지) */}
-              {meetingLocation?.type === 'auto' && (
-                <HostLocationInput value={hostLocation} onChange={setHostLocation} />
-              )}
               <p className="px-5 -mt-1 text-xs text-gray-400 leading-relaxed">
                 {meetingLocation?.type === 'auto'
-                  ? '내 출발지 + 참여자들의 출발지로 전원 기준 중간지점을 계산해요.'
+                  ? '참여자들이 각자 출발지를 입력하면 전원 기준 중간지점을 계산해요.'
                   : meetingLocation?.type === 'manual'
                     ? '참여자는 출발지 없이 분위기만 고르면 돼요.'
                     : '중간지점을 맡기거나, 만날 동네를 직접 골라주세요.'}
@@ -1405,7 +1384,7 @@ export default function Home() {
                   copied={copied}
                   onCopy={handleCopyLink}
                   onRecommend={requestGroupRecommend}
-                  members={groupDisplayMembers}
+                  members={groupMembers}
                   expectedCount={expectedCount}
                   canRecommend={canNext()}
                   recommending={pendingGroupRecommend || loading}
@@ -1500,7 +1479,7 @@ export default function Home() {
                       : 'bg-gray-200 text-gray-400 cursor-not-allowed'
                   }`}
                 >
-                  {step === 2 && isGroup && sessionId ? `${groupMembers.length + 1}명으로 추천받기` : '다음'}
+                  {step === 2 && isGroup && sessionId ? `${groupMembers.length}명으로 추천받기` : '다음'}
                 </button>
               </div>
               {!canNext() && (
@@ -1510,7 +1489,7 @@ export default function Home() {
                   {step === 0 && isGroup && '참여 인원과 1차 코스를 골라주세요'}
                   {step === 1 && isGroup && '만날 지역을 선택해주세요'}
                   {step === 2 && isGroup && !sessionId && '링크를 생성해 친구들에게 공유해주세요'}
-                  {step === 2 && isGroup && sessionId && `친구가 1명만 입력해도 추천받을 수 있어요 (지금 친구 ${groupMembers.length}명 입력)`}
+                  {step === 2 && isGroup && sessionId && `2명 이상 입력하면 추천으로 진행할 수 있어요 (현재 ${groupMembers.length}명)`}
                 </p>
               )}
             </>

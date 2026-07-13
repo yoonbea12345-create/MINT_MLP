@@ -246,17 +246,35 @@ export default function MemberInput() {
     .map((k) => VIBE_KEY_TO_LABEL[k] ?? k);
 
   if (phase === 'done') {
-    // 호스트는 코스·지역을 정한 첫 참여자로 항상 1명 포함(멤버 행은 아니지만 인원수엔 든다).
-    // 표시용 목록 맨 앞에 호스트 슬롯을 넣어 "N명 중 N명"이 호스트 포함 정원과 맞게 한다.
-    const displayMembers = [{ member_name: '호스트' }, ...members];
-    const total = expectedCount ?? displayMembers.length;
+    const total = expectedCount ?? members.length;
+    // 이 기기가 호스트(그룹 세션을 만든 사람)인지 판별 — 그러면 입력 후 호스트 화면으로 복귀 CTA를 보여준다.
+    const isHostDevice = (() => {
+      try {
+        const raw = localStorage.getItem('mint_group_session_v1');
+        return !!raw && !!sessionId && (JSON.parse(raw) as { sessionId?: string })?.sessionId === sessionId;
+      } catch { return false; }
+    })();
     return (
       <div className="min-h-[100dvh] flex flex-col items-center bg-[#F5FBF8] px-6 pt-12 pb-10">
         <div className="w-16 h-16 rounded-full bg-[#3CDBC0] flex items-center justify-center mb-5 shadow-lg shadow-[#3CDBC0]/30">
           <span className="text-white text-3xl font-black">✓</span>
         </div>
         <h1 className="text-xl font-black text-gray-800 mb-1">제출 완료!</h1>
-        <p className="text-sm text-gray-500 mb-6 text-center">호스트가 모두 모이면 장소를 추천받을 거예요.</p>
+        <p className="text-sm text-gray-500 mb-6 text-center">
+          {isHostDevice
+            ? '이제 호스트 화면으로 돌아가, 친구들이 모이면 추천을 받아보세요.'
+            : '호스트가 모두 모이면 장소를 추천받을 거예요.'}
+        </p>
+
+        {/* 호스트 전용 — 입력 후 호스트 대기/추천 화면으로 복귀 */}
+        {isHostDevice && (
+          <button
+            onClick={() => { window.location.href = '/app'; }}
+            className="w-full max-w-xs mb-5 py-3.5 rounded-2xl bg-[#3CDBC0] text-white font-black text-sm shadow-lg shadow-[#3CDBC0]/30 active:scale-95 transition-transform"
+          >
+            호스트 화면으로 돌아가기 →
+          </button>
+        )}
 
         {/* 호스트가 정한 코스·지역 */}
         {hostCtx?.purposeFirst && (
@@ -291,12 +309,12 @@ export default function MemberInput() {
         {/* 참여 현황 */}
         <div className="bg-white shadow-sm rounded-2xl px-6 py-5 w-full max-w-xs">
           <p className="text-xs text-gray-400 mb-3 text-center">
-            입력 현황 <span className="font-black text-[#2AB5A0]">{displayMembers.length}</span>
+            입력 현황 <span className="font-black text-[#2AB5A0]">{members.length}</span>
             <span className="text-gray-300"> / {total}</span>
           </p>
           <div className="flex flex-col gap-2">
             {Array.from({ length: total }).map((_, i) => {
-              const member = displayMembers[i];
+              const member = members[i];
               return (
                 <div
                   key={i}
