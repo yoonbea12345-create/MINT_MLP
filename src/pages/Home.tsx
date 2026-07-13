@@ -245,7 +245,7 @@ export default function Home() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // 입력 초안 복원 — 결과가 없을 때만, solo 모드 입력만 (그룹은 서버 세션이 소스)
+  // 입력 초안 복원 — 결과가 없을 때만. 그룹도 링크 생성 전에는 서버 세션이 없으므로 로컬 초안에서 복원한다.
   useEffect(() => {
     try {
       if (loadResultSnapshot()) return; // 결과 복원이 우선
@@ -253,14 +253,15 @@ export default function Home() {
       const raw = localStorage.getItem(INPUT_DRAFT_KEY) ?? sessionStorage.getItem(INPUT_DRAFT_KEY);
       if (!raw) return;
       const d = JSON.parse(raw);
-      if (d.appMode !== 'solo') return;
+      if (d.appMode !== 'solo' && d.appMode !== 'group') return;
       // 오래 방치된 초안은 복원하지 않음 (savedAt 없는 구버전 초안은 그대로 복원)
       if (typeof d.savedAt === 'number' && Date.now() - d.savedAt > INPUT_DRAFT_TTL_MS) {
         localStorage.removeItem(INPUT_DRAFT_KEY);
         return;
       }
-      setAppMode('solo');
+      setAppMode(d.appMode);
       if (typeof d.step === 'number') setStep(d.step as Step);
+      if (typeof d.expectedCount === 'number') setExpectedCount(d.expectedCount);
       if (d.groupSize) setGroupSize(d.groupSize);
       if (d.purpose) setPurpose(d.purpose);
       if (d.vibe) setVibe(d.vibe);
@@ -317,17 +318,19 @@ export default function Home() {
     } catch { /* 저장 실패는 치명적이지 않음 */ }
   }, [appMode, sessionId, expectedCount, purpose, meetingLocation]);
 
-  // 입력 초안 저장 — solo 모드로 입력 진행 중일 때만
+  // 입력 초안 저장 — solo 전체와 그룹 링크 생성 전까지 보존한다.
+  // 그룹 링크 생성 후에는 GROUP_SESSION_KEY가 서버 세션 ID와 함께 이어서 보존한다.
   useEffect(() => {
-    if (view !== 'steps' || appMode !== 'solo') return;
+    if (view !== 'steps') return;
+    if (appMode !== 'solo' && !(appMode === 'group' && !sessionId)) return;
     try {
       localStorage.setItem(INPUT_DRAFT_KEY, JSON.stringify({
         savedAt: Date.now(),
-        appMode, step, groupSize, purpose, vibe, keywords, excludeFoods, vibeCustom,
+        appMode, step, groupSize, expectedCount, purpose, vibe, keywords, excludeFoods, vibeCustom,
         meetingLocation, budget, customOccasion, locations,
       }));
     } catch { /* 저장 실패는 치명적이지 않음 */ }
-  }, [view, appMode, step, groupSize, purpose, vibe, keywords, excludeFoods, vibeCustom, meetingLocation, budget, customOccasion, locations]);
+  }, [view, appMode, sessionId, step, groupSize, expectedCount, purpose, vibe, keywords, excludeFoods, vibeCustom, meetingLocation, budget, customOccasion, locations]);
 
   // 결과 화면 상태가 확정될 때마다 스냅샷 저장 (setState 커밋 이후라 stale closure 없음)
   // + 같은 스냅샷을 localStorage 히스토리에도 적재 — 랜딩 "지난 추천"에서 그대로 복원
