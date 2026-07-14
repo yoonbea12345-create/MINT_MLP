@@ -187,6 +187,7 @@ export default function Home() {
   const [compromiseMessage, setCompromiseMessage] = useState<string | null>(null);
   const [showCompromiseToast, setShowCompromiseToast] = useState(false);
   const [showVibeScrollHint, setShowVibeScrollHint] = useState(false);
+  const [showResultScrollHint, setShowResultScrollHint] = useState(false);
 
   const travelReqRef = useRef(0);
   const enrichReqRef = useRef(0);
@@ -389,6 +390,28 @@ export default function Home() {
       scrollArea.removeEventListener('scroll', updateHint);
     };
   }, [view, step, isGroup]);
+
+  // 추천 결과 첫 화면에서 아래의 다른 후보·2차 코스를 놓치지 않도록 스크롤을 유도한다.
+  useEffect(() => {
+    if (view !== 'result' || !result || result.length < 2) return;
+
+    const updateHint = () => {
+      const remaining = document.documentElement.scrollHeight - window.scrollY - window.innerHeight;
+      setShowResultScrollHint(window.scrollY < 48 && remaining > 80);
+    };
+
+    const frame = requestAnimationFrame(updateHint);
+    const observer = new ResizeObserver(updateHint);
+    observer.observe(document.documentElement);
+    window.addEventListener('scroll', updateHint, { passive: true });
+    window.addEventListener('resize', updateHint);
+    return () => {
+      cancelAnimationFrame(frame);
+      observer.disconnect();
+      window.removeEventListener('scroll', updateHint);
+      window.removeEventListener('resize', updateHint);
+    };
+  }, [view, result]);
 
   // 그룹 대기 화면 폴링 — 입력 플로우(steps)에서만. 결과 화면에선 중단(불필요한 3초 폴링 낭비 방지)
   useEffect(() => {
@@ -1072,6 +1095,19 @@ export default function Home() {
             onReserve={() => setView('reserve')}
             onReject={handleReject}
           />
+
+          {showResultScrollHint && (
+            <button
+              type="button"
+              onClick={() => window.scrollBy({ top: Math.max(320, window.innerHeight * 0.55), behavior: 'smooth' })}
+              className="fixed bottom-[max(1rem,env(safe-area-inset-bottom))] left-1/2 z-40 flex -translate-x-1/2 items-center gap-2 whitespace-nowrap rounded-full border border-[#3CDBC0]/35 bg-white/95 px-4 py-2.5 text-xs font-bold text-[#2AB5A0] shadow-xl shadow-[#2AB5A0]/20 backdrop-blur"
+            >
+              {purpose?.second && purpose.second !== '없음'
+                ? '아래에 다른 후보와 2차 코스도 있어요'
+                : '아래에 다른 후보도 있어요'}
+              <span className="animate-bounce text-sm leading-none" aria-hidden>↓</span>
+            </button>
+          )}
 
           {showRetryModal && (
             <RetryWeightModal
