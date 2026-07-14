@@ -1095,9 +1095,11 @@ export default function Home() {
         <div className="flex-shrink-0 text-center pt-[max(1rem,env(safe-area-inset-top))] px-4 relative">
           <button
             onClick={() => { window.location.href = '/'; }}
-            className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-[#2AB5A0] transition-colors p-1 text-lg"
+            className="absolute left-3 top-1/2 -translate-y-1/2 flex items-center gap-1 rounded-lg px-1.5 py-1 text-xs font-bold text-gray-400 hover:text-[#2AB5A0] transition-colors"
+            aria-label="홈페이지로 돌아가기"
           >
-            ←
+            <span className="text-base leading-none" aria-hidden>←</span>
+            <span>홈페이지로 돌아가기</span>
           </button>
           <h1
             className="text-2xl font-black text-[#2AB5A0] tracking-tight cursor-pointer"
@@ -1510,9 +1512,9 @@ export default function Home() {
                 {step > 0 && (
                   <button
                     onClick={handleBack}
-                    className="w-14 py-4 rounded-2xl border-2 border-gray-200 bg-white text-gray-500 font-bold text-lg hover:border-gray-300 transition-all active:scale-95"
+                    className="w-[92px] py-4 rounded-2xl border-2 border-gray-200 bg-white text-gray-500 font-bold text-sm hover:border-gray-300 transition-all active:scale-95"
                   >
-                    ←
+                    ← 이전 단계
                   </button>
                 )}
                 <button
@@ -1539,21 +1541,28 @@ export default function Home() {
               )}
             </>
           ) : (
-            <div className="flex gap-3">
-              <button
-                onClick={handleBack}
-                className="w-14 py-4 rounded-2xl border-2 border-gray-200 bg-white text-gray-500 font-bold text-lg hover:border-gray-300 transition-all active:scale-95"
-              >
-                ←
-              </button>
-              <button
-                onClick={() => {
-                  if (meetingLocation) handleConfirmMeetingLocation(meetingLocation);
-                }}
-                className="flex-1 py-4 rounded-2xl font-black text-base bg-[#3CDBC0] text-white shadow-lg shadow-[#3CDBC0]/30 hover:bg-[#2AB5A0] transition-all active:scale-95"
-              >
-                ✨ 장소 추천받기
-              </button>
+            <div className="flex flex-col gap-2">
+              <p className="text-center text-xs font-medium text-[#2AB5A0]">
+                {purpose?.second && purpose.second !== '없음'
+                  ? '추천 결과에서 1차 다른 후보와 2차 코스까지 함께 확인할 수 있어요'
+                  : '추천 결과에서 1차 다른 후보도 함께 확인할 수 있어요'}
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={handleBack}
+                  className="w-[92px] py-4 rounded-2xl border-2 border-gray-200 bg-white text-gray-500 font-bold text-sm hover:border-gray-300 transition-all active:scale-95"
+                >
+                  ← 이전 단계
+                </button>
+                <button
+                  onClick={() => {
+                    if (meetingLocation) handleConfirmMeetingLocation(meetingLocation);
+                  }}
+                  className="flex-1 py-4 rounded-2xl font-black text-base bg-[#3CDBC0] text-white shadow-lg shadow-[#3CDBC0]/30 hover:bg-[#2AB5A0] transition-all active:scale-95"
+                >
+                  ✨ 장소 추천받기
+                </button>
+              </div>
             </div>
           )}
         </div>
