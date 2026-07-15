@@ -1,28 +1,64 @@
 import { createClient } from '@supabase/supabase-js';
 import type { VercelRequest, VercelResponse } from '@vercel/node';
+import { clientIp, checkRateLimit } from './_lib/guard.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  if (req.method !== 'GET') return res.status(405).end();
-
   const url = (process.env.SUPABASE_URL ?? '').trim();
   const key = (process.env.SUPABASE_SERVICE_ROLE_KEY ?? '').trim();
   if (!url || !key) {
     return res.status(500).json({ error: 'Supabase 설정이 없습니다.' });
   }
+  const supabase = createClient(url, key);
+
+  // POST { id, result } — 호스트가 그룹 추천 결과 요약을 세션에 저장(게스트 폴링이 수신)
+  if (req.method === 'POST') {
+    const body = (req.body ?? {}) as { id?: string; result?: unknown };
+    const sid = String(body.id ?? '');
+    if (!/^[a-z0-9]{4,32}$/.test(sid)) return res.status(400).json({ error: '잘못된 요청이에요.' });
+    const result = body.result;
+    if (!result || typeof result !== 'object' || Array.isArray(result)) {
+      return res.status(400).json({ error: '잘못된 요청이에요.' });
+    }
+    let raw = '';
+    try { raw = JSON.stringify(result); } catch { /* noop */ }
+    if (!raw || raw.length > 10_000) return res.status(400).json({ error: '결과 데이터가 너무 커요.' });
+
+    const gate = await checkRateLimit(supabase, 'session-result', clientIp(req), 10, 2000);
+    if (!gate.allowed) return res.status(429).json({ error: '잠시 후 다시 시도해주세요.' });
+
+    let { error } = await supabase.from('mint_sessions')
+      .update({ result_json: result, result_at: new Date().toISOString() })
+      .eq('id', sid);
+    if (error?.code === '42703') {
+      ({ error } = await supabase.from('mint_sessions').update({ result_json: result }).eq('id', sid));
+    }
+    if (error) {
+      if (error.code !== '42703') console.error('[session-get] result save failed', error);
+      return res.status(200).json({ ok: false, disabled: true }); // 컬럼 미생성 등 — 조용히 off
+    }
+    return res.status(200).json({ ok: true });
+  }
+  if (req.method !== 'GET') return res.status(405).end();
 
   const id = Array.isArray(req.query.id) ? req.query.id[0] : req.query.id;
   if (!id) return res.status(400).json({ error: 'session id가 필요해요.' });
 
   try {
-    const supabase = createClient(url, key);
 
     // has_second 포함 시도, 없으면 fallback
     let { data: session, error: sErr } = await supabase
       .from('mint_sessions')
-      .select('expected_count, has_second')
+      .select('expected_count, has_second, result_json')
       .eq('id', id)
       .single();
 
+    if (sErr?.code === '42703') {
+      ({ data: session, error: sErr } = await supabase
+        .from('mint_sessions')
+        .select('expected_count, has_second')
+        .eq('id', id)
+        .single());
+    }
     if (sErr?.code === '42703') {
       ({ data: session, error: sErr } = await supabase
         .from('mint_sessions')
@@ -72,6 +108,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(200).json({
       expected_count: session.expected_count,
       has_second: (session as Record<string, unknown>).has_second ?? false,
+      result_json: (session as Record<string, unknown>).result_json ?? null,
       members: parsedMembers,
     });
   } catch (e) {

@@ -102,6 +102,7 @@ export default function MemberInput() {
   // 세션 정보 (완료 화면 현황)
   const [expectedCount, setExpectedCount] = useState<number | null>(null);
   const [members, setMembers] = useState<{ member_name: string }[]>([]);
+  const [groupResult, setGroupResult] = useState<GroupResult | null>(null); // 호스트가 추천을 받으면 폴링으로 수신
 
   const wrapperRef = useRef<HTMLDivElement | null>(null);
   const locInputRef = useRef<HTMLInputElement | null>(null);
@@ -128,6 +129,8 @@ export default function MemberInput() {
         if (!active) return;
         setExpectedCount(data.expected_count ?? null);
         setMembers(Array.isArray(data.members) ? data.members : []);
+        // 호스트가 추천을 완료하면 결과가 실려온다 — 게스트 화면을 결과 뷰로 전환(협업 루프 완결)
+        if (data.result_json?.first?.placeName) setGroupResult(data.result_json as GroupResult);
       } catch { /* ignore */ }
     }
 
@@ -254,6 +257,10 @@ export default function MemberInput() {
         return !!raw && !!sessionId && (JSON.parse(raw) as { sessionId?: string })?.sessionId === sessionId;
       } catch { return false; }
     })();
+    // 게스트: 호스트가 추천을 완료했으면 결과 뷰로 전환(호스트는 자기 결과를 앱에서 봄)
+    if (!isHostDevice && groupResult) {
+      return <GroupResultView result={groupResult} />;
+    }
     return (
       <div className="min-h-[100dvh] flex flex-col items-center bg-[#F5FBF8] px-6 pt-12 pb-10">
         <div className="w-16 h-16 rounded-full bg-[#3CDBC0] flex items-center justify-center mb-5 shadow-lg shadow-[#3CDBC0]/30">
@@ -536,5 +543,83 @@ export default function MemberInput() {
         )}
       </div>
     </div>
+  );
+}
+
+// 그룹 게스트가 수신하는 결과(호스트가 세션에 저장한 요약)
+interface GroupResultPlace {
+  placeName: string; category?: string; description?: string; priceRange?: string;
+  address?: string; area?: string; lat?: number | null; lng?: number | null; kakaoPlaceUrl?: string | null;
+}
+interface GroupResult {
+  first: GroupResultPlace; second?: GroupResultPlace | null; third?: GroupResultPlace | null;
+  thirdLabel?: string | null; purposeFirst?: string | null; purposeSecond?: string | null; areaName?: string | null;
+}
+
+function groupMapLink(p: GroupResultPlace): string {
+  return p.kakaoPlaceUrl
+    || (p.lat && p.lng
+      ? `https://map.kakao.com/link/to/${encodeURIComponent(p.placeName)},${p.lat},${p.lng}`
+      : `https://map.kakao.com/link/search/${encodeURIComponent(p.placeName)}`);
+}
+
+// 게스트 결과 화면 — 호스트가 다 같이 고른 취향으로 뽑은 결과. 신규 유입 진입점("나도 추천받기") 포함.
+function GroupResultView({ result }: { result: GroupResult }) {
+  const f = result.first;
+  return (
+    <div className="min-h-[100dvh] bg-[#F5FBF8] px-5 pt-10 pb-12">
+      <div className="max-w-md mx-auto">
+        <div className="text-center mb-5">
+          <div className="text-3xl mb-1">🎉</div>
+          <h1 className="text-xl font-black text-gray-800">모임 장소가 정해졌어요!</h1>
+          <p className="text-sm text-gray-500 mt-1">다 같이 고른 취향으로 골랐어요</p>
+        </div>
+
+        <a
+          href={groupMapLink(f)}
+          target="_blank"
+          rel="noreferrer"
+          className="block result-gradient rounded-3xl overflow-hidden text-white shadow-xl shadow-[#3CDBC0]/30 mb-3 active:scale-[0.99] transition-transform"
+        >
+          <div className="p-5">
+            <span className="text-xs font-semibold opacity-80 bg-white/20 px-2.5 py-1 rounded-full">
+              {result.purposeFirst ? `1차 · ${result.purposeFirst}` : f.category}
+            </span>
+            <h2 className="text-2xl font-black mt-3 mb-1 leading-tight">{f.placeName}</h2>
+            {f.description && (
+              <p className="text-sm font-semibold opacity-95 mb-2 leading-snug bg-white/15 rounded-xl px-3 py-2">💬 {f.description}</p>
+            )}
+            <div className="flex items-start gap-2 text-sm opacity-90"><span className="opacity-70 shrink-0">📍</span><span>{f.address || f.area}</span></div>
+          </div>
+        </a>
+
+        {result.second && <GuestCourseCard place={result.second} label={`2차${result.purposeSecond ? ` · ${result.purposeSecond}` : ''}`} accent="#1A7A6E" />}
+        {result.third && <GuestCourseCard place={result.third} label={`3차 · ${result.thirdLabel ?? '이어서'}`} accent="#0F4E46" />}
+
+        <a
+          href="/app"
+          className="block w-full mt-4 py-4 rounded-2xl bg-[#3CDBC0] text-white font-black text-base text-center shadow-lg shadow-[#3CDBC0]/30 active:scale-95 transition-transform"
+        >
+          🌿 나도 30초 만에 추천받기
+        </a>
+      </div>
+    </div>
+  );
+}
+
+function GuestCourseCard({ place, label, accent }: { place: GroupResultPlace; label: string; accent: string }) {
+  return (
+    <a
+      href={groupMapLink(place)}
+      target="_blank"
+      rel="noreferrer"
+      className="block bg-white rounded-2xl border border-gray-200 border-l-4 p-4 mb-3 shadow-sm active:scale-[0.99] transition-transform"
+      style={{ borderLeftColor: accent }}
+    >
+      <span className="inline-block text-[11px] font-bold px-2 py-0.5 rounded-full mb-1" style={{ color: accent, background: `${accent}1a` }}>{label}</span>
+      <p className="text-base font-black text-gray-800 leading-tight">{place.placeName}</p>
+      {place.description && <p className="text-xs text-gray-500 leading-snug mt-0.5">{place.description}</p>}
+      <div className="flex items-center gap-1.5 text-xs text-gray-500 mt-1.5"><span>📍</span><span className="truncate">{place.address || place.area}</span></div>
+    </a>
   );
 }

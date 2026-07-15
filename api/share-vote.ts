@@ -14,6 +14,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method === 'GET') {
     const id = String(req.query.id ?? '');
     if (!ID_RE.test(id)) return res.status(400).json({ error: '잘못된 요청이에요.' });
+
+    // 결과 스냅샷 조회 — ?id=&type=snapshot (공유 링크 /shared?id=)
+    if (req.query.type === 'snapshot') {
+      const { data, error } = await supabase
+        .from('mint_share_snapshots')
+        .select('payload')
+        .eq('share_id', id)
+        .maybeSingle();
+      if (error) return res.status(200).json({ disabled: true }); // 테이블 미생성 등 → 클라 폴백
+      if (!data) return res.status(404).json({ error: '공유 링크를 찾을 수 없어요.' });
+      return res.status(200).json({ payload: data.payload });
+    }
+
     const { data, error } = await supabase
       .from('mint_share_votes')
       .select('choice')
@@ -27,7 +40,33 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   if (req.method === 'POST') {
-    const body = (req.body ?? {}) as { shareId?: string; voterId?: string; choice?: number; placeName?: string };
+    const body = (req.body ?? {}) as { type?: string; shareId?: string; voterId?: string; choice?: number; placeName?: string; payload?: unknown };
+
+    // 결과 스냅샷 저장 — { type:'snapshot', shareId, payload }
+    if (body.type === 'snapshot') {
+      const snapId = String(body.shareId ?? '');
+      const payload = body.payload;
+      if (!ID_RE.test(snapId) || !payload || typeof payload !== 'object' || Array.isArray(payload)) {
+        return res.status(400).json({ error: '잘못된 요청이에요.' });
+      }
+      let raw = '';
+      try { raw = JSON.stringify(payload); } catch { /* noop */ }
+      if (!raw || raw.length > 20_000) return res.status(400).json({ error: '공유 데이터가 너무 커요.' });
+
+      const gate = await checkRateLimit(supabase, 'share-snapshot', clientIp(req), 10, 2000);
+      if (!gate.allowed) return res.status(429).json({ error: '잠시 후 다시 시도해주세요.' });
+
+      // 같은 id 덮어쓰기 금지(선점 우선) — 공유 클릭마다 새 id라 충돌 없음
+      const { error } = await supabase
+        .from('mint_share_snapshots')
+        .upsert({ share_id: snapId, payload }, { onConflict: 'share_id', ignoreDuplicates: true });
+      if (error) {
+        console.error('[share-vote] snapshot insert failed', error);
+        return res.status(200).json({ ok: false, disabled: true }); // 테이블 미생성 → 클라가 ?data= 폴백
+      }
+      return res.status(200).json({ ok: true });
+    }
+
     const shareId = String(body.shareId ?? '');
     const voterId = String(body.voterId ?? '');
     const choice = Number(body.choice);

@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import type { PlaceRecommendation } from '../services/ai';
 import { congestionDotClass } from '../services/seoulData';
 import MiniMap from '../components/MiniMap';
 
@@ -10,7 +9,31 @@ interface VoteCandidate {
   s?: number | null;
 }
 
-interface SharedPayload extends PlaceRecommendation {
+// 공유 스냅샷의 장소 1곳 — 서버(/shared?id=)와 레거시(?data=) 렌더 경로를 통일
+interface SlimPlace {
+  placeName: string;
+  category?: string;
+  description?: string;
+  priceRange?: string;
+  vibeTags?: string[];
+  address?: string;
+  area?: string;
+  congestionLevel?: string | null;
+  lat?: number | null;
+  lng?: number | null;
+  imageUrl?: string | null;
+  kakaoPlaceUrl?: string | null;
+}
+
+interface SnapshotPayload {
+  first: SlimPlace;
+  second?: SlimPlace | null;
+  third?: SlimPlace | null;
+  thirdLabel?: string | null;
+  purposeFirst?: string | null;
+  purposeSecond?: string | null;
+  areaName?: string | null;
+  treasurer?: string | null;
   shareId?: string;
   candidates?: VoteCandidate[];
 }
@@ -129,20 +152,32 @@ function VoteSection({ shareId, candidates }: { shareId: string; candidates: Vot
 }
 
 export default function SharedResult() {
-  const [result, setResult] = useState<SharedPayload | null>(null);
+  const [result, setResult] = useState<SnapshotPayload | null>(null);
   const [error, setError] = useState(false);
 
   useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const id = params.get('id');
+    // 신버전: /shared?id=<shareId> → 서버 스냅샷 조회(1·2·3차 풀코스)
+    if (id && /^[a-z0-9_-]{6,40}$/i.test(id)) {
+      fetch(`/api/share-vote?id=${encodeURIComponent(id)}&type=snapshot`)
+        .then((r) => r.json().then((d) => ({ ok: r.ok, d })))
+        .then(({ ok, d }) => {
+          const p = d?.payload;
+          if (!ok || d?.disabled || !p?.first?.placeName || !Array.isArray(p.first.vibeTags)) throw new Error('bad snapshot');
+          setResult(p as SnapshotPayload);
+        })
+        .catch(() => setError(true));
+      return;
+    }
+    // 레거시: /shared?data=<json> → 1차만. 스냅샷 형태로 승격해 렌더 경로를 하나로.
+    // (URLSearchParams.get()이 이미 1회 디코드하므로 추가 decodeURIComponent 금지 — '%' 포함 데이터 URIError 방지)
     try {
-      const params = new URLSearchParams(window.location.search);
       const data = params.get('data');
       if (!data) throw new Error('no data');
-      // URLSearchParams.get()이 이미 1회 디코드한다. 여기서 또 decodeURIComponent하면
-      // description 등에 '%'가 섞였을 때(예: "만족도 90%") URIError로 정상 링크도 깨진다.
       const parsed = JSON.parse(data);
-      // URL 잘림 등으로 필수 필드가 결손되면 렌더 중 크래시(특히 208줄 vibeTags.map) 대신 에러 화면으로.
       if (!parsed?.placeName || !Array.isArray(parsed.vibeTags)) throw new Error('malformed payload');
-      setResult(parsed);
+      setResult({ first: parsed as SlimPlace, shareId: parsed.shareId, candidates: parsed.candidates });
     } catch {
       setError(true);
     }
@@ -168,64 +203,72 @@ export default function SharedResult() {
     );
   }
 
+  const f = result.first;
+  const mapLink = (p: SlimPlace) =>
+    p.kakaoPlaceUrl
+    || (p.lat && p.lng
+      ? `https://map.kakao.com/link/to/${encodeURIComponent(p.placeName)},${p.lat},${p.lng}`
+      : `https://map.kakao.com/link/search/${encodeURIComponent(p.placeName)}`);
+
   return (
     <div className="min-h-screen bg-[#F5FBF8]">
       <div className="max-w-md mx-auto px-4 pb-10 pt-8">
         <div className="text-center mb-6">
           <h1 className="text-2xl font-black text-[#2AB5A0]">MINT</h1>
-          <p className="text-sm text-gray-500 mt-1">오늘의 추천 장소</p>
+          <p className="text-sm text-gray-500 mt-1">오늘의 추천 {result.second ? '코스' : '장소'}</p>
         </div>
 
-        {/* 메인 카드 */}
+        {/* 오늘의 총무 */}
+        {result.treasurer && (
+          <div className="mb-4 bg-[#FEF9C3] border border-yellow-200 rounded-2xl px-4 py-2.5 text-center animate-fade-in-up">
+            <p className="text-sm font-bold text-yellow-800">🎲 오늘의 총무는 <strong>{result.treasurer}</strong>에서 출발!</p>
+          </div>
+        )}
+
+        {/* 메인 카드(1차) */}
         <div className="result-gradient rounded-3xl overflow-hidden text-white shadow-xl shadow-[#3CDBC0]/30 mb-4 animate-fade-in-up">
-          {result.imageUrl && (
-            <img
-              src={result.imageUrl}
-              alt={result.placeName}
-              className="w-full h-40 object-cover"
-              loading="lazy"
-              onError={(e) => { e.currentTarget.style.display = 'none'; }}
-            />
+          {f.imageUrl && (
+            <img src={f.imageUrl} alt={f.placeName} className="w-full h-40 object-cover" loading="lazy" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
           )}
           <div className="p-5">
             <div className="flex items-center justify-between mb-1">
               <span className="text-xs font-semibold opacity-80 bg-white/20 px-2.5 py-1 rounded-full">
-                {result.category}
+                {result.purposeFirst ? `1차 · ${result.purposeFirst}` : f.category}
               </span>
-              {result.congestionLevel && (
+              {f.congestionLevel && (
                 <div className="flex items-center gap-1.5">
-                  <div className={`w-2 h-2 rounded-full ${congestionDotClass(result.congestionLevel as Parameters<typeof congestionDotClass>[0])}`} />
-                  <span className="text-xs opacity-90">{result.congestionLevel}</span>
+                  <div className={`w-2 h-2 rounded-full ${congestionDotClass(f.congestionLevel as Parameters<typeof congestionDotClass>[0])}`} />
+                  <span className="text-xs opacity-90">{f.congestionLevel}</span>
                 </div>
               )}
             </div>
 
             <h2 className="text-2xl font-black mt-3 mb-1 leading-tight">
-              오늘은<br /><span className="text-3xl">{result.placeName}</span>
+              오늘은<br /><span className="text-3xl">{f.placeName}</span>
             </h2>
-            {result.description && (
+            {f.description && (
               <p className="text-sm font-semibold opacity-95 mb-3 leading-snug bg-white/15 rounded-xl px-3 py-2">
-                💬 {result.description}
+                💬 {f.description}
               </p>
             )}
 
             <div className="flex flex-wrap gap-1.5 mb-4">
-              {result.vibeTags.map((tag) => (
-                <span key={tag} className="text-xs bg-white/20 px-2.5 py-1 rounded-full font-medium">
-                  #{tag}
-                </span>
+              {(f.vibeTags ?? []).map((tag) => (
+                <span key={tag} className="text-xs bg-white/20 px-2.5 py-1 rounded-full font-medium">#{tag}</span>
               ))}
             </div>
 
             <div className="bg-white/15 rounded-2xl p-3 flex flex-col gap-1.5">
               <div className="flex items-start gap-2 text-sm">
                 <span className="opacity-70 shrink-0">📍</span>
-                <span className="opacity-90">{result.address || result.area}</span>
+                <span className="opacity-90">{f.address || f.area}</span>
               </div>
-              <div className="flex items-center gap-2 text-sm">
-                <span className="opacity-70">💰</span>
-                <span className="opacity-90">{result.priceRange}</span>
-              </div>
+              {f.priceRange && (
+                <div className="flex items-center gap-2 text-sm">
+                  <span className="opacity-70">💰</span>
+                  <span className="opacity-90">{f.priceRange}</span>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -235,28 +278,57 @@ export default function SharedResult() {
           <VoteSection shareId={result.shareId} candidates={result.candidates} />
         )}
 
-        {result.lat && result.lng && (
+        {/* 2차·3차 코스 — 스냅샷 공유에만 존재(레거시 링크에선 자동 미표시) */}
+        {result.second && (
+          <CourseCard place={result.second} label={`2차${result.purposeSecond ? ` · ${result.purposeSecond}` : ''}`} accent="#1A7A6E" mapLink={mapLink} />
+        )}
+        {result.third && (
+          <CourseCard place={result.third} label={`3차 · ${result.thirdLabel ?? '이어서'}`} accent="#0F4E46" mapLink={mapLink} />
+        )}
+
+        {f.lat && f.lng && (
           <div className="mb-4 animate-fade-in-up">
-            <MiniMap lat={result.lat} lng={result.lng} placeName={result.placeName} />
+            <MiniMap lat={f.lat} lng={f.lng} placeName={f.placeName} />
           </div>
         )}
 
         <div className="text-center mb-4">
-          <p className="text-xs text-gray-500">AI가 이 모임에 딱 맞는 장소를 골라줬어요</p>
+          <p className="text-xs text-gray-500">AI가 이 모임에 딱 맞는 곳을 골라줬어요</p>
         </div>
-        <a
-          href="/app"
-          className="block w-full py-4 rounded-2xl bg-[#3CDBC0] text-white font-black text-base text-center shadow-lg shadow-[#3CDBC0]/30 hover:bg-[#2AB5A0] transition-colors active:scale-95"
-        >
+        <a href="/app" className="block w-full py-4 rounded-2xl bg-[#3CDBC0] text-white font-black text-base text-center shadow-lg shadow-[#3CDBC0]/30 hover:bg-[#2AB5A0] transition-colors active:scale-95">
           🌿 나도 30초 만에 추천받기
         </a>
-        <a
-          href="/"
-          className="block w-full py-3 text-center text-sm text-gray-500 hover:text-[#2AB5A0] transition-colors mt-1"
-        >
+        <a href="/" className="block w-full py-3 text-center text-sm text-gray-500 hover:text-[#2AB5A0] transition-colors mt-1">
           MINT가 뭔지 알아보기 →
         </a>
       </div>
     </div>
+  );
+}
+
+// 2·3차 코스 요약 카드 — 흰 카드 + 코스 색 좌측 보더(결과 화면 3차 카드와 동일 문법)
+function CourseCard({ place, label, accent, mapLink }: { place: SlimPlace; label: string; accent: string; mapLink: (p: SlimPlace) => string }) {
+  return (
+    <a
+      href={mapLink(place)}
+      target="_blank"
+      rel="noreferrer"
+      className="block bg-white rounded-2xl border border-gray-200 border-l-4 p-4 mb-4 shadow-sm active:scale-[0.99] transition-transform"
+      style={{ borderLeftColor: accent }}
+    >
+      <div className="flex items-start gap-3">
+        {place.imageUrl && (
+          <img src={place.imageUrl} alt={place.placeName} className="w-16 h-16 rounded-xl object-cover flex-shrink-0" loading="lazy" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+        )}
+        <div className="min-w-0 flex-1">
+          <span className="inline-block text-[11px] font-bold px-2 py-0.5 rounded-full mb-1" style={{ color: accent, background: `${accent}1a` }}>{label}</span>
+          <p className="text-base font-black text-gray-800 leading-tight">{place.placeName}</p>
+          {place.description && <p className="text-xs text-gray-500 leading-snug mt-0.5">{place.description}</p>}
+          <div className="flex items-center gap-1.5 text-xs text-gray-500 mt-1.5">
+            <span>📍</span><span className="truncate">{place.address || place.area}</span>
+          </div>
+        </div>
+      </div>
+    </a>
   );
 }

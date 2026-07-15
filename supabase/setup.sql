@@ -199,3 +199,22 @@ CREATE TABLE IF NOT EXISTS mint_share_votes (
 CREATE INDEX IF NOT EXISTS idx_share_votes_share ON mint_share_votes(share_id);
 
 ALTER TABLE mint_share_votes ENABLE ROW LEVEL SECURITY;
+
+-- =============================================
+-- 공유 결과 스냅샷 (share-vote API가 type=snapshot으로 저장/조회 — /shared?id=)
+-- 서버(service role)만 접근. 실행 전에는 앱이 자동으로 레거시 ?data= 링크로 폴백한다.
+-- =============================================
+CREATE TABLE IF NOT EXISTS mint_share_snapshots (
+  share_id   TEXT PRIMARY KEY,
+  payload    JSONB NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_share_snapshots_created ON mint_share_snapshots(created_at);
+ALTER TABLE mint_share_snapshots ENABLE ROW LEVEL SECURITY;
+
+-- =============================================
+-- 그룹 세션 결과 전달 (호스트 추천 결과를 게스트 폴링으로 수신)
+-- 실행 전에는 게스트가 기존 대기 화면 그대로(기능만 off).
+-- =============================================
+ALTER TABLE mint_sessions ADD COLUMN IF NOT EXISTS result_json JSONB;
+ALTER TABLE mint_sessions ADD COLUMN IF NOT EXISTS result_at TIMESTAMPTZ;

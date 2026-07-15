@@ -110,6 +110,28 @@ function newShareId(): string {
   return s;
 }
 
+// 공유 결과 스냅샷을 서버에 저장 — 1.5초 안에 ok:true여야 짧은 링크(/shared?id=)를 쓴다.
+// 실패·타임아웃·오프라인·테이블 미생성(disabled)이면 false → 호출부가 레거시 ?data= URL로 폴백.
+async function saveShareSnapshot(shareId: string, payload: object): Promise<boolean> {
+  if (navigator.onLine === false) return false;
+  try {
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), 1500);
+    const res = await fetch('/api/share-vote', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type: 'snapshot', shareId, payload }),
+      signal: ctrl.signal,
+    });
+    clearTimeout(t);
+    if (!res.ok) return false;
+    const d = await res.json().catch(() => null);
+    return d?.ok === true;
+  } catch {
+    return false;
+  }
+}
+
 // 공유 폴백 — 카카오 SDK가 없거나 실패(특히 iOS 홈화면 PWA에선 조용히 실패)할 때
 // OS 네이티브 공유 시트 → 클립보드 → 최후 prompt 순으로. 어떤 환경에서도 버튼이 무반응으로 끝나지 않게 한다.
 async function fallbackShare(shareText: string, sharedUrl: string) {
@@ -252,6 +274,7 @@ export default function Home() {
   const loadingStartRef = useRef(0);   // 로딩 시작 시각 — 지연 인정 카피 전환 판단용
   const lastRecommendRef = useRef<(() => void) | null>(null); // 실패 시 같은 조건 원탭 재시도용
   const shareSentinelRef = useRef<HTMLDivElement | null>(null); // 결과 맨 아래 감지용(sticky 공유 바 표시 제어)
+  const lastSessionResultRef = useRef<string | null>(null); // 그룹 결과 세션 저장 중복 억제
   const stepScrollRef = useRef<HTMLDivElement>(null);
   const isGroup = appMode === 'group';
 
@@ -418,6 +441,36 @@ export default function Home() {
       snapshot,
     });
   }, [view, result, resultThird, resultThirdLabel, purpose, midpointData, treasurer, meetingLocation, resultTravelTimes, resultWeather, vibe, keywords, excludeFoods]);
+
+  // 그룹 호스트가 추천을 받으면 결과 요약을 세션에 저장 → 게스트 done 화면이 폴링으로 수신(협업 루프 완결).
+  // enrich·재추천으로 결과가 바뀌면 자동 재저장. 실패는 무해(게스트가 못 볼 뿐, 카톡 공유로도 전달 가능).
+  useEffect(() => {
+    if (view !== 'result' || !isGroup || !sessionId || !result || result.length === 0) return;
+    const hasSecondCourse = !!(purpose?.second && purpose.second !== '없음');
+    const slim = (p: PlaceRecommendation) => ({
+      placeName: p.placeName, category: p.category, description: p.description,
+      priceRange: p.priceRange, address: p.address, area: p.area,
+      lat: p.lat ?? null, lng: p.lng ?? null, kakaoPlaceUrl: p.kakaoPlaceUrl ?? null,
+    });
+    const summary = {
+      v: 1,
+      first: slim(result[0]),
+      second: hasSecondCourse && result[1] ? slim(result[1]) : null,
+      third: resultThird ? slim(resultThird) : null,
+      thirdLabel: resultThird ? (resultThirdLabel ?? '이어서') : null,
+      purposeFirst: purpose?.first ?? null,
+      purposeSecond: hasSecondCourse ? purpose?.second ?? null : null,
+      areaName: midpointData?.areaName ?? null,
+    };
+    const raw = JSON.stringify(summary);
+    if (lastSessionResultRef.current === raw) return;
+    lastSessionResultRef.current = raw;
+    fetch('/api/session-get', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: sessionId, result: summary }),
+    }).catch(() => { /* 실패 무해 */ });
+  }, [view, isGroup, sessionId, result, resultThird, resultThirdLabel, purpose, midpointData]);
 
 
   useEffect(() => {
@@ -1039,7 +1092,7 @@ export default function Home() {
     handleRecommend(midpointData.midpoint, midpointData.nearestAreas, validLocs, rejectWeights, exclude, reason, midpointData.scope ?? null);
   }
 
-  function handleShare() {
+  async function handleShare() {
     if (!result || result.length === 0) return;
     trackEvent('kakao_share');
     const primary = result[0];
@@ -1055,6 +1108,8 @@ export default function Home() {
     // SharedResult URL — 수신자가 링크 누르면 결과 카드로 바로 이동.
     // ⚠️ 전체 JSON을 쿼리에 싣기 때문에 URL이 너무 길면 일부 환경(카톡/iOS)에서 잘려 수신측 파싱이 깨진다.
     // imageUrl(긴 CDN URL)·kakaoPlaceUrl은 SharedResult에서 각각 가드/미사용이므로 payload에서 빼 URL을 짧게 유지한다.
+    const shareId = newShareId();
+    // 레거시 슬림 payload(?data=) — 스냅샷 저장 실패 시 폴백. imageUrl·kakaoPlaceUrl은 URL 길이 때문에 제외.
     const sharedData = {
       placeName: primary.placeName,
       category: primary.category,
@@ -1066,11 +1121,33 @@ export default function Home() {
       congestionLevel: primary.congestionLevel,
       lat: primary.lat,
       lng: primary.lng,
-      // 멤버 투표용 — 수신자들이 1차 후보에 👍 할 수 있게
-      shareId: newShareId(),
+      shareId,
       candidates: firstCandidates.length >= 2 ? firstCandidates : undefined,
     };
-    const sharedUrl = `${mlpUrl}/shared?data=${encodeURIComponent(JSON.stringify(sharedData))}`;
+    const legacyUrl = `${mlpUrl}/shared?data=${encodeURIComponent(JSON.stringify(sharedData))}`;
+
+    // 풀코스 스냅샷을 서버에 저장하고 짧은 링크(/shared?id=)로 공유 → URL 잘림 리스크 제거 + 수신자가 1·2·3차 전체를 봄.
+    const slim = (p: PlaceRecommendation) => ({
+      placeName: p.placeName, category: p.category, description: p.description,
+      priceRange: p.priceRange, vibeTags: p.vibeTags, address: p.address, area: p.area,
+      congestionLevel: p.congestionLevel ?? null, lat: p.lat ?? null, lng: p.lng ?? null,
+      imageUrl: p.imageUrl ?? null, kakaoPlaceUrl: p.kakaoPlaceUrl ?? null,
+    });
+    const snapshot = {
+      v: 1,
+      shareId,
+      first: slim(primary),
+      second: secondPlace ? slim(secondPlace) : null,
+      third: resultThird ? slim(resultThird) : null,
+      thirdLabel: resultThird ? (resultThirdLabel ?? '이어서') : null,
+      purposeFirst: purpose?.first ?? null,
+      purposeSecond: hasSecond ? purpose?.second ?? null : null,
+      areaName: midpointData?.areaName ?? null,
+      treasurer: treasurer ?? null,
+      candidates: firstCandidates.length >= 2 ? firstCandidates : undefined,
+    };
+    const snapshotSaved = await saveShareSnapshot(shareId, snapshot);
+    const sharedUrl = snapshotSaved ? `${mlpUrl}/shared?id=${shareId}` : legacyUrl;
 
     const mapUrl = (p: typeof primary) =>
       p.lat && p.lng
