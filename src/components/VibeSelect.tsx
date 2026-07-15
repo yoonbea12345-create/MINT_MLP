@@ -67,6 +67,20 @@ const GROUPS = [
   },
 ];
 
+// 목적(코스)별로 관련 칩을 앞으로 정렬 — "AI가 선택지까지 준비해준다"는 체감. 선택 자체는 자유(단순 노출 순서).
+const PURPOSE_CHIP_BOOST: Record<string, string[]> = {
+  '밥':   ['pref_known', 'pref_room', 'atm_clean', 'pref_parking', 'pref_reserve'],
+  '술':   ['atm_loud', 'atm_lively', 'pref_late', 'atm_hip', 'pref_station'],
+  '카페': ['atm_cozy', 'atm_mood', 'pref_view', 'pref_insta', 'atm_clean'],
+};
+function orderByPurpose<T extends { key: string }>(options: T[], purpose?: { first: string | null; second?: string | null }): T[] {
+  const courses = [purpose?.first, purpose?.second].filter((c): c is string => !!c);
+  const boost = new Set(courses.flatMap((c) => PURPOSE_CHIP_BOOST[c] ?? []));
+  if (boost.size === 0) return options;
+  // 안정 정렬 — 부스트된 칩만 앞으로, 그 외는 원래 순서 유지
+  return [...options].sort((a, b) => (boost.has(b.key) ? 1 : 0) - (boost.has(a.key) ? 1 : 0));
+}
+
 // 값은 서버(recommend.ts)·집계(groupAggregate BUDGET_ORDER)와 반드시 일치시켜야 검색 프리픽스/예산 반영이 작동한다
 const BUDGET_OPTIONS = [
   { value: '~2만원',  label: '~2만원',  emoji: '💵', sub: '가성비' },
@@ -182,7 +196,7 @@ export default function VibeSelect({ value, onChange, purpose, budget = null, on
             </div>
             {/* 취향 칩 — 가로 알약(pill)으로 촘촘하게. 옵션이 많아도 3~4줄로 가볍게 흐르고, 자유입력 태그와 디자인 통일. */}
             <div className="flex flex-wrap gap-2.5">
-              {group.options.map((opt) => {
+              {orderByPurpose(group.options, purpose).map((opt) => {
                 const isFirst = g.first === opt.key;
                 const isSecond = g.second === opt.key;
                 const isBoth = isFirst && isSecond;
