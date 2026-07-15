@@ -54,7 +54,7 @@ export default function StepProgress({ current, total, labels, onStepClick, isSt
                 onClick={() => clickable && onStepClick(i)}
                 aria-label={`${label} 단계로 이동`}
                 aria-current={i === current ? 'step' : undefined}
-                className={`flex flex-col items-center gap-1 rounded-lg -mx-1 px-1 py-0.5 transition-all ${
+                className={`flex flex-col items-center gap-1 rounded-lg px-2 py-1.5 min-w-[48px] transition-all ${
                   clickable ? 'cursor-pointer active:scale-95 hover:opacity-80' : 'cursor-default'
                 }`}
               >

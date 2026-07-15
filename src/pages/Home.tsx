@@ -76,13 +76,22 @@ interface ResultTravelTimes {
   second: { transit: TravelResult[]; driving: TravelResult[] } | null;
 }
 
-const LOADING_MESSAGES = [
-  '🗺️ 서울 구석구석 탐색 중...',
-  '👥 우리 팀 취향 분석 중...',
-  '🔍 딱 맞는 곳 걸러내는 중...',
-  '💰 가격대 & 영업시간 체크 중...',
-  '✨ 오늘의 코스 완성 직전!',
-];
+// 로딩 메시지 — 첫 줄에 선택 지역명을 넣어 "내 조건을 보고 있다"는 체감을 준다.
+// (전국 서비스라 '서울' 고정은 부산·인천 사용자에게 신뢰가 깨지는 순간이 됨)
+function getLoadingMessages(areaName?: string | null): string[] {
+  const place = areaName?.trim() || '동네';
+  return [
+    `🗺️ ${place} 구석구석 탐색 중...`,
+    '👥 우리 팀 취향 분석 중...',
+    '🔍 딱 맞는 곳 걸러내는 중...',
+    '💰 가격대 & 영업시간 체크 중...',
+    '✨ 오늘의 코스 완성 직전!',
+  ];
+}
+const LOADING_MESSAGE_COUNT = 5;
+// AI 응답이 오래 걸릴 때(약속한 30초 근처) 진행바 대신 '지연 인정' 카피로 전환 — 불확정 대기의 체감을 줄인다.
+const LOADING_SLOW_MS = 25000;
+const LOADING_SLOW_MESSAGE = '🍀 후보가 많은 동네라 꼼꼼히 보는 중이에요. 거의 다 왔어요!';
 
 // 결과·입력초안 모두 localStorage에 보관 — 홈버튼·공유로 앱을 벗어나 웹뷰가 재시작돼도 유지
 // (sessionStorage는 모바일에서 프로세스 재시작 시 통째로 사라짐)
@@ -239,6 +248,8 @@ export default function Home() {
 
   const travelReqRef = useRef(0);
   const enrichReqRef = useRef(0);
+  const loadingStartRef = useRef(0);   // 로딩 시작 시각 — 지연 인정 카피 전환 판단용
+  const lastRecommendRef = useRef<(() => void) | null>(null); // 실패 시 같은 조건 원탭 재시도용
   const stepScrollRef = useRef<HTMLDivElement>(null);
   const isGroup = appMode === 'group';
 
@@ -790,10 +801,13 @@ export default function Home() {
     changeReason?: ChangeReason,
     scope: RegionScope | null = null,
   ) {
+    // 실패 시 같은 조건으로 원탭 재시도할 수 있게 이번 호출을 기억해둔다(입력 state는 그대로라 재실행만 하면 됨)
+    lastRecommendRef.current = () => { void handleRecommend(midpoint, nearestAreas, validLocs, vibeWeights, excludeNames, changeReason, scope); };
     // 재추천이면 이전 1순위를 기억해뒀다가 "뭐가 달라졌는지" 한 줄에 사용
     const prevFirst = changeReason ? result?.[0] ?? null : null;
     setChangeNote(null);
     setLoading(true);
+    loadingStartRef.current = Date.now();
     setLoadingProgress(0);
     setError(null);
     setResult(null);
@@ -801,7 +815,7 @@ export default function Home() {
     setResultThirdLabel(null);
 
     const msgInterval = setInterval(() => {
-      setLoadingMsg((m) => (m + 1) % LOADING_MESSAGES.length);
+      setLoadingMsg((m) => (m + 1) % LOADING_MESSAGE_COUNT);
     }, 1800);
 
     let aiProgressInterval: ReturnType<typeof setInterval> | null = null;
@@ -1069,7 +1083,7 @@ export default function Home() {
             `  카카오맵 → ${primaryMapUrl}`,
           ]),
       ...(resultThird ? ['', `3차(${resultThirdLabel ?? '이어서'}): ${resultThird.placeName}`, `  카카오맵 → ${mapUrl(resultThird)}`] : []),
-      ...(treasurer ? ['', `💰 ${treasurer}에서 출발하는 분이 오늘의 총무 담당!`] : []),
+      ...(treasurer ? ['', `🎲 ${treasurer}에서 출발하는 분이 오늘의 총무 당첨!`] : []),
       '',
       '👇 결과 직접 확인',
     ].join('\n');
@@ -1114,7 +1128,10 @@ export default function Home() {
 
   // 로딩
   if (loading) {
-    return <LoadingScreen progress={loadingProgress} message={LOADING_MESSAGES[loadingMsg]} />;
+    const msgs = getLoadingMessages(midpointData?.areaName);
+    const elapsed = loadingStartRef.current ? Date.now() - loadingStartRef.current : 0;
+    const loadingMessage = elapsed > LOADING_SLOW_MS ? LOADING_SLOW_MESSAGE : msgs[loadingMsg % msgs.length];
+    return <LoadingScreen progress={loadingProgress} message={loadingMessage} />;
   }
 
   // 예약 페이지
@@ -1345,7 +1362,7 @@ export default function Home() {
                 >
                   <span className="text-lg">👥</span>
                   <span className={`text-[13px] font-black ${isGroup ? 'text-[#2AB5A0]' : 'text-gray-700'}`}>다같이 정할게요</span>
-                  <span className="text-[10px] text-gray-400">호스트가 코스·지역 선점 →</span>
+                  <span className="text-[10px] text-gray-400">링크로 친구 취향 모으기 →</span>
                 </button>
               </div>
 
@@ -1670,8 +1687,17 @@ export default function Home() {
 
         {/* 에러 */}
         {error && (
-          <div className="flex-shrink-0 mx-4 mb-2 p-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-600 text-center">
-            {error}
+          <div className="flex-shrink-0 mx-4 mb-2 p-3.5 bg-red-50 border border-red-200 rounded-xl text-center">
+            <p className="text-sm text-red-600 leading-snug">{error}</p>
+            <p className="mt-1 text-[11px] text-gray-500">입력하신 조건은 그대로 있어요.</p>
+            {lastRecommendRef.current && (
+              <button
+                onClick={() => lastRecommendRef.current?.()}
+                className="mt-2.5 w-full py-2.5 rounded-xl bg-[#3CDBC0] text-white text-sm font-black active:scale-95 transition-transform hover:bg-[#2AB5A0]"
+              >
+                🔄 다시 시도
+              </button>
+            )}
           </div>
         )}
 

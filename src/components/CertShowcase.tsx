@@ -68,11 +68,11 @@ export default function CertShowcase() {
                     {s.label}
                   </span>
                 </div>
-                <p className={`text-xs lg:text-sm leading-relaxed ${empty ? 'text-gray-400' : 'text-gray-500'}`}>
+                <p className={`text-xs lg:text-sm leading-relaxed ${empty ? 'text-gray-500' : 'text-gray-500'}`}>
                   {BLURBS[s.id] ?? s.sourceLine}
                 </p>
                 {empty ? (
-                  <span className="self-start mt-0.5 text-[10px] font-bold text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">
+                  <span className="self-start mt-0.5 text-[10px] font-bold text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">
                     데이터 준비 중
                   </span>
                 ) : SHOW_COUNT.has(s.id) ? (
@@ -87,10 +87,10 @@ export default function CertShowcase() {
 
         {/* 정직성 라인 */}
         <div className="mt-8 lg:mt-12 text-center flex flex-col gap-1.5">
-          <p className="text-xs lg:text-sm text-gray-400 leading-relaxed">
+          <p className="text-xs lg:text-sm text-gray-500 leading-relaxed">
             상호와 지역이 공식 목록과 정확히 일치할 때만 표시해요. 애매하면 붙이지 않습니다.
           </p>
-          <p className="text-xs lg:text-sm text-gray-400 leading-relaxed">
+          <p className="text-xs lg:text-sm text-gray-500 leading-relaxed">
             각 기관·가이드와의 제휴·후원 관계가 없으며, 공개 발표를 참고 정보로만 안내해요.
             {disclaimers.map((d) => ` ${d}`)}
           </p>

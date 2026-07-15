@@ -773,7 +773,7 @@ export default function ResultCard({
           >
             <div className="text-5xl mb-4">🎲</div>
             <p className="text-lg font-black text-gray-800 leading-snug">
-              {treasurer}에서 출발하는 분이<br />오늘의 총무 담첨!
+              {treasurer}에서 출발하는 분이<br />오늘의 총무 당첨!
             </p>
             <button
               onClick={() => setShowTreasurerPopup(false)}

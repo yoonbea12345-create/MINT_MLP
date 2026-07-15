@@ -71,7 +71,7 @@ const GROUPS = [
 const BUDGET_OPTIONS = [
   { value: '~2만원',  label: '~2만원',  emoji: '💵', sub: '가성비' },
   { value: '2~4만원', label: '2~4만원', emoji: '🍽️', sub: '적당히' },
-  { value: '4만원+',  label: '4만원+',  emoji: '💎', sub: 'special' },
+  { value: '4만원+',  label: '4만원+',  emoji: '💎', sub: '플렉스' },
 ];
 
 interface Props {
@@ -190,7 +190,7 @@ export default function VibeSelect({ value, onChange, purpose, budget = null, on
                   <button
                     key={opt.key}
                     onClick={() => toggle(group.label, opt.key)}
-                    className={`relative flex items-center gap-1.5 rounded-full border-2 px-3 py-2 text-sm font-bold transition-all duration-200 active:scale-95 ${
+                    className={`relative flex items-center gap-1.5 rounded-full border-2 px-3.5 py-2.5 text-sm font-bold transition-all duration-200 active:scale-95 ${
                       isFirst
                         ? 'border-[#3CDBC0] bg-[#E8F8F5] text-[#2AB5A0] shadow-sm shadow-[#3CDBC0]/20'
                         : isSecond
@@ -199,11 +199,11 @@ export default function VibeSelect({ value, onChange, purpose, budget = null, on
                     }`}
                   >
                     {isBoth ? (
-                      <span className="absolute -top-1.5 -right-1.5 text-[7px] font-black bg-gradient-to-r from-[#1E9E8C] to-orange-400 text-white px-1.5 py-0.5 rounded-full leading-none z-10 shadow-sm">1·2차</span>
+                      <span className="absolute -top-1.5 -right-1.5 text-[9px] font-black bg-gradient-to-r from-[#1E9E8C] to-orange-400 text-white px-1.5 py-0.5 rounded-full leading-none z-10 shadow-sm">1·2차</span>
                     ) : isFirst ? (
-                      <span className="absolute -top-1.5 -right-1.5 text-[7px] font-black bg-[#1E9E8C] text-white px-1.5 py-0.5 rounded-full leading-none z-10 shadow-sm">1차</span>
+                      <span className="absolute -top-1.5 -right-1.5 text-[9px] font-black bg-[#1E9E8C] text-white px-1.5 py-0.5 rounded-full leading-none z-10 shadow-sm">1차</span>
                     ) : isSecond ? (
-                      <span className="absolute -top-1.5 -right-1.5 text-[7px] font-black bg-orange-400 text-white px-1.5 py-0.5 rounded-full leading-none z-10 shadow-sm">2차</span>
+                      <span className="absolute -top-1.5 -right-1.5 text-[9px] font-black bg-orange-400 text-white px-1.5 py-0.5 rounded-full leading-none z-10 shadow-sm">2차</span>
                     ) : null}
                     <span className="text-base leading-none">{opt.emoji}</span>
                     <span>{opt.label}</span>
@@ -247,11 +247,11 @@ export default function VibeSelect({ value, onChange, purpose, budget = null, on
 
       {/* 키워드 — 자유 입력 강조 섹션. 2차 코스가 있으면 1차·2차로 나눠 입력 */}
       {showExtras && onKeywordsChange && (
-        <div className="rounded-2xl border-2 border-[#3CDBC0]/40 bg-[#F0FDF9] p-4">
-          <p className="text-sm font-black text-[#2AB5A0] mb-1 break-keep">🔎 원하는 키워드는 뭐든지!</p>
-          <p className="text-[11px] text-gray-500 mb-3 leading-relaxed break-keep">
-            편의시설·분위기·조건 뭐든 자유롭게<br />
-            ex.) #루프탑 #주차가능 #단체석 #노포 #뷰맛집
+        <div className="rounded-2xl border border-gray-200 bg-gray-50/60 p-4">
+          <p className="text-sm font-bold text-gray-700 mb-1 break-keep">🔎 칩에 없는 조건은 직접 추가</p>
+          <p className="text-xs text-gray-500 mb-3 leading-relaxed break-keep">
+            위 칩으로 부족하면 세부 조건을 자유롭게<br />
+            ex.) #노포 #오마카세 #콜키지 #창가자리 #루프탑
           </p>
           <KeywordTagInput
             badge={hasSecond ? `1차${purpose?.first ? ` · ${purpose.first}` : ''}` : undefined}

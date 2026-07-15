@@ -79,7 +79,7 @@ function VoteSection({ shareId, candidates }: { shareId: string; candidates: Vot
   return (
     <div className="bg-white rounded-2xl border border-gray-100 p-4 shadow-sm mb-4 animate-fade-in-up">
       <p className="text-sm font-black text-gray-800 mb-0.5">🙌 어디가 제일 좋아요?</p>
-      <p className="text-[11px] text-gray-400 mb-3">
+      <p className="text-[11px] text-gray-500 mb-3">
         투표하면 모두에게 집계가 보여요{total > 0 ? ` · 지금까지 ${total}표` : ''}
       </p>
       <div className="flex flex-col gap-2">
@@ -107,7 +107,7 @@ function VoteSection({ shareId, candidates }: { shareId: string; candidates: Vot
                   <p className={`text-sm font-black truncate ${mine ? 'text-[#1A7A6E]' : 'text-gray-800'}`}>
                     {i === 0 ? '⭐ ' : ''}{c.n}
                   </p>
-                  {c.c && <p className="text-[10px] text-gray-400 truncate">{c.c}</p>}
+                  {c.c && <p className="text-[10px] text-gray-500 truncate">{c.c}</p>}
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
                   {c.s != null && (
@@ -115,7 +115,7 @@ function VoteSection({ shareId, candidates }: { shareId: string; candidates: Vot
                       {c.s}점
                     </span>
                   )}
-                  <span className={`text-xs font-black ${mine ? 'text-[#2AB5A0]' : 'text-gray-400'}`}>
+                  <span className={`text-xs font-black ${mine ? 'text-[#2AB5A0]' : 'text-gray-500'}`}>
                     👍 {n}
                   </span>
                 </div>
@@ -173,7 +173,7 @@ export default function SharedResult() {
       <div className="max-w-md mx-auto px-4 pb-10 pt-8">
         <div className="text-center mb-6">
           <h1 className="text-2xl font-black text-[#2AB5A0]">MINT</h1>
-          <p className="text-sm text-gray-400 mt-1">오늘의 추천 장소</p>
+          <p className="text-sm text-gray-500 mt-1">오늘의 추천 장소</p>
         </div>
 
         {/* 메인 카드 */}
@@ -242,7 +242,7 @@ export default function SharedResult() {
         )}
 
         <div className="text-center mb-4">
-          <p className="text-xs text-gray-400">AI가 이 모임에 딱 맞는 장소를 골라줬어요</p>
+          <p className="text-xs text-gray-500">AI가 이 모임에 딱 맞는 장소를 골라줬어요</p>
         </div>
         <a
           href="/app"
@@ -252,7 +252,7 @@ export default function SharedResult() {
         </a>
         <a
           href="/"
-          className="block w-full py-3 text-center text-sm text-gray-400 hover:text-[#2AB5A0] transition-colors mt-1"
+          className="block w-full py-3 text-center text-sm text-gray-500 hover:text-[#2AB5A0] transition-colors mt-1"
         >
           MINT가 뭔지 알아보기 →
         </a>
