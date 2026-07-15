@@ -485,9 +485,10 @@ export default function MemberInput() {
               if (stepIndex === 0) window.location.href = '/';
               else setPhase((['step0', 'step1', 'step2'] as const)[stepIndex - 1]);
             }}
-            className="w-14 py-4 rounded-2xl border-2 border-gray-200 bg-white text-gray-500 font-bold text-lg hover:border-gray-300 transition-all active:scale-95"
+            aria-label="이전 단계로"
+            className="w-[92px] py-4 rounded-2xl border-2 border-gray-200 bg-white text-gray-500 font-bold text-sm hover:border-gray-300 transition-all active:scale-95"
           >
-            ←
+            ← 이전
           </button>
 
           {phase === 'step0' && (

@@ -1313,11 +1313,11 @@ export default function Home() {
         <div className="flex-shrink-0 text-center pt-[max(1rem,env(safe-area-inset-top))] px-4 relative">
           <button
             onClick={() => { window.location.href = '/'; }}
-            className="absolute left-3 top-1/2 -translate-y-1/2 flex items-center gap-1 rounded-lg px-1.5 py-1 text-xs font-bold text-gray-400 hover:text-[#2AB5A0] transition-colors"
-            aria-label="홈페이지로 돌아가기"
+            className="absolute left-2 top-1/2 -translate-y-1/2 flex items-center gap-1 rounded-lg px-2 py-2 text-xs font-bold text-gray-500 hover:text-[#2AB5A0] transition-colors"
+            aria-label="홈으로 가기"
           >
             <span className="text-base leading-none" aria-hidden>←</span>
-            <span>홈페이지로 돌아가기</span>
+            <span>홈</span>
           </button>
           <h1
             className="text-2xl font-black text-[#2AB5A0] tracking-tight cursor-pointer"
@@ -1403,6 +1403,13 @@ export default function Home() {
                   <span className="text-[10px] text-gray-400">링크로 친구 취향 모으기 →</span>
                 </button>
               </div>
+
+              {/* 다같이 선택 시 미리보기 한 줄 — 진행 전에 그룹 모드가 어떻게 돌아가는지 체감시켜 진입률↑ */}
+              {isGroup && (
+                <p className="text-xs text-[#2AB5A0] bg-[#E8F8F5] border border-[#3CDBC0]/30 rounded-xl px-3 py-2.5 leading-relaxed animate-fade-in-up break-keep">
+                  💡 링크만 공유하면 친구들은 <strong className="font-black">가입 없이 분위기만 30초</strong>. 결과는 단톡방으로 와요!
+                </p>
+              )}
 
               {/* Solo: 인원수 + 목적 */}
               {appMode === 'solo' && (

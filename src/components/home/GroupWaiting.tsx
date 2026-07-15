@@ -43,10 +43,8 @@ export default function GroupWaiting({
             onClick={onKakaoShare}
             className="flex-1 flex items-center justify-center gap-1 px-4 py-2.5 rounded-xl bg-[#FEE500] text-[#3A1D1D] text-sm font-bold transition-all active:scale-95 hover:brightness-95"
           >
-            <svg className="w-4 h-4" viewBox="0 0 120 108" fill="none" aria-hidden="true">
-              <ellipse cx="60" cy="46" rx="58" ry="44" fill="#3A1D1D"/>
-              <text x="60" y="58" textAnchor="middle" fill="#FEE500" fontSize="26" fontWeight="900" fontFamily="Arial, sans-serif" letterSpacing="-0.5">TALK</text>
-              <path d="M 26 84 L 12 107 L 50 86 Z" fill="#3A1D1D"/>
+            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <path d="M12 3C6.48 3 2 6.58 2 11c0 2.83 1.83 5.31 4.6 6.73L5.5 21.5l4.2-2.3c.74.13 1.51.2 2.3.2 5.52 0 10-3.58 10-8s-4.48-8-10-8z" />
             </svg>
             카카오톡 공유
           </button>

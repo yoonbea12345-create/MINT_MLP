@@ -155,7 +155,7 @@ export default function MeetingLocationSelect({ value, onSelect }: Props) {
         onClick={() => { setSearch(''); setSuggestions([]); onSelect({ type: 'auto' }); }}
         className={`w-full text-left rounded-2xl p-4 flex items-center gap-3 active:scale-[0.98] transition-all shadow-lg shadow-[#3CDBC0]/25 ${
           value?.type === 'auto'
-            ? 'bg-[#3CDBC0] border-4 border-[#2AB58C]'
+            ? 'bg-[#3CDBC0] border-4 border-[#2AB5A0]'
             : 'bg-[#3CDBC0]'
         }`}
       >
