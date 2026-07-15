@@ -190,6 +190,8 @@ export default function VibeSelect({ value, onChange, purpose, budget = null, on
                   <button
                     key={opt.key}
                     onClick={() => toggle(group.label, opt.key)}
+                    aria-pressed={isFirst || isSecond}
+                    aria-label={`${opt.label}${isBoth ? ' (1·2차 선택됨)' : isFirst ? ' (1차 선택됨)' : isSecond ? ' (2차 선택됨)' : ''}`}
                     className={`relative flex items-center gap-1.5 rounded-full border-2 px-3.5 py-2.5 text-sm font-bold transition-all duration-200 active:scale-95 ${
                       isFirst
                         ? 'border-[#3CDBC0] bg-[#E8F8F5] text-[#2AB5A0] shadow-sm shadow-[#3CDBC0]/20'
@@ -229,6 +231,7 @@ export default function VibeSelect({ value, onChange, purpose, budget = null, on
                 <button
                   key={opt.value}
                   onClick={() => onBudgetChange(isActive ? null : opt.value)}
+                  aria-pressed={isActive}
                   className={`flex flex-col items-center justify-center h-16 rounded-xl border-2 text-xs font-bold transition-all duration-200 active:scale-[0.97] ${
                     isActive
                       ? 'border-[#3CDBC0] bg-[#E8F8F5] text-[#2AB5A0] shadow-md shadow-[#3CDBC0]/20'

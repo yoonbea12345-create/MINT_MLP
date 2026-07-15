@@ -245,11 +245,13 @@ export default function Home() {
   const [showCompromiseToast, setShowCompromiseToast] = useState(false);
   const [showVibeScrollHint, setShowVibeScrollHint] = useState(false);
   const [showResultScrollHint, setShowResultScrollHint] = useState(false);
+  const [showStickyShare, setShowStickyShare] = useState(false);   // 결과 하단 sticky 공유 바 — 맨 아래 CTA에 닿으면 숨김
 
   const travelReqRef = useRef(0);
   const enrichReqRef = useRef(0);
   const loadingStartRef = useRef(0);   // 로딩 시작 시각 — 지연 인정 카피 전환 판단용
   const lastRecommendRef = useRef<(() => void) | null>(null); // 실패 시 같은 조건 원탭 재시도용
+  const shareSentinelRef = useRef<HTMLDivElement | null>(null); // 결과 맨 아래 감지용(sticky 공유 바 표시 제어)
   const stepScrollRef = useRef<HTMLDivElement>(null);
   const isGroup = appMode === 'group';
 
@@ -428,6 +430,20 @@ export default function Home() {
       }
     }
   }, [view]);
+
+  // 결과 하단 sticky 카톡 공유 바 — 핵심 유입 경로라 스크롤 어디서든 한 탭.
+  // 맨 아래 감지 센티넬(=인라인 공유 버튼 지점)이 보이면 숨겨 중복을 피한다.
+  useEffect(() => {
+    if (view !== 'result') { setShowStickyShare(false); return; }
+    const el = shareSentinelRef.current;
+    if (!el) return;
+    const obs = new IntersectionObserver(
+      ([entry]) => setShowStickyShare(!entry.isIntersecting),
+      { rootMargin: '0px 0px -40px 0px' },
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, [view, result]);
 
   // 혼자 정하기 분위기 단계에서 아래 키워드 영역이 화면 밖에 있을 때만 스크롤 힌트를 보여준다.
   useEffect(() => {
@@ -1242,11 +1258,31 @@ export default function Home() {
             onReject={handleReject}
           />
 
+          {/* 맨 아래(인라인 CTA 지점) 감지용 — 여기 닿으면 sticky 공유 바를 숨긴다 */}
+          <div ref={shareSentinelRef} aria-hidden className="h-px w-full" />
+
+          {/* 하단 sticky 카톡 공유 바 — 결과 어디서든 한 탭(핵심 유입). 맨 아래 CTA에 닿으면 숨김 */}
+          {showStickyShare && (
+            <div className="fixed inset-x-0 bottom-0 z-40 border-t border-gray-100 bg-white/95 px-4 pt-2.5 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur animate-fade-in-up">
+              <div className="mx-auto max-w-md">
+                <button
+                  onClick={handleShare}
+                  className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl bg-[#FEE500] text-gray-900 font-black text-base shadow-lg shadow-yellow-200/60 active:scale-95 transition-transform"
+                >
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12 2C6.48 2 2 6.08 2 11.1c0 3.13 1.73 5.9 4.35 7.57V22l3.97-2.18c1.06.29 2.18.44 3.33.44 5.52 0 10-4.08 10-9.1C23.65 6.08 17.52 2 12 2z" />
+                  </svg>
+                  카카오톡으로 공유하기
+                </button>
+              </div>
+            </div>
+          )}
+
           {showResultScrollHint && (
             <button
               type="button"
               onClick={() => window.scrollBy({ top: Math.max(320, window.innerHeight * 0.55), behavior: 'smooth' })}
-              className="fixed bottom-[max(1rem,env(safe-area-inset-bottom))] left-1/2 z-40 flex -translate-x-1/2 items-center gap-2 whitespace-nowrap rounded-full border border-[#3CDBC0]/35 bg-white/95 px-4 py-2.5 text-xs font-bold text-[#2AB5A0] shadow-xl shadow-[#2AB5A0]/20 backdrop-blur"
+              className="fixed bottom-[max(5.5rem,calc(env(safe-area-inset-bottom)+5rem))] left-1/2 z-40 flex -translate-x-1/2 items-center gap-2 whitespace-nowrap rounded-full border border-[#3CDBC0]/35 bg-white/95 px-4 py-2.5 text-xs font-bold text-[#2AB5A0] shadow-xl shadow-[#2AB5A0]/20 backdrop-blur"
             >
               {purpose?.second && purpose.second !== '없음'
                 ? '아래에 다른 후보와 2차 코스도 있어요'
@@ -1342,6 +1378,7 @@ export default function Home() {
               <div className="grid grid-cols-2 gap-3">
                 <button
                   onClick={() => { setAppMode('solo'); setSessionId(null); setGroupMembers([]); setGroupError(null); try { localStorage.removeItem(GROUP_SESSION_KEY); } catch { /* ignore */ } }}
+                  aria-pressed={appMode === 'solo'}
                   className={`flex flex-col items-center justify-center gap-0.5 py-3 rounded-2xl border-2 transition-all active:scale-[0.97] ${
                     appMode === 'solo'
                       ? 'border-[#3CDBC0] bg-[#E8F8F5] shadow-md shadow-[#3CDBC0]/20'
@@ -1354,6 +1391,7 @@ export default function Home() {
                 </button>
                 <button
                   onClick={() => { if (appMode !== 'group') setAppMode('group'); }}
+                  aria-pressed={isGroup}
                   className={`flex flex-col items-center justify-center gap-0.5 py-3 rounded-2xl border-2 transition-all active:scale-[0.97] ${
                     isGroup
                       ? 'border-[#3CDBC0] bg-[#E8F8F5] shadow-md shadow-[#3CDBC0]/20'
@@ -1376,6 +1414,7 @@ export default function Home() {
                         <button
                           key={size}
                           onClick={() => setGroupSize(size)}
+                          aria-pressed={groupSize === size}
                           className={`flex items-center justify-center h-10 rounded-xl border-2 text-sm font-bold transition-all active:scale-[0.97] ${
                             groupSize === size
                               ? 'border-[#3CDBC0] bg-[#E8F8F5] text-[#2AB5A0] shadow-md shadow-[#3CDBC0]/20'

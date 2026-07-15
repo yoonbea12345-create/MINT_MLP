@@ -72,6 +72,7 @@ export default function PurposeSelect({ value, onChange }: Props) {
               <button
                 key={opt.value}
                 onClick={() => selectFirst(opt.value)}
+                aria-pressed={selected}
                 className={`flex flex-col items-center justify-center h-[72px] rounded-2xl border-2 transition-all duration-200 ${
                   selected
                     ? 'border-[#3CDBC0] bg-[#E8F8F5] shadow-md shadow-[#3CDBC0]/20'
@@ -114,6 +115,7 @@ export default function PurposeSelect({ value, onChange }: Props) {
               <button
                 key={opt.value}
                 onClick={() => selectSecond(opt.value)}
+                aria-pressed={selected}
                 className={`flex flex-col items-center justify-center h-[72px] rounded-2xl border-2 transition-all duration-200 ${
                   selected
                     ? 'border-[#3CDBC0] bg-[#E8F8F5] shadow-md shadow-[#3CDBC0]/20'

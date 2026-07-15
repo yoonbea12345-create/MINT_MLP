@@ -203,9 +203,13 @@ function PlaceCard({ place, extraResults = [], gradient, shadowColor }: CardProp
   return (
     <>
     <div
-      className={`rounded-2xl text-white overflow-hidden cursor-pointer active:scale-[0.99] transition-transform shadow-xl ${shadowColor}`}
+      role="link"
+      tabIndex={0}
+      aria-label={`${place.placeName} 카카오맵에서 열기`}
+      className={`rounded-2xl text-white overflow-hidden cursor-pointer active:scale-[0.99] transition-transform shadow-xl outline-none focus-visible:ring-2 focus-visible:ring-[#3CDBC0] focus-visible:ring-offset-2 ${shadowColor}`}
       style={{ background: gradient }}
       onClick={() => window.open(url, '_blank')}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); window.open(url, '_blank'); } }}
     >
       {/* 대표 사진 — 카드 신뢰도의 절반 */}
       {place.imageUrl && (
@@ -581,9 +585,13 @@ export default function ResultCard({
 
           {/* 2차 카드 */}
           <div
-            className="rounded-2xl text-white shadow-xl shadow-[#1A7A6E]/25 overflow-hidden cursor-pointer active:scale-[0.99] transition-transform"
+            role="link"
+            tabIndex={0}
+            aria-label={`${secondResult.placeName} 카카오맵에서 열기`}
+            className="rounded-2xl text-white shadow-xl shadow-[#1A7A6E]/25 overflow-hidden cursor-pointer active:scale-[0.99] transition-transform outline-none focus-visible:ring-2 focus-visible:ring-[#3CDBC0] focus-visible:ring-offset-2"
             style={{ background: 'linear-gradient(135deg, #1A7A6E 0%, #155E54 100%)' }}
             onClick={() => window.open(kakaoUrl(secondResult), '_blank')}
+            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); window.open(kakaoUrl(secondResult), '_blank'); } }}
           >
             {secondResult.imageUrl && (
               <img
@@ -674,12 +682,37 @@ export default function ResultCard({
               );
             })()}
           </div>
-          <PlaceCard
-            place={thirdResult}
-            extraResults={[]}
-            gradient="linear-gradient(135deg, #0F4E46 0%, #0A3A34 100%)"
-            shadowColor="shadow-[#0F4E46]/25"
-          />
+          {/* 3차는 '덤' 성격이라 흰 카드+다크틸 좌측 보더로 경량화(주인공=1차 위계 유지). 중첩 버튼이 없어 시맨틱 <a>로 처리 */}
+          <a
+            href={kakaoUrl(thirdResult)}
+            target="_blank"
+            rel="noreferrer"
+            aria-label={`${thirdResult.placeName} 카카오맵에서 열기`}
+            className="block rounded-2xl bg-white border border-gray-200 border-l-4 border-l-[#0F4E46] p-3.5 shadow-sm active:scale-[0.99] transition-transform outline-none focus-visible:ring-2 focus-visible:ring-[#0F4E46] focus-visible:ring-offset-2"
+          >
+            <div className="flex items-start gap-3">
+              {thirdResult.imageUrl && (
+                <img
+                  src={thirdResult.imageUrl}
+                  alt={thirdResult.placeName}
+                  className="w-16 h-16 rounded-xl object-cover flex-shrink-0"
+                  loading="lazy"
+                  onError={hideOnError}
+                />
+              )}
+              <div className="min-w-0 flex-1">
+                <span className="inline-block text-[11px] font-bold text-[#0F4E46] bg-[#0F4E46]/10 px-2 py-0.5 rounded-full mb-1">{thirdResult.category}</span>
+                <p className="text-base font-black text-gray-800 leading-tight">{thirdResult.placeName}</p>
+                {thirdResult.description && (
+                  <p className="text-xs text-gray-500 leading-snug mt-0.5 break-keep">{thirdResult.description}</p>
+                )}
+                <div className="flex items-center gap-1.5 text-xs text-gray-500 mt-1.5">
+                  <GpsPin className="text-gray-400 shrink-0" />
+                  <span className="truncate">{thirdResult.address || thirdResult.area}</span>
+                </div>
+              </div>
+            </div>
+          </a>
         </>
       )}
 
