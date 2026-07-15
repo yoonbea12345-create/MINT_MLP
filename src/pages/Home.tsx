@@ -573,17 +573,18 @@ export default function Home() {
     }), shareText, link);
   }
 
-  function canNext(): boolean {
-    if (step === 0) {
+  // 특정 스텝에서 '다음'으로 진행 가능한지 — 스텝바 점프 게이트에도 재사용하려 인자화.
+  function canNextAt(s: Step): boolean {
+    if (s === 0) {
       // 혼자·그룹 모두 1차 목적(코스)을 골라야 다음으로
       if (appMode === 'solo' || appMode === 'group') return !!purpose?.first;
       return false; // mode-select
     }
-    if (step === 1) {
+    if (s === 1) {
       if (isGroup) return meetingLocation !== null; // 그룹: 지역 선택
       return true; // 혼자: 관계·특별한날은 선택사항
     }
-    if (step === 2) {
+    if (s === 2) {
       // 그룹: 링크 생성 + 2명 이상 입력(호스트도 '내 취향 입력하기'로 자가참여해 멤버로 합류)하면 확정 가능.
       // 전원(expectedCount)을 기다리지 않고 2명만 모여도 추천 진입 가능 — 버튼은 GroupWaiting에서 노출.
       if (isGroup) return !!sessionId && groupMembers.length >= 2;
@@ -591,6 +592,77 @@ export default function Home() {
       return meetingLocation !== null && (meetingLocation.type === 'manual' || locations.length >= 2);
     }
     return true; // step 3
+  }
+
+  function canNext(): boolean {
+    return canNextAt(step);
+  }
+
+  // 그룹 링크 생성 후 코스·지역을 바꾸려면 이미 공유된 링크와 어긋난다 → 동의받고 세션을 무효화.
+  // (handleBack·스텝바 점프가 공유 헬퍼로 재사용)
+  function confirmInvalidateGroupLink(): boolean {
+    const ok = window.confirm('코스·지역을 바꾸려면 지금 링크를 취소하고 다시 설정해야 해요.\n계속할까요? (이미 공유한 링크는 무효가 됩니다)');
+    if (!ok) return false;
+    setSessionId(null);
+    setGroupMembers([]);
+    try { localStorage.removeItem(GROUP_SESSION_KEY); } catch { /* ignore */ }
+    return true;
+  }
+
+  // 스텝바 점프 허용 여부: 뒤로는 자유, 앞으로는 solo에서 경유 게이트를 모두 통과할 때만.
+  // 결과 화면(view==='result')에선 모든 입력 단계가 '과거'이므로 0~3 전부 점프 가능.
+  function canJumpTo(target: number): boolean {
+    const t = target as Step;
+    const cur = view === 'result' ? 4 : step;
+    if (t === cur) return false;
+    if (t < cur) return true;
+    if (isGroup) return false; // 그룹 forward 점프 금지(집계·링크 흐름 보호)
+    for (let k = step; k < t; k++) if (!canNextAt(k as Step)) return false;
+    return true;
+  }
+
+  // 스텝바 클릭 → 해당 단계로 이동(입력값은 그대로 유지). 결과 화면에서 누르면 입력 화면으로 복귀.
+  function handleStepJump(target: number) {
+    const t = target as Step;
+    if (!canJumpTo(t)) return;
+    // 그룹: 활성 링크가 있는데 코스·지역 단계(t<2)로 내려가면 링크 무효화 동의 필요
+    if (isGroup && sessionId && t < 2 && (view === 'result' || step >= 2)) {
+      if (!confirmInvalidateGroupLink()) return;
+    }
+    if (view === 'result') { setChangeNote(null); setView('steps'); }
+    setStep(t);
+  }
+
+  // 처음부터 다시 — 결과·입력 취향을 전부 지우고 첫 화면으로. 파괴적이라 반드시 확인 1회.
+  function handleFullReset() {
+    if (!window.confirm('추천 결과와 입력한 취향이 모두 지워져요.\n처음부터 다시 시작할까요?')) return;
+    clearResultSnapshot();
+    try { localStorage.removeItem(INPUT_DRAFT_KEY); sessionStorage.removeItem(INPUT_DRAFT_KEY); localStorage.removeItem(GROUP_SESSION_KEY); } catch { /* ignore */ }
+    setResult(null);
+    setResultThird(null);
+    setResultThirdLabel(null);
+    setView('steps');
+    setStep(0);
+    setAppMode('mode-select');
+    setSessionId(null);
+    setGroupMembers([]);
+    setResultTravelTimes(null);
+    setLocations([]);
+    setPurpose(null);
+    setOccasionChip(null);
+    setEtcRelOpen(false);
+    setCustomOccasion('');
+    setVibe({});
+    setBudget(null);
+    setKeywords([]);
+    setKeywordsSecond([]);
+    setExcludeFoods([]);
+    setVibeCustom({});
+    setMeetingLocation(null);
+    setMidpointData(null);
+    setTreasurer(null);
+    setResultWeather(null);
+    setChangeNote(null);
   }
 
   // 그룹 확정 진입 직전: 멤버들이 각자 낸 출발지·분위기·취향을 하나로 집계.
@@ -629,11 +701,7 @@ export default function Home() {
     // 그룹: 링크 생성 후 코스·지역을 바꾸면 이미 공유된 링크의 파라미터와 어긋난다.
     // 공유(step2)에서 뒤로가기는 '링크 취소 후 재설정'으로 처리해 항상 링크=설정이 일치하게 유지.
     if (isGroup && step === 2 && sessionId) {
-      const ok = window.confirm('코스·지역을 바꾸려면 지금 링크를 취소하고 다시 설정해야 해요.\n계속할까요? (이미 공유한 링크는 무효가 됩니다)');
-      if (!ok) return;
-      setSessionId(null);
-      setGroupMembers([]);
-      try { localStorage.removeItem(GROUP_SESSION_KEY); } catch { /* ignore */ }
+      if (!confirmInvalidateGroupLink()) return;
       setStep(0); // 코스·지역은 유지 — 수정 후 다시 링크 생성
       return;
     }
@@ -1075,55 +1143,37 @@ export default function Home() {
           </div>
         )}
         <div className="max-w-md mx-auto px-4 pb-6 pt-2">
-          <div className="flex items-center justify-between mb-2">
+          {/* 헤더 3요소: 좌 '조건 수정'(값 유지), 중앙 브랜드 마크(클릭 불가), 우 '처음부터'(확인 후 전체 초기화) */}
+          <div className="flex items-center justify-between mb-1">
             <button
               onClick={() => {
-                // 결과에서 뒤로가기 = 바로 이전 입력 화면(마지막 스텝)으로. 입력값은 그대로 유지해 바로 수정·재추천 가능.
+                // 결과에서 조건 수정 = 바로 이전 입력 화면(마지막 스텝)으로. 입력값은 그대로 유지해 바로 수정·재추천 가능.
                 setChangeNote(null);
                 setView('steps');
                 setStep(3);
               }}
-              className="text-sm text-gray-400 hover:text-gray-600"
+              className="flex items-center gap-1 rounded-full border border-[#3CDBC0]/40 bg-white px-3 py-1.5 text-xs font-bold text-[#2AB5A0] shadow-sm transition-all active:scale-95 hover:bg-[#E8F8F5]"
             >
-              ← 뒤로
+              ← 조건 수정
             </button>
+            <span className="text-[#3CDBC0] font-black text-lg select-none">MINT</span>
             <button
-              onClick={() => {
-                // 처음부터 다시 — 전체 초기화
-                clearResultSnapshot();
-                try { localStorage.removeItem(INPUT_DRAFT_KEY); sessionStorage.removeItem(INPUT_DRAFT_KEY); localStorage.removeItem(GROUP_SESSION_KEY); } catch { /* ignore */ }
-                setResult(null);
-                setResultThird(null);
-                setResultThirdLabel(null);
-                setView('steps');
-                setStep(0);
-                setAppMode('mode-select');
-                setSessionId(null);
-                setGroupMembers([]);
-                setResultTravelTimes(null);
-                setLocations([]);
-                setPurpose(null);
-                setOccasionChip(null);
-                setEtcRelOpen(false);
-                setCustomOccasion('');
-                setVibe({});
-                setBudget(null);
-                setKeywords([]);
-                setKeywordsSecond([]);
-                setExcludeFoods([]);
-                setVibeCustom({});
-                setMeetingLocation(null);
-                setMidpointData(null);
-                setTreasurer(null);
-                setResultWeather(null);
-                setChangeNote(null);
-              }}
-              className="text-[#3CDBC0] font-black text-lg"
-              title="처음부터 다시"
+              onClick={handleFullReset}
+              className="flex items-center gap-1 rounded-lg px-2 py-1.5 text-[11px] font-bold text-gray-400 transition-colors hover:text-gray-600"
+              title="처음부터 다시 (입력·결과 초기화)"
             >
-              MINT
+              ↺ 처음부터
             </button>
           </div>
+
+          {/* 상단 단계바 — 결과 화면에서도 특정 단계를 눌러 바로 수정하러 갈 수 있게(값 유지). */}
+          <StepProgress
+            current={4}
+            total={4}
+            labels={isGroup ? ['코스', '지역', '공유', '확정'] : undefined}
+            onStepClick={handleStepJump}
+            isStepClickable={canJumpTo}
+          />
 
           {/* 날씨 반영 배너 — "모든 변수 반영"을 유저가 체감하게 */}
           {resultWeather && (resultWeather.isRainy || resultWeather.isHot || resultWeather.isCold) && (
@@ -1226,7 +1276,13 @@ export default function Home() {
 
         {/* 스텝 프로그레스 — 전 화면 4단계 고정 (그룹은 라벨만 교체) */}
         <div className="flex-shrink-0">
-          <StepProgress current={step} total={4} labels={isGroup ? ['코스', '지역', '공유', '확정'] : undefined} />
+          <StepProgress
+            current={step}
+            total={4}
+            labels={isGroup ? ['코스', '지역', '공유', '확정'] : undefined}
+            onStepClick={handleStepJump}
+            isStepClickable={canJumpTo}
+          />
         </div>
 
         {/* 스텝 제목 */}

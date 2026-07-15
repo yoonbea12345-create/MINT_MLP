@@ -2,39 +2,66 @@ interface Props {
   current: number;
   total: number;
   labels?: string[];
+  /** 있으면 각 스텝을 클릭해 해당 단계로 점프할 수 있게 한다. 없으면 순수 표시(기존 동작). */
+  onStepClick?: (index: number) => void;
+  /** 특정 스텝 클릭 허용 여부. 생략 시 onStepClick이 있으면 현재 단계가 아닌 모든 스텝을 허용. */
+  isStepClickable?: (index: number) => boolean;
 }
 
 const DEFAULT_LABELS = ['모임·목적', '관계', '지역·장소', '분위기', '추천'];
 
-export default function StepProgress({ current, total, labels }: Props) {
+export default function StepProgress({ current, total, labels, onStepClick, isStepClickable }: Props) {
   const STEP_LABELS = labels ?? DEFAULT_LABELS;
-  const progress = total > 1 ? current / (total - 1) : 0;
+  // 결과 화면에서 current=total(전 단계 완료)로 넘겨도 마스코트가 밖으로 날아가지 않게 클램프.
+  const progress = total > 1 ? Math.min(1, current / (total - 1)) : 0;
   return (
     <div className="w-full px-4 pt-6 pb-2">
       <div className="relative">
         <div className="flex items-center justify-between mb-3">
-          {STEP_LABELS.slice(0, total).map((label, i) => (
-            <div key={i} className="flex flex-col items-center gap-1">
-              <div
-                className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-300 ${
-                  i < current
-                    ? 'bg-[#3CDBC0] text-white'
-                    : i === current
-                    ? 'bg-[#3CDBC0] text-white shadow-lg shadow-[#3CDBC0]/40'
-                    : 'bg-gray-200 text-gray-400'
+          {STEP_LABELS.slice(0, total).map((label, i) => {
+            const clickable = !!onStepClick && (isStepClickable ? isStepClickable(i) : i !== current);
+            const inner = (
+              <>
+                <div
+                  className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-300 ${
+                    i < current
+                      ? 'bg-[#3CDBC0] text-white'
+                      : i === current
+                      ? 'bg-[#3CDBC0] text-white shadow-lg shadow-[#3CDBC0]/40'
+                      : 'bg-gray-200 text-gray-400'
+                  }`}
+                >
+                  {i < current ? '✓' : i + 1}
+                </div>
+                <span
+                  className={`text-[10px] font-medium ${
+                    i <= current ? 'text-[#2AB5A0]' : 'text-gray-400'
+                  }`}
+                >
+                  {label}
+                </span>
+              </>
+            );
+            // onStepClick이 없으면 기존과 100% 동일한 div 렌더(MemberInput 등 하위호환)
+            if (!onStepClick) {
+              return <div key={i} className="flex flex-col items-center gap-1">{inner}</div>;
+            }
+            return (
+              <button
+                key={i}
+                type="button"
+                disabled={!clickable}
+                onClick={() => clickable && onStepClick(i)}
+                aria-label={`${label} 단계로 이동`}
+                aria-current={i === current ? 'step' : undefined}
+                className={`flex flex-col items-center gap-1 rounded-lg -mx-1 px-1 py-0.5 transition-all ${
+                  clickable ? 'cursor-pointer active:scale-95 hover:opacity-80' : 'cursor-default'
                 }`}
               >
-                {i < current ? '✓' : i + 1}
-              </div>
-              <span
-                className={`text-[10px] font-medium ${
-                  i <= current ? 'text-[#2AB5A0]' : 'text-gray-400'
-                }`}
-              >
-                {label}
-              </span>
-            </div>
-          ))}
+                {inner}
+              </button>
+            );
+          })}
         </div>
         <div className="relative h-1.5 bg-gray-200 rounded-full overflow-hidden">
           <div
