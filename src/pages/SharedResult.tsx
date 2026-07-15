@@ -137,7 +137,12 @@ export default function SharedResult() {
       const params = new URLSearchParams(window.location.search);
       const data = params.get('data');
       if (!data) throw new Error('no data');
-      setResult(JSON.parse(decodeURIComponent(data)));
+      // URLSearchParams.get()이 이미 1회 디코드한다. 여기서 또 decodeURIComponent하면
+      // description 등에 '%'가 섞였을 때(예: "만족도 90%") URIError로 정상 링크도 깨진다.
+      const parsed = JSON.parse(data);
+      // URL 잘림 등으로 필수 필드가 결손되면 렌더 중 크래시(특히 208줄 vibeTags.map) 대신 에러 화면으로.
+      if (!parsed?.placeName || !Array.isArray(parsed.vibeTags)) throw new Error('malformed payload');
+      setResult(parsed);
     } catch {
       setError(true);
     }

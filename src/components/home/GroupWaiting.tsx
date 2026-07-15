@@ -4,6 +4,7 @@ interface Props {
   shareLink: string;
   copied: boolean;
   onCopy: () => void;
+  onKakaoShare: () => void;
   onRecommend: () => void;
   members: GroupMember[];
   expectedCount: number;
@@ -16,6 +17,7 @@ export default function GroupWaiting({
   shareLink,
   copied,
   onCopy,
+  onKakaoShare,
   onRecommend,
   members,
   expectedCount,
@@ -26,16 +28,27 @@ export default function GroupWaiting({
 
   return (
     <div className="flex flex-col gap-3">
-      {/* 공유 링크 */}
+      {/* 공유 링크 — 링크 복사 + 카카오톡 공유 둘 다 제공(카톡 안 쓰는 층은 복사, 쓰는 층은 원터치) */}
       <div className="bg-white shadow-sm rounded-2xl p-4">
         <p className="text-xs text-gray-400 mb-2">공유 링크</p>
-        <div className="flex items-center gap-2">
-          <p className="flex-1 text-sm text-gray-700 truncate">{shareLink}</p>
+        <p className="text-sm text-gray-700 truncate bg-gray-50 rounded-xl px-3 py-2.5 mb-3">{shareLink}</p>
+        <div className="flex gap-2">
           <button
             onClick={onCopy}
-            className="flex-shrink-0 px-4 py-2 rounded-xl bg-[#3CDBC0] text-white text-sm font-bold transition-all active:scale-95 hover:bg-[#2AB5A0]"
+            className="flex-1 px-4 py-2.5 rounded-xl bg-[#E8F8F5] text-[#2AB5A0] text-sm font-bold transition-all active:scale-95 hover:bg-[#d4f3ee]"
           >
-            {copied ? '복사됨!' : '복사'}
+            {copied ? '복사됨!' : '🔗 링크 복사'}
+          </button>
+          <button
+            onClick={onKakaoShare}
+            className="flex-1 flex items-center justify-center gap-1 px-4 py-2.5 rounded-xl bg-[#FEE500] text-[#3A1D1D] text-sm font-bold transition-all active:scale-95 hover:brightness-95"
+          >
+            <svg className="w-4 h-4" viewBox="0 0 120 108" fill="none" aria-hidden="true">
+              <ellipse cx="60" cy="46" rx="58" ry="44" fill="#3A1D1D"/>
+              <text x="60" y="58" textAnchor="middle" fill="#FEE500" fontSize="26" fontWeight="900" fontFamily="Arial, sans-serif" letterSpacing="-0.5">TALK</text>
+              <path d="M 26 84 L 12 107 L 50 86 Z" fill="#3A1D1D"/>
+            </svg>
+            카카오톡 공유
           </button>
         </div>
       </div>

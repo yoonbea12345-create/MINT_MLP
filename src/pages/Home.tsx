@@ -101,6 +101,52 @@ function newShareId(): string {
   return s;
 }
 
+// 공유 폴백 — 카카오 SDK가 없거나 실패(특히 iOS 홈화면 PWA에선 조용히 실패)할 때
+// OS 네이티브 공유 시트 → 클립보드 → 최후 prompt 순으로. 어떤 환경에서도 버튼이 무반응으로 끝나지 않게 한다.
+async function fallbackShare(shareText: string, sharedUrl: string) {
+  if (navigator.share) {
+    try {
+      await navigator.share({ title: 'MINT 장소 추천', text: shareText, url: sharedUrl });
+      return;
+    } catch (e) {
+      // 사용자가 공유 시트를 닫은 것(AbortError)은 정상 종료. 그 외 실패만 클립보드로 이어감.
+      if ((e as Error)?.name === 'AbortError') return;
+    }
+  }
+  try {
+    await navigator.clipboard.writeText(`${shareText}\n${sharedUrl}`);
+    alert('공유 내용이 복사되었어요! 카카오톡에 붙여넣기 해주세요.');
+  } catch {
+    window.prompt('아래 링크를 길게 눌러 복사한 뒤 카카오톡에 붙여넣어 주세요.', sharedUrl);
+  }
+}
+
+// 카카오톡 공유 시트를 원터치로 띄우되, 실패 케이스를 전부 폴백으로 흡수한다:
+//  - iOS 홈화면 PWA(standalone): sendDefault가 커스텀 스킴/window.open 제약으로 예외 없이 조용히 실패 → 아예 건너뜀
+//  - Vercel env 키 누락: kakaoLoader.ts와 동일한 공개 JS 키로 폴백(그래도 falsy면 시도 안 함)
+//  - 도메인 미등록·SDK 내부 예외: try/catch로 잡아 공통 폴백(fallbackShare)으로
+// buildPayload는 성공 경로에서만 호출된다(Kakao.Share.sendDefault 인자).
+async function shareViaKakaoOrFallback(buildPayload: () => object, shareText: string, sharedUrl: string) {
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+  const isStandalone =
+    (navigator as Navigator & { standalone?: boolean }).standalone === true ||
+    window.matchMedia('(display-mode: standalone)').matches;
+  const skipKakao = isIOS && isStandalone;
+  const kakaoKey: string = import.meta.env.VITE_KAKAO_JS_API_KEY ?? '633de41eba4b85734a961345c0f55a7e';
+
+  if (!skipKakao && kakaoKey && window.Kakao?.Share) {
+    try {
+      if (!window.Kakao.isInitialized()) window.Kakao.init(kakaoKey);
+      if (!window.Kakao.isInitialized()) throw new Error('kakao init failed');
+      window.Kakao.Share.sendDefault(buildPayload());
+      return;
+    } catch {
+      trackEvent('kakao_share_fallback'); // 폴백 비율 관측용
+    }
+  }
+  await fallbackShare(shareText, sharedUrl);
+}
+
 function distMeters(aLat: number, aLng: number, bLat: number, bLng: number): number {
   const R = 6371000;
   const dLat = (bLat - aLat) * Math.PI / 180;
@@ -496,6 +542,31 @@ export default function Home() {
     });
   }
 
+  // 그룹 초대 링크를 카카오톡 UI로 원터치 공유(복사 버튼과 함께 제공 — 카톡 안 쓰는 층은 복사, 쓰는 층은 원터치).
+  function handleShareGroupLink() {
+    const link = groupShareLink();
+    if (!link) return;
+    trackEvent('kakao_share');
+    const shareText = [
+      '🍀 MINT에서 만날 장소 같이 정해요!',
+      '',
+      '링크 열고 분위기·취향만 30초 고르면 끝.',
+      '코스·지역은 이미 정해뒀어요 👇',
+    ].join('\n');
+    void shareViaKakaoOrFallback(() => ({
+      objectType: 'feed',
+      content: {
+        title: '🍀 MINT | 어디서 만날지 같이 정해요',
+        description: '링크 열고 분위기·취향만 고르면 끝. 다같이 만날 장소를 정해요.',
+        imageUrl: `${window.location.origin}/image/step5.png`,
+        link: { mobileWebUrl: link, webUrl: link },
+      },
+      buttons: [
+        { title: '참여하고 취향 입력하기', link: { mobileWebUrl: link, webUrl: link } },
+      ],
+    }), shareText, link);
+  }
+
   function canNext(): boolean {
     if (step === 0) {
       // 혼자·그룹 모두 1차 목적(코스)을 골라야 다음으로
@@ -870,7 +941,9 @@ export default function Home() {
       .filter((p): p is PlaceRecommendation => !!p)
       .map((p) => ({ n: p.placeName, c: p.category, s: p.fitScore ?? null }));
 
-    // SharedResult URL — 수신자가 링크 누르면 결과 카드로 바로 이동
+    // SharedResult URL — 수신자가 링크 누르면 결과 카드로 바로 이동.
+    // ⚠️ 전체 JSON을 쿼리에 싣기 때문에 URL이 너무 길면 일부 환경(카톡/iOS)에서 잘려 수신측 파싱이 깨진다.
+    // imageUrl(긴 CDN URL)·kakaoPlaceUrl은 SharedResult에서 각각 가드/미사용이므로 payload에서 빼 URL을 짧게 유지한다.
     const sharedData = {
       placeName: primary.placeName,
       category: primary.category,
@@ -882,8 +955,6 @@ export default function Home() {
       congestionLevel: primary.congestionLevel,
       lat: primary.lat,
       lng: primary.lng,
-      kakaoPlaceUrl: primary.kakaoPlaceUrl,
-      imageUrl: primary.imageUrl,
       // 멤버 투표용 — 수신자들이 1차 후보에 👍 할 수 있게
       shareId: newShareId(),
       candidates: firstCandidates.length >= 2 ? firstCandidates : undefined,
@@ -898,11 +969,30 @@ export default function Home() {
     const primaryMapUrl = mapUrl(primary);
     const secondMapUrl = secondPlace ? mapUrl(secondPlace) : null;
 
-    if (window.Kakao?.Share) {
-      if (!window.Kakao.isInitialized()) {
-        window.Kakao.init(import.meta.env.VITE_KAKAO_JS_API_KEY);
-      }
+    // 폴백(네이티브 공유/클립보드)용 텍스트 — sharedUrl은 fallbackShare에 따로 넘기므로 본문에서 분리한다.
+    const shareText = [
+      `🍀 MINT 추천 — ${primary.placeName}`,
+      '',
+      primary.description,
+      '',
+      ...(hasSecond && secondPlace
+        ? [
+            `1차(${purpose!.first}): ${primary.placeName}`,
+            `  카카오맵 → ${primaryMapUrl}`,
+            '',
+            `2차(${purpose!.second}): ${secondPlace.placeName}`,
+            `  카카오맵 → ${secondMapUrl}`,
+          ]
+        : [
+            `📍 ${primary.address || primary.area}`,
+            `  카카오맵 → ${primaryMapUrl}`,
+          ]),
+      ...(treasurer ? ['', `💰 ${treasurer}에서 출발하는 분이 오늘의 총무 담당!`] : []),
+      '',
+      '👇 결과 직접 확인',
+    ].join('\n');
 
+    void shareViaKakaoOrFallback(() => {
       const descLines = hasSecond && secondPlace
         ? [
             `1차(${purpose!.first}): ${primary.placeName}`,
@@ -924,7 +1014,7 @@ export default function Home() {
         buttons.push({ title: '카카오맵에서 보기', link: { mobileWebUrl: primaryMapUrl, webUrl: primaryMapUrl } });
       }
 
-      window.Kakao.Share.sendDefault({
+      return {
         objectType: 'feed',
         content: {
           title: `🍀 MINT 추천${hasSecond ? ` | 1차(${purpose!.first}) · 2차(${purpose!.second})` : ` | ${primary.placeName}`}`,
@@ -933,40 +1023,8 @@ export default function Home() {
           link: { mobileWebUrl: sharedUrl, webUrl: sharedUrl },
         },
         buttons,
-      });
-      return;
-    }
-
-    // 카카오 SDK 없을 때 텍스트 공유
-    const lines = [
-      `🍀 MINT 추천 — ${primary.placeName}`,
-      '',
-      primary.description,
-      '',
-      ...(hasSecond && secondPlace
-        ? [
-            `1차(${purpose!.first}): ${primary.placeName}`,
-            `  카카오맵 → ${primaryMapUrl}`,
-            '',
-            `2차(${purpose!.second}): ${secondPlace.placeName}`,
-            `  카카오맵 → ${secondMapUrl}`,
-          ]
-        : [
-            `📍 ${primary.address || primary.area}`,
-            `  카카오맵 → ${primaryMapUrl}`,
-          ]),
-      ...(treasurer ? ['', `💰 ${treasurer}에서 출발하는 분이 오늘의 총무 담당!`] : []),
-      '',
-      '👇 결과 직접 확인',
-      sharedUrl,
-    ];
-
-    const shareText = lines.join('\n');
-    if (navigator.share) {
-      navigator.share({ text: shareText });
-    } else {
-      navigator.clipboard?.writeText(shareText).then(() => alert('공유 내용이 복사되었습니다!'));
-    }
+      };
+    }, shareText, sharedUrl);
   }
 
   // 로딩
@@ -1452,6 +1510,7 @@ export default function Home() {
                   shareLink={groupShareLink()}
                   copied={copied}
                   onCopy={handleCopyLink}
+                  onKakaoShare={handleShareGroupLink}
                   onRecommend={requestGroupRecommend}
                   members={groupMembers}
                   expectedCount={expectedCount}
