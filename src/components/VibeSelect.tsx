@@ -180,7 +180,8 @@ export default function VibeSelect({ value, onChange, purpose, budget = null, on
                 </div>
               )}
             </div>
-            <div className="grid grid-cols-3 gap-2">
+            {/* 취향 칩 — 가로 알약(pill)으로 촘촘하게. 옵션이 많아도 3~4줄로 가볍게 흐르고, 자유입력 태그와 디자인 통일. */}
+            <div className="flex flex-wrap gap-2.5">
               {group.options.map((opt) => {
                 const isFirst = g.first === opt.key;
                 const isSecond = g.second === opt.key;
@@ -189,11 +190,11 @@ export default function VibeSelect({ value, onChange, purpose, budget = null, on
                   <button
                     key={opt.key}
                     onClick={() => toggle(group.label, opt.key)}
-                    className={`relative flex flex-col items-center justify-center h-16 rounded-xl border-2 text-xs font-bold transition-all duration-200 active:scale-[0.97] ${
+                    className={`relative flex items-center gap-1.5 rounded-full border-2 px-3 py-2 text-sm font-bold transition-all duration-200 active:scale-95 ${
                       isFirst
-                        ? 'border-[#3CDBC0] bg-[#E8F8F5] text-[#2AB5A0] shadow-md shadow-[#3CDBC0]/20'
+                        ? 'border-[#3CDBC0] bg-[#E8F8F5] text-[#2AB5A0] shadow-sm shadow-[#3CDBC0]/20'
                         : isSecond
-                        ? 'border-orange-400 bg-orange-50 text-orange-500 shadow-md shadow-orange-200/50'
+                        ? 'border-orange-400 bg-orange-50 text-orange-500 shadow-sm shadow-orange-200/50'
                         : 'border-gray-200 bg-white text-gray-700 hover:border-[#3CDBC0]/50'
                     }`}
                   >
@@ -204,7 +205,7 @@ export default function VibeSelect({ value, onChange, purpose, budget = null, on
                     ) : isSecond ? (
                       <span className="absolute -top-1.5 -right-1.5 text-[7px] font-black bg-orange-400 text-white px-1.5 py-0.5 rounded-full leading-none z-10 shadow-sm">2차</span>
                     ) : null}
-                    <span className="text-lg mb-1 leading-none">{opt.emoji}</span>
+                    <span className="text-base leading-none">{opt.emoji}</span>
                     <span>{opt.label}</span>
                   </button>
                 );
