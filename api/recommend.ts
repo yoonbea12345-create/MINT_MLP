@@ -141,42 +141,84 @@ function scopePlaces(raw: NaverPlace[], scope: RegionScope | null, midLat: numbe
   return withDist.sort((a, b) => a._d - b._d);
 }
 
+// 카카오 로컬 단일 카테고리 좌표+반경 검색 (음식점 FD6 / 카페 CE7).
+async function fetchKakaoByCategory(
+  lat: number, lng: number, radiusM: number, cat: 'FD6' | 'CE7', restApiKey: string, pages = 3,
+): Promise<NaverPlace[]> {
+  const out: NaverPlace[] = [];
+  const seen = new Set<string>();
+  for (let page = 1; page <= pages; page++) {
+    try {
+      const url = `https://dapi.kakao.com/v2/local/search/category.json?category_group_code=${cat}&x=${lng}&y=${lat}&radius=${Math.min(radiusM, 20000)}&size=15&page=${page}&sort=distance`;
+      const res = await fetch(url, { headers: { Authorization: `KakaoAK ${restApiKey}` } });
+      if (!res.ok) break;
+      const data = await res.json() as {
+        documents?: { place_name: string; category_name: string; road_address_name?: string; address_name?: string; x: string; y: string }[];
+        meta?: { is_end?: boolean };
+      };
+      for (const d of data.documents ?? []) {
+        const key = `${d.place_name}|${d.road_address_name || d.address_name}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        out.push({
+          name: d.place_name,
+          category: d.category_name,
+          address: d.road_address_name || d.address_name || '',
+          jibun: d.address_name || d.road_address_name || '', // 지번(동 포함)
+          lat: parseFloat(d.y),
+          lng: parseFloat(d.x),
+        });
+      }
+      if (data.meta?.is_end) break;
+    } catch { break; }
+  }
+  return out;
+}
+
 // 카카오 로컬 좌표+반경 음식점/카페 검색 — 네이버가 희소한 동이어도 좌표 기반으로 후보를 보장.
 // (네이버 지역검색은 키워드 기반이라 좌표 스코프가 없음 → 카카오로 지오코드 커버리지 확보)
 async function fetchKakaoLocalFood(
   lat: number, lng: number, radiusM: number, restApiKey: string,
 ): Promise<NaverPlace[]> {
-  const cats = ['FD6', 'CE7']; // 음식점, 카페
-  const out: NaverPlace[] = [];
+  const [fd, ce] = await Promise.all([
+    fetchKakaoByCategory(lat, lng, radiusM, 'FD6', restApiKey),
+    fetchKakaoByCategory(lat, lng, radiusM, 'CE7', restApiKey),
+  ]);
   const seen = new Set<string>();
-  for (const cat of cats) {
-    for (let page = 1; page <= 3; page++) {
-      try {
-        const url = `https://dapi.kakao.com/v2/local/search/category.json?category_group_code=${cat}&x=${lng}&y=${lat}&radius=${Math.min(radiusM, 20000)}&size=15&page=${page}&sort=distance`;
-        const res = await fetch(url, { headers: { Authorization: `KakaoAK ${restApiKey}` } });
-        if (!res.ok) break;
-        const data = await res.json() as {
-          documents?: { place_name: string; category_name: string; road_address_name?: string; address_name?: string; x: string; y: string }[];
-          meta?: { is_end?: boolean };
-        };
-        for (const d of data.documents ?? []) {
-          const key = `${d.place_name}|${d.road_address_name || d.address_name}`;
-          if (seen.has(key)) continue;
-          seen.add(key);
-          out.push({
-            name: d.place_name,
-            category: d.category_name,
-            address: d.road_address_name || d.address_name || '',
-            jibun: d.address_name || d.road_address_name || '', // 지번(동 포함)
-            lat: parseFloat(d.y),
-            lng: parseFloat(d.x),
-          });
-        }
-        if (data.meta?.is_end) break;
-      } catch { break; }
-    }
+  const out: NaverPlace[] = [];
+  for (const p of [...fd, ...ce]) {
+    const key = `${p.name}|${p.address}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(p);
   }
   return out;
+}
+
+// ── 3차(이어서 갈 곳) 성격 규칙 ──
+// 마지막 코스(2차, 없으면 1차) + 현재 시각으로 3차 성격을 결정론적으로 정한다(AI 판단 아님).
+// category: 카카오 카테고리 코드. tokens: 있으면 그 토큰이 가게명/카테고리에 있어야 통과(술집/야식 좁히기).
+function thirdCourseSpec(
+  lastCourse: string, hour: number,
+): { label: string; category: 'FD6' | 'CE7'; tokens?: string[] } | null {
+  const c = lastCourse || '';
+  const BAR_TOKENS = ['술집', '바', '포차', '호프', '이자카야', '와인', '펍', '칵테일', '오뎅', '요리주점', '맥주', '주점'];
+  const LATE_TOKENS = ['국밥', '해장', '포차', '분식', '치킨', '라멘', '족발', '우동', '국수', '곱창', '노포', '포장마차'];
+  const isLate = hour >= 21 || hour < 5;
+  if (c.includes('술')) {
+    // 술 다음: 늦은 시간이면 야식·해장, 아니면 카페로 마무리
+    return isLate
+      ? { label: '야식·해장', category: 'FD6', tokens: LATE_TOKENS }
+      : { label: '카페·디저트', category: 'CE7' };
+  }
+  if (c.includes('카페')) {
+    // 카페 단독 코스 다음: 술 한잔
+    return { label: '술 한잔', category: 'FD6', tokens: BAR_TOKENS };
+  }
+  // 밥 / 기타(메뉴 콕·커스텀): 저녁 이후면 술, 낮이면 카페
+  return hour >= 20 || hour < 5
+    ? { label: '술 한잔', category: 'FD6', tokens: BAR_TOKENS }
+    : { label: '카페·디저트', category: 'CE7' };
 }
 
 // 시 전체 추천 시 구/군이 한쪽에 쏠리지 않게 골고루 섞는다(점수순 유지하며 라운드로빈).
@@ -680,7 +722,7 @@ async function handleEnrich(req: VercelRequest, res: VercelResponse) {
       && (p as { placeName: string }).placeName.length <= 80
       && typeof (p as { lat?: unknown }).lat === 'number'
       && typeof (p as { lng?: unknown }).lng === 'number')
-    .slice(0, 6);
+    .slice(0, 7); // 1차 메인+대안(4) + 2차 메인+대안(2) + 3차(1) = 최대 7곳까지 사진·URL 보강
   const kakaoRestKey = process.env.VITE_KAKAO_REST_API_KEY;
   const naverImgId = process.env.NAVER_CLIENT_ID;
   const naverImgSecret = process.env.NAVER_CLIENT_SECRET;
@@ -1305,6 +1347,55 @@ ${fitScoreGuide}
       }
     }
 
+    // ── 3차(이어서 갈 곳) 자동 첨부 ──
+    // 입력 단계는 1·2차만. 마지막 코스(2차, 없으면 1차) 근처에서 다음 성격(카페/술/야식)의 실존 장소 1곳을 붙인다.
+    // 카카오 로컬(네이버와 별도 쿼터)로 소싱 → 네이버 QPS·초기 로딩에 영향 0. 모든 실패는 thirdStop=null로 수렴(1·2차 결과는 무조건 온전).
+    let thirdStop: FinalistPlace | null = null;
+    let thirdLabel: string | null = null;
+    try {
+      const kakaoRestKey3 = process.env.VITE_KAKAO_REST_API_KEY;
+      const anchor = places.find((p) => p.rank === 2) ?? places.find((p) => p.rank === 1);
+      const lastCourse = effectiveTwoPurposes ? (purpose.second ?? purpose.first) : purpose.first;
+      const spec = thirdCourseSpec(lastCourse, now.getHours());
+      if (kakaoRestKey3 && spec && anchor
+          && typeof anchor.lat === 'number' && typeof anchor.lng === 'number'
+          && anchor.lat !== 0 && anchor.lng !== 0) {
+        const aLat = anchor.lat, aLng = anchor.lng;
+        const raw = await fetchKakaoByCategory(aLat, aLng, 1500, spec.category, kakaoRestKey3, 2);
+        // 이미 쓴 1·2차 장소(공백무시 부분매칭)와 편식 필터를 3차 후보에도 적용
+        const usedNames = places.map((p) => stripSpace(p.placeName || '')).filter(Boolean);
+        const pick = filterExcludedFoods(raw, excludeTokens)
+          .filter((p) => (spec.tokens ? spec.tokens.some((t) => p.category.includes(t) || p.name.includes(t)) : true))
+          .filter((p) => {
+            const nm = stripSpace(p.name);
+            return nm && !usedNames.some((u) => u.includes(nm) || nm.includes(u));
+          })
+          .map((p) => ({ p, d: distKm(aLat, aLng, p.lat, p.lng) }))
+          .filter((x) => x.d <= 2.0)
+          .sort((a, b) => a.d - b.d)[0]?.p;
+        if (pick) {
+          thirdStop = {
+            placeName: pick.name,
+            // 카카오 category_name "음식점 > 카페 > 디저트" → 마지막 세그먼트만("디저트")
+            category: pick.category.split('>').pop()?.trim() || pick.category,
+            description: `${anchor.placeName} 근처, 걸어서 이어가기 좋은 ${spec.label}`,
+            priceRange: '',
+            vibeTags: [spec.label],
+            address: pick.address,
+            area: primaryArea,
+            lat: pick.lat,
+            lng: pick.lng,
+            ...(realCongestion ? { congestionLevel: realCongestion } : {}),
+          };
+          thirdLabel = spec.label;
+          // 앵커(2차·없으면 1차) → 3차 도보 시간을 앵커의 walkingToNext에 기록 (단일 모드에서 이 필드는 UI 미사용이라 충돌 없음)
+          anchor.walkingToNext = walkingMinutes(aLat, aLng, pick.lat, pick.lng);
+        }
+      }
+    } catch (e) {
+      console.error('[recommend] thirdStop attach failed', e);
+    }
+
     // L4: 후보별 신호·노출·선택 기록 (분석은 v2 스코프 — 지금은 기록만, 실패해도 응답엔 무영향)
     try {
       const supabase = getSupabaseAdmin();
@@ -1347,6 +1438,9 @@ ${fitScoreGuide}
 
     return res.status(200).json({
       places,
+      // 3차(이어서 갈 곳) — 없으면 null. 클라이언트는 있을 때만 렌더한다.
+      thirdStop,
+      thirdLabel,
       // 유저 배너용 날씨 요약 — 프롬프트에는 이미 반영됨(우천 시 실내 우선), 이제 그 사실을 유저에게도 보여준다
       weather: weather
         ? { description: weather.description, temp: weather.temp, isRainy: weather.isRainy, isHot: weather.isHot, isCold: weather.isCold }

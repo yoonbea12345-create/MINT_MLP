@@ -32,6 +32,8 @@ interface TravelTimeData {
 
 interface Props {
   results: PlaceRecommendation[];
+  thirdResult?: PlaceRecommendation | null;   // 3차 '이어서 갈 곳' (없으면 미노출)
+  thirdLabel?: string | null;                 // 3차 성격 라벨
   travelTimes: TravelTimeData | null;
   showTravelTime?: boolean;
   midpointAreaName?: string;
@@ -269,10 +271,12 @@ function PlaceCard({ place, extraResults = [], gradient, shadowColor }: CardProp
             <span className="leading-tight">{place.address || place.area}</span>
           </div>
           <div className="flex items-center gap-3 text-xs text-white/80 flex-wrap">
-            <span className="flex items-center gap-1">
-              <span>💰</span>
-              <span>{place.priceRange}</span>
-            </span>
+            {place.priceRange && (
+              <span className="flex items-center gap-1">
+                <span>💰</span>
+                <span>{place.priceRange}</span>
+              </span>
+            )}
             {place.openingHours && (
               <span className="flex items-center gap-1">
                 <span>🕐</span>
@@ -385,6 +389,8 @@ function CertSheet({ source, onClose }: { source: CertSource; onClose: () => voi
 export default function ResultCard({
   results,
   travelTimes,
+  thirdResult,
+  thirdLabel,
   showTravelTime = true,
   midpointAreaName,
   purpose,
@@ -535,6 +541,9 @@ export default function ResultCard({
             if (secondResult?.lat && secondResult.lng && secondResult.lat !== 0) {
               pins.push({ lat: secondResult.lat, lng: secondResult.lng, name: secondResult.placeName, kind: 'second' });
             }
+            if (thirdResult?.lat && thirdResult.lng && thirdResult.lat !== 0) {
+              pins.push({ lat: thirdResult.lat, lng: thirdResult.lng, name: thirdResult.placeName, kind: 'third' });
+            }
             for (const p of [...extraFirstResults, ...extraSecondResults]) {
               if (p.lat && p.lng && p.lat !== 0) pins.push({ lat: p.lat, lng: p.lng, name: p.placeName, kind: 'alt' });
             }
@@ -646,6 +655,32 @@ export default function ResultCard({
           accentColor="#1A7A6E"
           label={`2차 ${purpose!.second} · 다른 추천 ${extraSecondResults.length}곳`}
         />
+      )}
+
+      {/* 3차 '이어서 갈 곳' — 서버가 붙여준 경우에만. 앵커(2차·없으면 1차)에서 도보로 이어가는 마무리 코스 */}
+      {thirdResult && (
+        <>
+          <div className="relative flex items-center py-1">
+            <span className="text-xs font-black bg-[#0F4E46] text-white px-3 py-1 rounded-full">
+              3차 · {thirdLabel ?? '이어서 가기'}
+            </span>
+            {(() => {
+              const walk = hasSecond ? secondResult?.walkingToNext : result.walkingToNext;
+              return (
+                <div className="absolute left-1/2 -translate-x-1/2 flex items-center gap-1 text-xs text-gray-400 font-medium pointer-events-none">
+                  <span className="text-[#3CDBC0] text-base leading-none">↓</span>
+                  <span>도보 약 {walk ? `${walk}분` : '5~10분'}</span>
+                </div>
+              );
+            })()}
+          </div>
+          <PlaceCard
+            place={thirdResult}
+            extraResults={[]}
+            gradient="linear-gradient(135deg, #0F4E46 0%, #0A3A34 100%)"
+            shadowColor="shadow-[#0F4E46]/25"
+          />
+        </>
       )}
 
       {/* ── 1순위 CTA: 카카오톡 공유 (핵심 유입 경로) ── */}

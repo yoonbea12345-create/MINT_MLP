@@ -5,7 +5,7 @@ export interface MapPin {
   lat: number;
   lng: number;
   name: string;
-  kind: 'first' | 'second' | 'alt';
+  kind: 'first' | 'second' | 'third' | 'alt';
 }
 
 interface Props {
@@ -21,8 +21,8 @@ function pinContent(pin: MapPin): string {
   if (pin.kind === 'alt') {
     return `<div title="${pin.name}" style="width:11px;height:11px;border-radius:50%;background:#9CA3AF;border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.35);"></div>`;
   }
-  const bg = pin.kind === 'first' ? '#3CDBC0' : '#1A7A6E';
-  const label = pin.kind === 'first' ? '1차' : '2차';
+  const bg = pin.kind === 'first' ? '#3CDBC0' : pin.kind === 'third' ? '#0F4E46' : '#1A7A6E';
+  const label = pin.kind === 'first' ? '1차' : pin.kind === 'third' ? '3차' : '2차';
   const shortName = pin.name.length > 10 ? `${pin.name.slice(0, 10)}…` : pin.name;
   return `<div style="display:flex;align-items:center;gap:4px;background:${bg};color:#fff;font-weight:800;font-size:11px;padding:3px 9px;border-radius:999px;box-shadow:0 2px 6px rgba(0,0,0,.28);font-family:'Pretendard',sans-serif;white-space:nowrap;transform:translateY(-6px);">${label} · ${shortName}</div>`;
 }

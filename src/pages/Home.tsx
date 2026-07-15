@@ -229,6 +229,8 @@ export default function Home() {
   const [resultTravelTimes, setResultTravelTimes] = useState<ResultTravelTimes | null>(null);
   const [treasurer, setTreasurer] = useState<string | null>(null);
   const [resultWeather, setResultWeather] = useState<WeatherSummary | null>(null);
+  const [resultThird, setResultThird] = useState<PlaceRecommendation | null>(null);       // 3차 '이어서 갈 곳'
+  const [resultThirdLabel, setResultThirdLabel] = useState<string | null>(null);
   const [changeNote, setChangeNote] = useState<string | null>(null);
   const [compromiseMessage, setCompromiseMessage] = useState<string | null>(null);
   const [showCompromiseToast, setShowCompromiseToast] = useState(false);
@@ -268,6 +270,8 @@ export default function Home() {
     try {
       const saved = loadResultSnapshot() as {
         result?: PlaceRecommendation[];
+        resultThird?: PlaceRecommendation | null;
+        resultThirdLabel?: string | null;
         purpose?: PurposeValue;
         midpointData?: { midpoint: Coordinates; areaName: string; nearestAreas: string[] };
         treasurer?: string;
@@ -280,6 +284,8 @@ export default function Home() {
       } | null;
       if (!saved || !Array.isArray(saved.result) || saved.result.length === 0) return;
       setResult(saved.result);
+      if (saved.resultThird) setResultThird(saved.resultThird);
+      if (saved.resultThirdLabel) setResultThirdLabel(saved.resultThirdLabel);
       if (saved.purpose) setPurpose(saved.purpose);
       if (saved.midpointData) setMidpointData(saved.midpointData);
       if (saved.treasurer) setTreasurer(saved.treasurer);
@@ -386,7 +392,7 @@ export default function Home() {
   useEffect(() => {
     if (view !== 'result' || !result || result.length === 0) return;
     const snapshot = {
-      result, purpose, midpointData, treasurer, meetingLocation, resultTravelTimes, resultWeather, vibe, keywords, excludeFoods,
+      result, resultThird, resultThirdLabel, purpose, midpointData, treasurer, meetingLocation, resultTravelTimes, resultWeather, vibe, keywords, excludeFoods,
     };
     saveResultSnapshot(snapshot);
     const hasSecondCourse = !!(purpose?.second && purpose.second !== '없음');
@@ -398,7 +404,7 @@ export default function Home() {
       purposeFirst: purpose?.first ?? null,
       snapshot,
     });
-  }, [view, result, purpose, midpointData, treasurer, meetingLocation, resultTravelTimes, resultWeather, vibe, keywords, excludeFoods]);
+  }, [view, result, resultThird, resultThirdLabel, purpose, midpointData, treasurer, meetingLocation, resultTravelTimes, resultWeather, vibe, keywords, excludeFoods]);
 
 
   useEffect(() => {
@@ -723,6 +729,8 @@ export default function Home() {
     setLoadingProgress(0);
     setError(null);
     setResult(null);
+    setResultThird(null);
+    setResultThirdLabel(null);
 
     const msgInterval = setInterval(() => {
       setLoadingMsg((m) => (m + 1) % LOADING_MESSAGES.length);
@@ -787,28 +795,31 @@ export default function Home() {
       }, 250);
 
       // 실제 마일스톤 2: AI 추천 완료 (재추천 시 이전 장소 제외)
-      const { places: recommendation, weather } = await getAIRecommendation(input, midpoint, [], excludeNames, nearestAreas, scope);
+      const { places: recommendation, weather, thirdStop, thirdLabel } = await getAIRecommendation(input, midpoint, [], excludeNames, nearestAreas, scope);
       clearInterval(aiProgressInterval);
       setLoadingProgress(100); // 실제 완료
 
       setResult(recommendation);
+      setResultThird(thirdStop ?? null);
+      setResultThirdLabel(thirdLabel ?? null);
       setResultWeather(weather);
       if (changeReason) {
         setChangeNote(buildChangeNote(prevFirst, recommendation[0], midpoint, changeReason));
       }
 
       // 사진·카카오URL 후처리 — 결과를 먼저 그린 뒤 별도 호출로 채운다(초기 로딩 단축).
-      // 재추천 레이스 방지용 reqId 가드 (오래된 응답이 새 결과를 덮지 않게).
+      // 재추천 레이스 방지용 reqId 가드 (오래된 응답이 새 결과를 덮지 않게). 3차도 함께 보강.
       const enrichId = ++enrichReqRef.current;
-      enrichPlaces(recommendation.map((p) => ({ placeName: p.placeName, lat: p.lat, lng: p.lng, area: p.area })))
+      const enrichTargets = [...recommendation, ...(thirdStop ? [thirdStop] : [])];
+      enrichPlaces(enrichTargets.map((p) => ({ placeName: p.placeName, lat: p.lat, lng: p.lng, area: p.area })))
         .then((enriched) => {
           if (enrichId !== enrichReqRef.current || enriched.length === 0) return;
-          setResult((prev) => prev
-            ? prev.map((p) => {
-                const e = enriched.find((x) => x.placeName === p.placeName);
-                return e ? { ...p, kakaoPlaceUrl: e.kakaoPlaceUrl ?? p.kakaoPlaceUrl, imageUrl: e.imageUrl ?? p.imageUrl } : p;
-              })
-            : prev);
+          const apply = (p: PlaceRecommendation) => {
+            const e = enriched.find((x) => x.placeName === p.placeName);
+            return e ? { ...p, kakaoPlaceUrl: e.kakaoPlaceUrl ?? p.kakaoPlaceUrl, imageUrl: e.imageUrl ?? p.imageUrl } : p;
+          };
+          setResult((prev) => (prev ? prev.map(apply) : prev));
+          setResultThird((prev) => (prev ? apply(prev) : prev));
         });
 
       let pickedTreasurer: string | null = null;
@@ -850,9 +861,11 @@ export default function Home() {
     }
   }
 
-  // 현재 표시 중인 추천 장소 이름 — 재추천 시 제외 목록으로 전달
+  // 현재 표시 중인 추천 장소 이름 — 재추천 시 제외 목록으로 전달 (3차 포함)
   function currentExclude(): string[] {
-    return (result ?? []).map((r) => r.placeName).filter(Boolean);
+    return [...(result ?? []), ...(resultThird ? [resultThird] : [])]
+      .map((r) => r.placeName)
+      .filter(Boolean);
   }
 
   // 🔄 다시 뽑기 = 방금 곳 제외하고 즉시 다른 곳 (조건 그대로, 모달 없음)
@@ -987,21 +1000,25 @@ export default function Home() {
             `📍 ${primary.address || primary.area}`,
             `  카카오맵 → ${primaryMapUrl}`,
           ]),
+      ...(resultThird ? ['', `3차(${resultThirdLabel ?? '이어서'}): ${resultThird.placeName}`, `  카카오맵 → ${mapUrl(resultThird)}`] : []),
       ...(treasurer ? ['', `💰 ${treasurer}에서 출발하는 분이 오늘의 총무 담당!`] : []),
       '',
       '👇 결과 직접 확인',
     ].join('\n');
 
     void shareViaKakaoOrFallback(() => {
+      const thirdDescLine = resultThird ? [`3차(${resultThirdLabel ?? '이어서'}): ${resultThird.placeName}`] : [];
       const descLines = hasSecond && secondPlace
         ? [
             `1차(${purpose!.first}): ${primary.placeName}`,
             `2차(${purpose!.second}): ${secondPlace.placeName}`,
+            ...thirdDescLine,
             ...(treasurer ? [`💰 ${treasurer}에서 출발하는 분이 오늘의 총무!`] : []),
           ]
         : [
             primary.description,
             `📍 ${primary.address || primary.area} · 💰 ${primary.priceRange || ''}`,
+            ...thirdDescLine,
             ...(treasurer ? [`💰 ${treasurer}에서 출발하는 분이 오늘의 총무!`] : []),
           ];
 
@@ -1076,6 +1093,8 @@ export default function Home() {
                 clearResultSnapshot();
                 try { localStorage.removeItem(INPUT_DRAFT_KEY); sessionStorage.removeItem(INPUT_DRAFT_KEY); localStorage.removeItem(GROUP_SESSION_KEY); } catch { /* ignore */ }
                 setResult(null);
+                setResultThird(null);
+                setResultThirdLabel(null);
                 setView('steps');
                 setStep(0);
                 setAppMode('mode-select');
@@ -1138,6 +1157,8 @@ export default function Home() {
 
           <ResultCard
             results={result}
+            thirdResult={resultThird}
+            thirdLabel={resultThirdLabel}
             travelTimes={resultTravelTimes}
             showTravelTime={meetingLocation?.type === 'auto'}
             midpointAreaName={midpointData?.areaName}
