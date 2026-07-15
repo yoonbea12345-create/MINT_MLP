@@ -26,7 +26,7 @@ export default function CertShowcase() {
           <h2 className="text-2xl lg:text-4xl font-bold text-gray-800 leading-tight mb-3">
             믿을 만한 집인지, <span className="text-[#2AB5A0]">인증 마크</span>가 말해줘요
           </h2>
-          <p className="text-sm lg:text-base text-gray-500 mb-8 lg:mb-12 leading-relaxed">
+          <p className="text-base lg:text-lg text-gray-500 mb-8 lg:mb-12 leading-relaxed">
             우체국·정부·미쉐린 가이드 — 공개된 공식 리스트와 상호·지역을 대조해,<br className="hidden lg:block" />
             정확히 일치할 때만 추천 카드에 마크를 붙입니다.
           </p>
@@ -47,7 +47,7 @@ export default function CertShowcase() {
               </span>
             </div>
             <p className="text-lg font-black leading-tight">이 집, 믿고 가도 돼요</p>
-            <p className="text-xs text-white/80 mt-0.5">공식 리스트에 오른 집엔 이렇게 마크가 떠요</p>
+            <p className="text-sm text-white/80 mt-0.5">공식 리스트에 오른 집엔 이렇게 마크가 떠요</p>
           </div>
         </div>
 
@@ -68,7 +68,7 @@ export default function CertShowcase() {
                     {s.label}
                   </span>
                 </div>
-                <p className={`text-[11px] lg:text-sm leading-relaxed ${empty ? 'text-gray-400' : 'text-gray-500'}`}>
+                <p className={`text-xs lg:text-sm leading-relaxed ${empty ? 'text-gray-400' : 'text-gray-500'}`}>
                   {BLURBS[s.id] ?? s.sourceLine}
                 </p>
                 {empty ? (
@@ -87,10 +87,10 @@ export default function CertShowcase() {
 
         {/* 정직성 라인 */}
         <div className="mt-8 lg:mt-12 text-center flex flex-col gap-1.5">
-          <p className="text-[11px] lg:text-xs text-gray-400 leading-relaxed">
+          <p className="text-xs lg:text-sm text-gray-400 leading-relaxed">
             상호와 지역이 공식 목록과 정확히 일치할 때만 표시해요. 애매하면 붙이지 않습니다.
           </p>
-          <p className="text-[11px] lg:text-xs text-gray-400 leading-relaxed">
+          <p className="text-xs lg:text-sm text-gray-400 leading-relaxed">
             각 기관·가이드와의 제휴·후원 관계가 없으며, 공개 발표를 참고 정보로만 안내해요.
             {disclaimers.map((d) => ` ${d}`)}
           </p>
