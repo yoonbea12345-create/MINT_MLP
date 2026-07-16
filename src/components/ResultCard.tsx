@@ -45,7 +45,6 @@ interface Props {
   treasurer: string | null;
   onRetry: () => void;
   onAdjust?: () => void;
-  onShare: () => void;
   onReserve: () => void;
   onReject?: (reason: 'expensive' | 'far' | 'vibe') => void;
 }
@@ -405,7 +404,6 @@ export default function ResultCard({
   treasurer,
   onRetry,
   onAdjust,
-  onShare,
   onReserve,
   onReject,
 }: Props) {
@@ -715,17 +713,6 @@ export default function ResultCard({
           </a>
         </>
       )}
-
-      {/* ── 1순위 CTA: 카카오톡 공유 (핵심 유입 경로) ── */}
-      <button
-        onClick={onShare}
-        className="w-full py-4 rounded-2xl bg-[#FEE500] text-gray-900 font-black text-base flex items-center justify-center gap-2 shadow-lg shadow-yellow-200 active:scale-95 transition-transform mt-1"
-      >
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M12 2C6.48 2 2 6.08 2 11.1c0 3.13 1.73 5.9 4.35 7.57V22l3.97-2.18c1.06.29 2.18.44 3.33.44 5.52 0 10-4.08 10-9.1C23.65 6.08 17.52 2 12 2z" />
-        </svg>
-        카카오톡으로 공유하기
-      </button>
 
       {/* ── 재추천 영역: 3역할 명확 분리 ── */}
       <div className="bg-white border border-gray-100 rounded-2xl p-3.5 flex flex-col gap-3 mt-1">
