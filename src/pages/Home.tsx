@@ -123,9 +123,11 @@ async function saveShareSnapshot(shareId: string, payload: object): Promise<bool
       body: JSON.stringify({ type: 'snapshot', shareId, payload }),
       signal: ctrl.signal,
     });
-    clearTimeout(t);
-    if (!res.ok) return false;
+    // clearTimeout은 본문 파싱까지 끝난 뒤에 — 느린 망에서 바디 읽기가 1.5초를 넘기면 abort되어
+    // json이 실패(→null→false→레거시 링크 폴백)하도록. 먼저 해제하면 바디 읽기가 무제한 대기됨.
+    if (!res.ok) { clearTimeout(t); return false; }
     const d = await res.json().catch(() => null);
+    clearTimeout(t);
     return d?.ok === true;
   } catch {
     return false;
@@ -158,7 +160,10 @@ async function fallbackShare(shareText: string, sharedUrl: string) {
 //  - 도메인 미등록·SDK 내부 예외: try/catch로 잡아 공통 폴백(fallbackShare)으로
 // buildPayload는 성공 경로에서만 호출된다(Kakao.Share.sendDefault 인자).
 async function shareViaKakaoOrFallback(buildPayload: () => object, shareText: string, sharedUrl: string) {
-  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+  // iPadOS 13+는 UA가 "Macintosh"로 나오므로 터치 지원(maxTouchPoints)까지 봐서 iPad를 iOS로 포함 —
+  // 안 그러면 iPad 홈화면 PWA에서 sendDefault가 조용히 실패한 뒤 폴백 없이 무반응이 된다.
+  const ua = navigator.userAgent;
+  const isIOS = /iPad|iPhone|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1);
   const isStandalone =
     (navigator as Navigator & { standalone?: boolean }).standalone === true ||
     window.matchMedia('(display-mode: standalone)').matches;
