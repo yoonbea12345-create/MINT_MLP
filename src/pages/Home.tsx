@@ -600,6 +600,7 @@ export default function Home() {
       const data = await res.json();
       setSessionId(data.id);
       setGroupMembers([]);
+      trackEvent('group_session_create'); // 그룹 바이럴 루프 분해 — 링크 생성 성공 수
       // appMode/step은 그대로(step 2 공유 화면) — 링크가 생기면 같은 화면이 공유 UI로 전환된다
     } catch (e) {
       setGroupError((e as Error).message);
@@ -758,6 +759,8 @@ export default function Home() {
   }
 
   function handleNext() {
+    // 입력 단계 이탈 퍼널 — 각 스텝을 실제로 통과(전진)한 횟수. 어디서 포기하는지 파악.
+    if (step === 0 || step === 1 || step === 2) trackEvent(`step_next_${step}` as 'step_next_0' | 'step_next_1' | 'step_next_2');
     // 그룹: 대기 화면에서 바로 추천으로 진입. 집계 state 반영 뒤 effect에서 추천을 시작한다.
     if (step === 2 && isGroup) {
       requestGroupRecommend();
@@ -864,6 +867,7 @@ export default function Home() {
     // 재추천이면 이전 1순위를 기억해뒀다가 "뭐가 달라졌는지" 한 줄에 사용
     const prevFirst = changeReason ? result?.[0] ?? null : null;
     setChangeNote(null);
+    trackEvent('recommend_request'); // 퍼널 분모: 모든 추천 호출(첫 추천·재추천 공통)
     setLoading(true);
     loadingStartRef.current = Date.now();
     setLoadingProgress(0);
@@ -969,6 +973,7 @@ export default function Home() {
         setTreasurer(pickedTreasurer);
       }
       setView('result');
+      trackEvent('recommend_shown'); // 결과가 실제로 렌더된 성공 케이스(퍼널 분자)
 
       // 자동 중간지점 모드에서만 소요시간 조회 (임의 지역은 UI도 안 뜨므로 호출 생략)
       if (meetingLocation?.type === 'auto' && validLocs.length >= 2) {
@@ -993,6 +998,7 @@ export default function Home() {
       }
     } catch (e) {
       if (aiProgressInterval) clearInterval(aiProgressInterval);
+      trackEvent('recommend_error'); // 추천 성공률 관측 — 특정 조건/지역 실패 편중 파악
       setError((e as Error).message || '추천을 가져오지 못했어요. 다시 시도해주세요.');
     } finally {
       clearInterval(msgInterval);

@@ -6,6 +6,15 @@ import MiniMap from './MiniMap';
 import type { MapPin } from './MiniMap';
 import { findCertifications } from '../data/certifications';
 import type { CertSource } from '../data/certifications';
+import { trackEvent } from '../utils/analytics';
+
+// 선택 신호(ground truth) — 노출된 후보 중 실제로 어떤 순위를 눌러 지도를 열었나.
+// recommend.ts가 이미 기록 중인 노출 순위(finalRank)와 대비하면 랭킹 튜닝 학습셋이 된다.
+type PlaceClickEvent = 'place_click_rank1' | 'place_click_second' | 'place_click_candidate' | 'place_click_third';
+function openPlace(url: string, type: PlaceClickEvent) {
+  trackEvent(type);
+  window.open(url, '_blank');
+}
 
 // 매칭된 인증 이모지(최대 2개)를 리스트 행 앞에 붙일 접두사로 — 대안/더보기 행의 인증 표식.
 function certPrefix(place: { placeName?: string; address?: string; area?: string }): string {
@@ -114,7 +123,7 @@ function AltsSection({ alts, accentColor = '#3CDBC0', label }: { alts: PlaceReco
           key={idx}
           className="bg-white rounded-2xl border border-gray-100 border-l-4 p-3.5 shadow-sm cursor-pointer active:scale-[0.99] transition-transform"
           style={{ borderLeftColor: accentColor }}
-          onClick={() => window.open(kakaoUrl(p), '_blank')}
+          onClick={() => openPlace(kakaoUrl(p), 'place_click_candidate')}
         >
           <div className="flex items-start justify-between gap-2 mb-1">
             <div className="flex-1 min-w-0">
@@ -207,8 +216,8 @@ function PlaceCard({ place, extraResults = [], gradient, shadowColor }: CardProp
       aria-label={`${place.placeName} 카카오맵에서 열기`}
       className={`rounded-2xl text-white overflow-hidden cursor-pointer active:scale-[0.99] transition-transform shadow-xl outline-none focus-visible:ring-2 focus-visible:ring-[#3CDBC0] focus-visible:ring-offset-2 ${shadowColor}`}
       style={{ background: gradient }}
-      onClick={() => window.open(url, '_blank')}
-      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); window.open(url, '_blank'); } }}
+      onClick={() => openPlace(url, 'place_click_rank1')}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openPlace(url, 'place_click_rank1'); } }}
     >
       {/* 대표 사진 — 카드 신뢰도의 절반 */}
       {place.imageUrl && (
@@ -230,7 +239,7 @@ function PlaceCard({ place, extraResults = [], gradient, shadowColor }: CardProp
             {certs.map((c) => (
               <button
                 key={c.source.id}
-                onClick={(e) => { e.stopPropagation(); setOpenCertId(c.source.id); }}
+                onClick={(e) => { e.stopPropagation(); trackEvent('cert_badge_open'); setOpenCertId(c.source.id); }}
                 className="text-[11px] font-black bg-white px-2.5 py-0.5 rounded-full shadow-sm shrink-0 active:scale-95 transition-transform"
                 style={{ color: c.source.badgeTextColor }}
                 aria-label={`${c.source.label} 인증 안내 열기`}
@@ -299,7 +308,7 @@ function PlaceCard({ place, extraResults = [], gradient, shadowColor }: CardProp
         {/* 더보기 버튼 */}
         {extraResults.length > 0 && (
           <button
-            onClick={(e) => { e.stopPropagation(); setMoreVisible(!moreVisible); }}
+            onClick={(e) => { e.stopPropagation(); if (!moreVisible) trackEvent('candidates_expand'); setMoreVisible(!moreVisible); }}
             className="w-full mt-3 text-white/70 text-sm font-bold flex items-center justify-center gap-1 active:scale-95 transition-all"
           >
             {moreVisible ? '접기 ▲' : `추천 더보기 (${extraResults.length}개 더) ▼`}
@@ -314,7 +323,7 @@ function PlaceCard({ place, extraResults = [], gradient, shadowColor }: CardProp
             <div
               key={idx}
               className="bg-white/15 rounded-xl p-3 cursor-pointer active:bg-white/25 transition-colors"
-              onClick={(e) => { e.stopPropagation(); window.open(kakaoUrl(p), '_blank'); }}
+              onClick={(e) => { e.stopPropagation(); openPlace(kakaoUrl(p), 'place_click_candidate'); }}
             >
               <div className="flex items-start justify-between mb-1">
                 <div>
@@ -588,8 +597,8 @@ export default function ResultCard({
             aria-label={`${secondResult.placeName} 카카오맵에서 열기`}
             className="rounded-2xl text-white shadow-xl shadow-[#1A7A6E]/25 overflow-hidden cursor-pointer active:scale-[0.99] transition-transform outline-none focus-visible:ring-2 focus-visible:ring-[#3CDBC0] focus-visible:ring-offset-2"
             style={{ background: 'linear-gradient(135deg, #1A7A6E 0%, #155E54 100%)' }}
-            onClick={() => window.open(kakaoUrl(secondResult), '_blank')}
-            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); window.open(kakaoUrl(secondResult), '_blank'); } }}
+            onClick={() => openPlace(kakaoUrl(secondResult), 'place_click_second')}
+            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openPlace(kakaoUrl(secondResult), 'place_click_second'); } }}
           >
             {secondResult.imageUrl && (
               <img
@@ -685,6 +694,7 @@ export default function ResultCard({
             href={kakaoUrl(thirdResult)}
             target="_blank"
             rel="noreferrer"
+            onClick={() => trackEvent('place_click_third')}
             aria-label={`${thirdResult.placeName} 카카오맵에서 열기`}
             className="block rounded-2xl bg-white border border-gray-200 border-l-4 border-l-[#0F4E46] p-3.5 shadow-sm active:scale-[0.99] transition-transform outline-none focus-visible:ring-2 focus-visible:ring-[#0F4E46] focus-visible:ring-offset-2"
           >

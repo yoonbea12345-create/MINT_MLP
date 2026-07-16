@@ -61,7 +61,9 @@ function useInstallPrompt() {
     // Android/Chrome은 브라우저 네이티브 설치창만 사용한다.
     if (nativePrompt) {
       await nativePrompt.prompt();
-      await nativePrompt.userChoice;
+      const choice = await nativePrompt.userChoice;
+      // 클릭≠설치 — 실제 설치 전환율을 보려면 outcome을 나눠 기록한다
+      trackEvent(choice?.outcome === 'accepted' ? 'pwa_install_accepted' : 'pwa_install_dismissed');
       w.__mintInstallPrompt = null;
       setPrompt(null);
       return;

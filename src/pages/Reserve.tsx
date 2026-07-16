@@ -84,6 +84,7 @@ export default function Reserve({ placeName, address, openingHours, onBack }: Pr
                 href={`https://map.kakao.com/link/search/${encodeURIComponent(placeName)}`}
                 target="_blank"
                 rel="noreferrer"
+                onClick={() => trackEvent('reserve_deeplink_kakaomap')}
                 className="flex items-center justify-center gap-1.5 py-3 rounded-xl bg-[#FEE500]/20 border-2 border-[#FEE500] text-gray-800 text-sm font-black active:scale-95 transition-all"
               >
                 카카오맵

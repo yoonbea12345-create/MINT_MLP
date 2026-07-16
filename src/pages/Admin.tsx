@@ -13,8 +13,26 @@ interface AdminAnalytics {
   sessions: number;
   reservationAttempts: number;
   reservationCompleted: number;
+  recommendRequests: number;
+  recommendShown: number;
+  recommendErrors: number;
+  placeClickRank1: number;
+  placeClickSecond: number;
+  placeClickCandidate: number;
+  placeClickThird: number;
+  candidatesExpand: number;
+  certBadgeOpen: number;
+  stepNext0: number;
+  stepNext1: number;
+  stepNext2: number;
+  locationSearchZero: number;
+  locationSearchError: number;
+  pwaInstallAccepted: number;
+  pwaInstallDismissed: number;
+  groupSessionCreate: number;
   deeplinkCatchtable: number;
   deeplinkNaver: number;
+  deeplinkKakaomap: number;
   rejectExpensive: number;
   rejectFar: number;
   rejectVibe: number;
@@ -30,7 +48,13 @@ interface AdminAnalytics {
 
 const EMPTY_ANALYTICS: AdminAnalytics = {
   landingViews: 0, ctaClicks: 0, sessions: 0, reservationAttempts: 0, reservationCompleted: 0,
-  deeplinkCatchtable: 0, deeplinkNaver: 0,
+  recommendRequests: 0, recommendShown: 0, recommendErrors: 0,
+  placeClickRank1: 0, placeClickSecond: 0, placeClickCandidate: 0, placeClickThird: 0,
+  candidatesExpand: 0, certBadgeOpen: 0,
+  stepNext0: 0, stepNext1: 0, stepNext2: 0,
+  locationSearchZero: 0, locationSearchError: 0,
+  pwaInstallAccepted: 0, pwaInstallDismissed: 0, groupSessionCreate: 0,
+  deeplinkCatchtable: 0, deeplinkNaver: 0, deeplinkKakaomap: 0,
   rejectExpensive: 0, rejectFar: 0, rejectVibe: 0,
   retryFresh: 0, retryAdjust: 0,
   kakaoShares: 0, kakaoShareFallbacks: 0, pwaInstallClicks: 0, demoPlaceClicks: 0,
@@ -179,7 +203,8 @@ export default function Admin() {
   const a = analytics;
   const rejectTotal = a.rejectExpensive + a.rejectFar + a.rejectVibe;
   const retryTotal = a.retryFresh + a.retryAdjust;
-  const deeplinkTotal = a.deeplinkCatchtable + a.deeplinkNaver;
+  const deeplinkTotal = a.deeplinkCatchtable + a.deeplinkNaver + a.deeplinkKakaomap;
+  const placeClickTotal = a.placeClickRank1 + a.placeClickSecond + a.placeClickCandidate + a.placeClickThird;
 
   function applyData(data: { analytics?: AdminAnalytics; reservations?: ReservationRecord[] }) {
     setAnalytics(data.analytics ?? EMPTY_ANALYTICS);
@@ -258,8 +283,26 @@ export default function Admin() {
       ['앱 진입(세션)', a.sessions],
       ['예약 시도(이벤트)', a.reservationAttempts],
       ['예약 완료(테이블)', a.reservationCompleted],
+      ['추천 요청', a.recommendRequests],
+      ['추천 노출', a.recommendShown],
+      ['추천 에러', a.recommendErrors],
+      ['클릭·1순위', a.placeClickRank1],
+      ['클릭·2차', a.placeClickSecond],
+      ['클릭·대안', a.placeClickCandidate],
+      ['클릭·3차', a.placeClickThird],
+      ['후보 펼침', a.candidatesExpand],
+      ['인증 뱃지 열람', a.certBadgeOpen],
+      ['입력 1단계 통과', a.stepNext0],
+      ['입력 2단계 통과', a.stepNext1],
+      ['입력 3단계 통과', a.stepNext2],
+      ['검색 0건', a.locationSearchZero],
+      ['검색 에러', a.locationSearchError],
+      ['PWA 설치 수락', a.pwaInstallAccepted],
+      ['PWA 설치 취소', a.pwaInstallDismissed],
+      ['그룹 링크 생성', a.groupSessionCreate],
       ['딥링크·캐치테이블', a.deeplinkCatchtable],
       ['딥링크·네이버', a.deeplinkNaver],
+      ['딥링크·카카오맵', a.deeplinkKakaomap],
       ['거절·비쌈', a.rejectExpensive],
       ['거절·멂', a.rejectFar],
       ['거절·분위기', a.rejectVibe],
@@ -447,8 +490,57 @@ export default function Admin() {
                 <div className="flex flex-col gap-2">
                   <BarRow label="캐치" count={a.deeplinkCatchtable} total={deeplinkTotal} />
                   <BarRow label="네이버" count={a.deeplinkNaver} total={deeplinkTotal} color="#22C55E" />
+                  <BarRow label="카카오맵" count={a.deeplinkKakaomap} total={deeplinkTotal} color="#EAB308" />
                 </div>
               )}
+            </div>
+          </section>
+        </div>
+
+        {/* ── 추천 품질 (노출·성공률·선택 신호) ── */}
+        <section className="mb-6">
+          <h2 className="text-sm font-black text-gray-600 mb-3">🎯 추천 품질 <span className="text-gray-300 font-normal">(랭킹 튜닝 신호)</span></h2>
+          <div className="grid grid-cols-2 gap-3 mb-3">
+            <StatCard label="추천 노출" value={a.recommendShown} unit="회" sub={`요청 ${a.recommendRequests}회`} />
+            <StatCard label="추천 성공률" value={`${pct(a.recommendShown, a.recommendRequests)}%`} sub={a.recommendErrors > 0 ? `에러 ${a.recommendErrors}회` : '에러 없음'} highlight />
+          </div>
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
+            <p className="text-xs font-black text-gray-500 mb-2">선택 순위 분포 <span className="text-gray-300 font-normal">(어떤 순위를 눌렀나 = ground truth)</span></p>
+            {placeClickTotal === 0 ? (
+              <p className="text-xs text-gray-400 text-center py-3">아직 장소 클릭 기록이 없어요.</p>
+            ) : (
+              <div className="flex flex-col gap-2">
+                <BarRow label="1순위" count={a.placeClickRank1} total={placeClickTotal} />
+                <BarRow label="2차" count={a.placeClickSecond} total={placeClickTotal} color="#1A7A6E" />
+                <BarRow label="대안" count={a.placeClickCandidate} total={placeClickTotal} color="#0EA5E9" />
+                <BarRow label="3차" count={a.placeClickThird} total={placeClickTotal} color="#8B5CF6" />
+                <div className="text-[11px] text-gray-400 mt-1 pt-2 border-t border-gray-50">
+                  후보 펼침 {a.candidatesExpand}회 · 인증 뱃지 열람 {a.certBadgeOpen}회
+                </div>
+              </div>
+            )}
+          </div>
+        </section>
+
+        {/* ── 입력 단계 이탈 & 검색 실패 ── */}
+        <div className="grid md:grid-cols-2 gap-3 mb-6">
+          <section>
+            <h2 className="text-sm font-black text-gray-600 mb-3">📝 입력 단계 진행</h2>
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 flex flex-col gap-2">
+              <FunnelStep label="1단계 통과" value={a.stepNext0} rate={null} />
+              <FunnelStep label="2단계 통과" value={a.stepNext1} rate={pct(a.stepNext1, a.stepNext0)} />
+              <FunnelStep label="3단계 통과" value={a.stepNext2} rate={pct(a.stepNext2, a.stepNext1)} last />
+            </div>
+          </section>
+          <section>
+            <h2 className="text-sm font-black text-gray-600 mb-3">🔎 검색·설치·그룹</h2>
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
+              <MiniStat label="검색 0건" value={a.locationSearchZero} />
+              <MiniStat label="검색 에러" value={a.locationSearchError} />
+              <MiniStat label="PWA 설치" value={a.pwaInstallAccepted} />
+              <MiniStat label="PWA 취소" value={a.pwaInstallDismissed} />
+              <MiniStat label="그룹 링크 생성" value={a.groupSessionCreate} />
+              <MiniStat label="데모 장소 클릭" value={a.demoPlaceClicks} />
             </div>
           </section>
         </div>
@@ -550,6 +642,15 @@ export default function Admin() {
           </>
         )}
       </div>
+    </div>
+  );
+}
+
+function MiniStat({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="flex items-center justify-between">
+      <span className="text-gray-400">{label}</span>
+      <span className="font-black text-gray-700">{value}</span>
     </div>
   );
 }

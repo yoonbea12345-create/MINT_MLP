@@ -6,7 +6,20 @@ import { supabase } from './supabase';
 
 type EventType = 'landing_view' | 'cta_click' | 'reservation_attempt' | 'session_duration' | 'kakao_share' | 'kakao_share_fallback' | 'pwa_install_click' | 'landing_demo_place_click'
   | 'retry_fresh' | 'retry_adjust' | 'reject_expensive' | 'reject_far' | 'reject_vibe'
-  | 'reserve_deeplink_catchtable' | 'reserve_deeplink_naver';
+  | 'reserve_deeplink_catchtable' | 'reserve_deeplink_naver' | 'reserve_deeplink_kakaomap'
+  // 추천 퍼널 — 노출(분모)·실패율. 추천 요청/노출/에러
+  | 'recommend_request' | 'recommend_shown' | 'recommend_error'
+  // 선택 신호(ground truth) — 노출된 후보 중 실제로 어떤 순위를 클릭했나
+  | 'place_click_rank1' | 'place_click_second' | 'place_click_candidate' | 'place_click_third'
+  // 결과 화면 품질 상호작용
+  | 'candidates_expand' | 'cert_badge_open'
+  // PWA 설치 결과(클릭≠설치)
+  | 'pwa_install_accepted' | 'pwa_install_dismissed'
+  // 입력 단계 이탈 퍼널 (step N → N+1 진행) & 지역검색 실패
+  | 'step_next_0' | 'step_next_1' | 'step_next_2'
+  | 'location_search_zero' | 'location_search_error'
+  // 그룹 링크 생성(바이럴 루프 분해)
+  | 'group_session_create';
 
 const PAUSE_KEY = 'mint_tracking_paused';
 

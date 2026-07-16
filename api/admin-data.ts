@@ -105,9 +105,33 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           sessions: c('session_duration'),          // 앱 진입 프록시(세션 종료 기록 수)
           reservationAttempts: c('reservation_attempt'),
           reservationCompleted: reservations.length, // reservations 테이블 실건수(이벤트와 소스 다름)
+          // 추천 퍼널 — 노출(분모)·성공률·실패
+          recommendRequests: c('recommend_request'),
+          recommendShown: c('recommend_shown'),
+          recommendErrors: c('recommend_error'),
+          // 선택 신호(ground truth) — 어떤 순위를 클릭했나
+          placeClickRank1: c('place_click_rank1'),
+          placeClickSecond: c('place_click_second'),
+          placeClickCandidate: c('place_click_candidate'),
+          placeClickThird: c('place_click_third'),
+          // 결과 화면 상호작용
+          candidatesExpand: c('candidates_expand'),
+          certBadgeOpen: c('cert_badge_open'),
+          // 입력 단계 이탈 퍼널
+          stepNext0: c('step_next_0'),
+          stepNext1: c('step_next_1'),
+          stepNext2: c('step_next_2'),
+          // 지역 검색 실패
+          locationSearchZero: c('location_search_zero'),
+          locationSearchError: c('location_search_error'),
+          // PWA 설치 결과 & 그룹
+          pwaInstallAccepted: c('pwa_install_accepted'),
+          pwaInstallDismissed: c('pwa_install_dismissed'),
+          groupSessionCreate: c('group_session_create'),
           // 예약 딥링크(실제 예약 채널)
           deeplinkCatchtable: c('reserve_deeplink_catchtable'),
           deeplinkNaver: c('reserve_deeplink_naver'),
+          deeplinkKakaomap: c('reserve_deeplink_kakaomap'),
           // 거절 사유 — 추천 알고리즘 개선의 핵심 신호
           rejectExpensive: c('reject_expensive'),
           rejectFar: c('reject_far'),
