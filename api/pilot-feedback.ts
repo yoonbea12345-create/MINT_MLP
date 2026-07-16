@@ -54,7 +54,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         };
       });
 
-      return res.status(200).json({ feedback });
+      // 정성 요약 — 평균 적합도 + 1~5점 분포(알고리즘 품질 정량 지표)
+      const ratings = feedback.map((f) => Number(f.fitRating)).filter((n) => Number.isFinite(n));
+      const distribution = [1, 2, 3, 4, 5].map((score) => ratings.filter((n) => n === score).length);
+      const avgFitRating = ratings.length > 0
+        ? Math.round((ratings.reduce((s, n) => s + n, 0) / ratings.length) * 10) / 10
+        : null;
+
+      return res.status(200).json({ feedback, summary: { count: feedback.length, avgFitRating, distribution } });
     } catch (e) {
       console.error('[pilot-feedback] admin list failed', e);
       return res.status(500).json({ error: '데이터를 불러오지 못했어요. 잠시 후 다시 시도해주세요.' });

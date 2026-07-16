@@ -11,7 +11,15 @@ interface PilotFeedback {
   paymentImageUrls: string[];
 }
 
-async function callPilotAdmin(password: string): Promise<PilotFeedback[]> {
+interface PilotSummary {
+  count: number;
+  avgFitRating: number | null;
+  distribution: number[]; // [1점, 2점, 3점, 4점, 5점] 건수
+}
+
+const EMPTY_SUMMARY: PilotSummary = { count: 0, avgFitRating: null, distribution: [0, 0, 0, 0, 0] };
+
+async function callPilotAdmin(password: string): Promise<{ feedback: PilotFeedback[]; summary: PilotSummary }> {
   const res = await fetch('/api/pilot-feedback', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -19,7 +27,10 @@ async function callPilotAdmin(password: string): Promise<PilotFeedback[]> {
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(data.error || '데이터를 불러오지 못했어요.');
-  return Array.isArray(data.feedback) ? data.feedback : [];
+  return {
+    feedback: Array.isArray(data.feedback) ? data.feedback : [],
+    summary: data.summary ?? EMPTY_SUMMARY,
+  };
 }
 
 function formatDate(iso: string) {
@@ -35,6 +46,7 @@ export default function PilotAdmin() {
   const [password, setPassword] = useState('');
   const [unlocked, setUnlocked] = useState(false);
   const [records, setRecords] = useState<PilotFeedback[]>([]);
+  const [summary, setSummary] = useState<PilotSummary>(EMPTY_SUMMARY);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -43,7 +55,8 @@ export default function PilotAdmin() {
     setError(null);
     try {
       const data = await callPilotAdmin(pw);
-      setRecords(data);
+      setRecords(data.feedback);
+      setSummary(data.summary);
       setUnlocked(true);
     } catch (e) {
       setError((e as Error).message);
@@ -107,6 +120,40 @@ export default function PilotAdmin() {
         {error && (
           <div className="mb-4 bg-red-50 border border-red-200 rounded-2xl p-4 text-sm text-red-600">
             {error}
+          </div>
+        )}
+
+        {summary.count > 0 && (
+          <div className="mb-6 bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+            <div className="flex items-center gap-4 mb-4">
+              <div>
+                <div className="text-xs text-gray-400 mb-0.5">평균 적합도</div>
+                <div className="text-3xl font-black text-[#2AB5A0]">
+                  {summary.avgFitRating != null ? summary.avgFitRating.toFixed(1) : '—'}
+                  <span className="text-base text-gray-300 font-bold"> /5</span>
+                </div>
+              </div>
+              <div className="h-10 w-px bg-gray-100" />
+              <div>
+                <div className="text-xs text-gray-400 mb-0.5">제출 건수</div>
+                <div className="text-3xl font-black text-gray-700">{summary.count}<span className="text-base text-gray-300 font-bold"> 건</span></div>
+              </div>
+            </div>
+            <div className="flex flex-col gap-1.5">
+              {[5, 4, 3, 2, 1].map((score) => {
+                const cnt = summary.distribution[score - 1] ?? 0;
+                const pct = summary.count > 0 ? Math.round((cnt / summary.count) * 100) : 0;
+                return (
+                  <div key={score} className="flex items-center gap-2 text-xs">
+                    <span className="w-8 text-gray-400 font-bold shrink-0">{score}점</span>
+                    <div className="flex-1 h-2.5 bg-gray-100 rounded-full overflow-hidden">
+                      <div className="h-full bg-[#36CFA0] rounded-full transition-all" style={{ width: `${pct}%` }} />
+                    </div>
+                    <span className="w-14 text-right text-gray-500 shrink-0">{cnt}건 ({pct}%)</span>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         )}
 

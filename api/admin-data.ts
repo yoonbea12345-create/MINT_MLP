@@ -4,10 +4,32 @@ import { getSupabaseAdmin } from './_lib/supabaseAdmin.js';
 // 어드민 데이터 API — 비밀번호는 서버 env(ADMIN_PASSWORD)에서만 검증.
 // 기존에는 클라이언트 하드코딩 비밀번호 + anon 키 직접 select였다(누구나 예약자 명단 열람 가능).
 // 이 엔드포인트 + RLS 차단(sql/security.sql)으로 이전.
+//
+// 기획점검(fable5) 반영: analytics.ts EventType 15종을 전부 집계해 어드민에 노출한다.
+// (이전에는 5종만 집계 — reject/retry/deeplink 등 알고리즘 개선 신호가 버려졌음)
 
 interface EventRow {
   type: string;
   duration_seconds: number | null;
+  created_at: string;
+}
+
+const STAY_CAP_SECONDS = 1800; // 탭 방치 아웃라이어가 평균을 왜곡하지 않도록 상한 캡
+
+function median(values: number[]): number | null {
+  if (values.length === 0) return null;
+  const sorted = [...values].sort((a, b) => a - b);
+  const mid = Math.floor(sorted.length / 2);
+  return sorted.length % 2 !== 0
+    ? sorted[mid]
+    : Math.round((sorted[mid - 1] + sorted[mid]) / 2);
+}
+
+// ISO 문자열이면 반환, 아니면 null (신뢰할 수 없는 입력 방어)
+function toIso(v: unknown): string | null {
+  if (typeof v !== 'string' || !v) return null;
+  const t = Date.parse(v);
+  return Number.isNaN(t) ? null : new Date(t).toISOString();
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -18,7 +40,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(500).json({ error: 'ADMIN_PASSWORD 환경변수가 설정되지 않았어요. Vercel 대시보드에서 설정해주세요.' });
   }
 
-  const body = (req.body ?? {}) as { password?: string; action?: string; id?: string };
+  const body = (req.body ?? {}) as { password?: string; action?: string; id?: string; from?: string; to?: string };
   if (body.password !== adminPassword) {
     return res.status(401).json({ error: '비밀번호가 틀렸어요' });
   }
@@ -42,23 +64,29 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(200).json({ ok: true });
       }
       default: {
-        // 'load' — 분석 지표 + 예약 목록
-        const [eventsRes, reservationsRes] = await Promise.all([
-          supabase.from('events').select('type, duration_seconds'),
-          supabase.from('reservations').select('*').order('created_at', { ascending: false }),
-        ]);
+        // 'load' — 분석 지표 + 예약 목록. from/to(ISO)로 기간 필터 가능.
+        const from = toIso(body.from);
+        const to = toIso(body.to);
+
+        let eventsQuery = supabase.from('events').select('type, duration_seconds, created_at');
+        let reservationsQuery = supabase.from('reservations').select('*').order('created_at', { ascending: false });
+        if (from) { eventsQuery = eventsQuery.gte('created_at', from); reservationsQuery = reservationsQuery.gte('created_at', from); }
+        if (to) { eventsQuery = eventsQuery.lte('created_at', to); reservationsQuery = reservationsQuery.lte('created_at', to); }
+
+        const [eventsRes, reservationsRes] = await Promise.all([eventsQuery, reservationsQuery]);
 
         const events = (eventsRes.data ?? []) as EventRow[];
-        const sessions = events.filter((e) => e.type === 'session_duration' && e.duration_seconds != null);
-        const analytics = {
-          landingViews: events.filter((e) => e.type === 'landing_view').length,
-          ctaClicks: events.filter((e) => e.type === 'cta_click').length,
-          reservationAttempts: events.filter((e) => e.type === 'reservation_attempt').length,
-          kakaoShares: events.filter((e) => e.type === 'kakao_share').length,
-          avgStaySeconds: sessions.length > 0
-            ? Math.round(sessions.reduce((sum, s) => sum + (s.duration_seconds as number), 0) / sessions.length)
-            : null,
-        };
+
+        // 타입별 카운트 맵 (단일 순회) — 데이터가 쌓여도 순회 1회로 처리
+        const counts: Record<string, number> = {};
+        const stays: number[] = [];
+        for (const e of events) {
+          counts[e.type] = (counts[e.type] ?? 0) + 1;
+          if (e.type === 'session_duration' && e.duration_seconds != null) {
+            stays.push(Math.min(e.duration_seconds, STAY_CAP_SECONDS));
+          }
+        }
+        const c = (t: string) => counts[t] ?? 0;
 
         const reservations = (reservationsRes.data ?? []).map((r) => ({
           id: r.id,
@@ -69,6 +97,35 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           arrivalTime: r.arrival_time,
           createdAt: r.created_at,
         }));
+
+        const analytics = {
+          // 퍼널 핵심
+          landingViews: c('landing_view'),
+          ctaClicks: c('cta_click'),
+          sessions: c('session_duration'),          // 앱 진입 프록시(세션 종료 기록 수)
+          reservationAttempts: c('reservation_attempt'),
+          reservationCompleted: reservations.length, // reservations 테이블 실건수(이벤트와 소스 다름)
+          // 예약 딥링크(실제 예약 채널)
+          deeplinkCatchtable: c('reserve_deeplink_catchtable'),
+          deeplinkNaver: c('reserve_deeplink_naver'),
+          // 거절 사유 — 추천 알고리즘 개선의 핵심 신호
+          rejectExpensive: c('reject_expensive'),
+          rejectFar: c('reject_far'),
+          rejectVibe: c('reject_vibe'),
+          // 재시도
+          retryFresh: c('retry_fresh'),
+          retryAdjust: c('retry_adjust'),
+          // 공유 & 기타
+          kakaoShares: c('kakao_share'),
+          kakaoShareFallbacks: c('kakao_share_fallback'),
+          pwaInstallClicks: c('pwa_install_click'),
+          demoPlaceClicks: c('landing_demo_place_click'),
+          // 체류시간 (아웃라이어 캡 후 평균·중앙값)
+          avgStaySeconds: stays.length > 0
+            ? Math.round(stays.reduce((sum, s) => sum + s, 0) / stays.length)
+            : null,
+          medianStaySeconds: median(stays),
+        };
 
         return res.status(200).json({ analytics, reservations });
       }
