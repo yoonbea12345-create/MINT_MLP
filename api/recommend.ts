@@ -761,6 +761,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     const { input, midpoint, congestionData } = req.body;
 
+    // 탐색 에피소드 세션키(선택) — recommendation_log·events를 한 에피소드로 조인. 형식 방어.
+    const sessionKey: string | null = (() => {
+      const sk = req.body.sessionKey;
+      return typeof sk === 'string' && sk.length > 0 && sk.length <= 100 ? sk : null;
+    })();
+
     // 행정단위 스코프(선택) — 있으면 시/구/동 범위로 결과를 고정한다.
     const regionScope: RegionScope | null = (() => {
       const rs = req.body.regionScope;
@@ -1420,7 +1426,14 @@ ${fitScoreGuide}
           };
         });
 
+        // 같은 세션키의 이전 추천 행을 retried=true로 표시(재시도/거절/조정이 있었다는 신호).
+        // 이번 insert가 그 세션의 최신 노출이 된다.
+        if (sessionKey) {
+          await supabase.from('recommendation_log').update({ retried: true }).eq('session_key', sessionKey);
+        }
+
         await supabase.from('recommendation_log').insert({
+          session_key: sessionKey,
           group_size: groupSize,
           purpose_first: purpose.first,
           purpose_second: purpose.second,

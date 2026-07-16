@@ -98,8 +98,8 @@ export default function LocationInput({ locations, onChange }: Props) {
     timers.current[index] = setTimeout(async () => {
       try {
         const results = await searchAddress(value);
-        // 결과 0건 = 사용자가 친 지명 표현과 카카오 커버리지의 갭(별칭 사전 개선 신호)
-        if (results.length === 0) trackEvent('location_search_zero');
+        // 결과 0건 = 사용자가 친 지명 표현과 카카오 커버리지의 갭(별칭 사전 개선 신호). 검색어를 payload로 남긴다.
+        if (results.length === 0) trackEvent('location_search_zero', { query: value.slice(0, 100) });
         update(index, { suggestions: results.slice(0, 5), loading: false });
       } catch {
         trackEvent('location_search_error'); // 검색 API 실패율

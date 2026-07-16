@@ -1,6 +1,8 @@
-// Supabase 마이그레이션 필요:
+// Supabase 마이그레이션 필요(SQL Editor에서 실행):
 //   ALTER TABLE events ADD COLUMN IF NOT EXISTS duration_seconds integer;
-// (Supabase 대시보드 > SQL Editor에서 실행)
+//   ALTER TABLE events ADD COLUMN IF NOT EXISTS session_key TEXT;   -- 탐색 에피소드 조인 키
+//   ALTER TABLE events ADD COLUMN IF NOT EXISTS payload JSONB;      -- 이벤트 맥락(place_key/priceRange/query 등)
+// ⚠️ 아직 실행 안 됐어도 안전: 새 컬럼 insert가 실패하면 자동으로 {type}만 재삽입(폴백)해 수집이 끊기지 않는다.
 
 import { supabase } from './supabase';
 
@@ -40,15 +42,42 @@ function pushDataLayer(event: string) {
   window.dataLayer.push({ event });
 }
 
-export function trackEvent(type: Exclude<EventType, 'session_duration'>): void {
+// ── 세션키: 한 탐색 에피소드(초기 추천→재시도→거절→선택)를 묶는 익명 키 ──
+// Home이 추천 시작 시 발급/설정하고, 이후 발생하는 모든 이벤트에 자동으로 태깅된다.
+let currentSessionKey: string | null = null;
+
+export function newSessionKey(): string {
+  try {
+    if (typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID();
+  } catch { /* 폴백으로 진행 */ }
+  return `sk_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 10)}`;
+}
+
+export function setSessionKey(key: string | null): void {
+  currentSessionKey = key;
+}
+
+type EventPayload = Record<string, unknown>;
+
+export function trackEvent(type: Exclude<EventType, 'session_duration'>, payload?: EventPayload): void {
   if (isTrackingPaused()) return;
   pushDataLayer(type);
-  supabase.from('events').insert({ type }).then(() => {});
+  const row: Record<string, unknown> = { type };
+  if (currentSessionKey) row.session_key = currentSessionKey;
+  if (payload && Object.keys(payload).length > 0) row.payload = payload;
+  supabase.from('events').insert(row).then(({ error }) => {
+    // 마이그레이션 전(session_key/payload 컬럼 부재 등)이면 최소 필드로 폴백 — 수집 자체는 절대 끊기지 않게
+    if (error) supabase.from('events').insert({ type }).then(() => {});
+  });
 }
 
 export function trackSessionDuration(seconds: number): void {
   if (isTrackingPaused()) return;
-  supabase.from('events').insert({ type: 'session_duration', duration_seconds: seconds }).then(() => {});
+  const row: Record<string, unknown> = { type: 'session_duration', duration_seconds: seconds };
+  if (currentSessionKey) row.session_key = currentSessionKey;
+  supabase.from('events').insert(row).then(({ error }) => {
+    if (error) supabase.from('events').insert({ type: 'session_duration', duration_seconds: seconds }).then(() => {});
+  });
 }
 
 // 분석 지표 조회는 /api/admin-data(서버)로 이전 — anon select 제거

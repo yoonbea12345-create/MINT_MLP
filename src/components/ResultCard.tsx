@@ -11,8 +11,9 @@ import { trackEvent } from '../utils/analytics';
 // 선택 신호(ground truth) — 노출된 후보 중 실제로 어떤 순위를 눌러 지도를 열었나.
 // recommend.ts가 이미 기록 중인 노출 순위(finalRank)와 대비하면 랭킹 튜닝 학습셋이 된다.
 type PlaceClickEvent = 'place_click_rank1' | 'place_click_second' | 'place_click_candidate' | 'place_click_third';
-function openPlace(url: string, type: PlaceClickEvent) {
-  trackEvent(type);
+function openPlace(url: string, type: PlaceClickEvent, place?: PlaceRecommendation) {
+  // payload: 어떤 장소를 실제 선택했나. session_key로 recommendation_log의 노출 순위와 대비하면 랭킹 정답 레이블.
+  trackEvent(type, place ? { placeName: place.placeName, address: place.address, priceRange: place.priceRange, fitScore: place.fitScore } : undefined);
   window.open(url, '_blank');
 }
 
@@ -123,7 +124,7 @@ function AltsSection({ alts, accentColor = '#3CDBC0', label }: { alts: PlaceReco
           key={idx}
           className="bg-white rounded-2xl border border-gray-100 border-l-4 p-3.5 shadow-sm cursor-pointer active:scale-[0.99] transition-transform"
           style={{ borderLeftColor: accentColor }}
-          onClick={() => openPlace(kakaoUrl(p), 'place_click_candidate')}
+          onClick={() => openPlace(kakaoUrl(p), 'place_click_candidate', p)}
         >
           <div className="flex items-start justify-between gap-2 mb-1">
             <div className="flex-1 min-w-0">
@@ -216,8 +217,8 @@ function PlaceCard({ place, extraResults = [], gradient, shadowColor }: CardProp
       aria-label={`${place.placeName} 카카오맵에서 열기`}
       className={`rounded-2xl text-white overflow-hidden cursor-pointer active:scale-[0.99] transition-transform shadow-xl outline-none focus-visible:ring-2 focus-visible:ring-[#3CDBC0] focus-visible:ring-offset-2 ${shadowColor}`}
       style={{ background: gradient }}
-      onClick={() => openPlace(url, 'place_click_rank1')}
-      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openPlace(url, 'place_click_rank1'); } }}
+      onClick={() => openPlace(url, 'place_click_rank1', place)}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openPlace(url, 'place_click_rank1', place); } }}
     >
       {/* 대표 사진 — 카드 신뢰도의 절반 */}
       {place.imageUrl && (
@@ -323,7 +324,7 @@ function PlaceCard({ place, extraResults = [], gradient, shadowColor }: CardProp
             <div
               key={idx}
               className="bg-white/15 rounded-xl p-3 cursor-pointer active:bg-white/25 transition-colors"
-              onClick={(e) => { e.stopPropagation(); openPlace(kakaoUrl(p), 'place_click_candidate'); }}
+              onClick={(e) => { e.stopPropagation(); openPlace(kakaoUrl(p), 'place_click_candidate', p); }}
             >
               <div className="flex items-start justify-between mb-1">
                 <div>
@@ -597,8 +598,8 @@ export default function ResultCard({
             aria-label={`${secondResult.placeName} 카카오맵에서 열기`}
             className="rounded-2xl text-white shadow-xl shadow-[#1A7A6E]/25 overflow-hidden cursor-pointer active:scale-[0.99] transition-transform outline-none focus-visible:ring-2 focus-visible:ring-[#3CDBC0] focus-visible:ring-offset-2"
             style={{ background: 'linear-gradient(135deg, #1A7A6E 0%, #155E54 100%)' }}
-            onClick={() => openPlace(kakaoUrl(secondResult), 'place_click_second')}
-            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openPlace(kakaoUrl(secondResult), 'place_click_second'); } }}
+            onClick={() => openPlace(kakaoUrl(secondResult), 'place_click_second', secondResult)}
+            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openPlace(kakaoUrl(secondResult), 'place_click_second', secondResult); } }}
           >
             {secondResult.imageUrl && (
               <img
@@ -694,7 +695,7 @@ export default function ResultCard({
             href={kakaoUrl(thirdResult)}
             target="_blank"
             rel="noreferrer"
-            onClick={() => trackEvent('place_click_third')}
+            onClick={() => trackEvent('place_click_third', { placeName: thirdResult.placeName, address: thirdResult.address })}
             aria-label={`${thirdResult.placeName} 카카오맵에서 열기`}
             className="block rounded-2xl bg-white border border-gray-200 border-l-4 border-l-[#0F4E46] p-3.5 shadow-sm active:scale-[0.99] transition-transform outline-none focus-visible:ring-2 focus-visible:ring-[#0F4E46] focus-visible:ring-offset-2"
           >

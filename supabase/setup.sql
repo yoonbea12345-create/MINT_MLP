@@ -19,11 +19,17 @@ CREATE TABLE IF NOT EXISTS events (
   id               BIGSERIAL PRIMARY KEY,
   type             TEXT NOT NULL,
   duration_seconds INTEGER,
+  session_key      TEXT,   -- 탐색 에피소드 조인 키(recommendation_log.session_key와 매칭)
+  payload          JSONB,  -- 이벤트 맥락(place_click: {placeName,address,priceRange,fitScore} / reject: 동일 / location_search_zero: {query})
   created_at       TIMESTAMPTZ DEFAULT now()
 );
 
--- 3. duration_seconds 컬럼 추가 (이미 테이블이 있는 경우)
+-- 3. 기존 테이블 컬럼 보강 (이미 테이블이 있는 경우) — 모두 additive, 안전.
+--    ⚠️ 앱은 이 컬럼이 없어도 {type}만으로 폴백 삽입하므로 실행 전에도 수집은 끊기지 않는다.
 ALTER TABLE events ADD COLUMN IF NOT EXISTS duration_seconds INTEGER;
+ALTER TABLE events ADD COLUMN IF NOT EXISTS session_key TEXT;
+ALTER TABLE events ADD COLUMN IF NOT EXISTS payload JSONB;
+CREATE INDEX IF NOT EXISTS idx_events_session_key ON events(session_key);
 
 -- =============================================
 -- RLS 정책 — anon 키로 읽기/쓰기 허용
@@ -179,6 +185,8 @@ CREATE TABLE IF NOT EXISTS recommendation_log (
 );
 
 CREATE INDEX IF NOT EXISTS idx_recommendation_log_created_at ON recommendation_log(created_at);
+-- 세션키 조인/업데이트 인덱스 (session_key 컬럼은 위 CREATE TABLE에 이미 포함)
+CREATE INDEX IF NOT EXISTS idx_recommendation_log_session_key ON recommendation_log(session_key);
 
 ALTER TABLE recommendation_log ENABLE ROW LEVEL SECURITY;
 

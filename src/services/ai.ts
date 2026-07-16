@@ -66,12 +66,14 @@ export async function getAIRecommendation(
   excludeNames: string[] = [],
   areas: string[] = [],
   regionScope: RegionScope | null = null,
+  sessionKey: string | null = null,
 ): Promise<RecommendationResult> {
   const res = await fetch('/api/recommend', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     // areas를 보내면 혼잡도는 서버가 네이버 검색과 병렬로 조회 (클라이언트 왕복 1회 절감)
-    body: JSON.stringify({ input, midpoint, congestionData, excludeNames, areas, ...(regionScope ? { regionScope } : {}) }),
+    // sessionKey: 같은 탐색 에피소드(초기→재시도→선택)를 recommendation_log·events에서 조인하기 위한 키
+    body: JSON.stringify({ input, midpoint, congestionData, excludeNames, areas, ...(regionScope ? { regionScope } : {}), ...(sessionKey ? { sessionKey } : {}) }),
   });
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));

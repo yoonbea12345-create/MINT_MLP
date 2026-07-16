@@ -19,7 +19,7 @@ import { getAIRecommendation, enrichPlaces } from '../services/ai';
 import type { PlaceRecommendation, UserInput, WeatherSummary, RegionScope } from '../services/ai';
 import { saveResultSnapshot, loadResultSnapshot, clearResultSnapshot, saveHistory } from '../utils/history';
 import { computeTravelTimes } from '../services/travelTime';
-import { trackSessionDuration, trackEvent } from '../utils/analytics';
+import { trackSessionDuration, trackEvent, setSessionKey, newSessionKey } from '../utils/analytics';
 import { aggregateVibe, aggregateBudget, splitMemberKeywords } from '../utils/groupAggregate';
 import type { GroupMember } from '../utils/groupAggregate';
 import LoadingScreen from '../components/home/LoadingScreen';
@@ -277,6 +277,7 @@ export default function Home() {
   const enrichReqRef = useRef(0);
   const loadingStartRef = useRef(0);   // 로딩 시작 시각 — 지연 인정 카피 전환 판단용
   const lastRecommendRef = useRef<(() => void) | null>(null); // 실패 시 같은 조건 원탭 재시도용
+  const sessionKeyRef = useRef<string | null>(null);          // 탐색 에피소드 세션키 — recommendation_log·events 조인용
   const lastSessionResultRef = useRef<string | null>(null); // 그룹 결과 세션 저장 중복 억제
   const stepScrollRef = useRef<HTMLDivElement>(null);
   const isGroup = appMode === 'group';
@@ -867,6 +868,9 @@ export default function Home() {
     // 재추천이면 이전 1순위를 기억해뒀다가 "뭐가 달라졌는지" 한 줄에 사용
     const prevFirst = changeReason ? result?.[0] ?? null : null;
     setChangeNote(null);
+    // 초기 추천에서 새 세션키 발급, 재시도/거절/조정(changeReason 있음)은 같은 키 유지 → 한 에피소드로 조인
+    if (!changeReason || !sessionKeyRef.current) sessionKeyRef.current = newSessionKey();
+    setSessionKey(sessionKeyRef.current); // 이후 발생하는 이벤트(클릭·거절·예약)에 자동으로 세션키 태깅
     trackEvent('recommend_request'); // 퍼널 분모: 모든 추천 호출(첫 추천·재추천 공통)
     setLoading(true);
     loadingStartRef.current = Date.now();
@@ -939,7 +943,7 @@ export default function Home() {
       }, 250);
 
       // 실제 마일스톤 2: AI 추천 완료 (재추천 시 이전 장소 제외)
-      const { places: recommendation, weather, thirdStop, thirdLabel } = await getAIRecommendation(input, midpoint, [], excludeNames, nearestAreas, scope);
+      const { places: recommendation, weather, thirdStop, thirdLabel } = await getAIRecommendation(input, midpoint, [], excludeNames, nearestAreas, scope, sessionKeyRef.current);
       clearInterval(aiProgressInterval);
       setLoadingProgress(100); // 실제 완료
 
@@ -1051,7 +1055,9 @@ export default function Home() {
 
   function handleReject(reason: 'expensive' | 'far' | 'vibe') {
     if (!midpointData) return;
-    trackEvent(`reject_${reason}`);
+    // payload: 무엇을 왜 거절했나(현 1순위의 가격대·적합도). session_key로 어떤 추천이었는지 조인 가능.
+    const rejected = result?.[0];
+    trackEvent(`reject_${reason}`, rejected ? { placeName: rejected.placeName, address: rejected.address, priceRange: rejected.priceRange, fitScore: rejected.fitScore } : undefined);
     const validLocs = locations.filter((l) => l.lat != null && l.lng != null);
     const exclude = currentExclude();
     setTreasurer(null);
