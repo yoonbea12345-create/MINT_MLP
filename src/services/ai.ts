@@ -103,12 +103,12 @@ export interface PlaceEnrichment {
 }
 
 export async function enrichPlaces(
-  places: { placeName: string; lat?: number; lng?: number; area?: string }[],
+  places: { placeName: string; lat?: number; lng?: number; area?: string; category?: string }[],
 ): Promise<PlaceEnrichment[]> {
   try {
     const payload = places
       .filter((p) => p.placeName && p.lat && p.lng)
-      .map((p) => ({ placeName: p.placeName, lat: p.lat, lng: p.lng, area: p.area }));
+      .map((p) => ({ placeName: p.placeName, lat: p.lat, lng: p.lng, area: p.area, category: p.category }));
     if (payload.length === 0) return [];
     const res = await fetch('/api/recommend', {
       method: 'POST',

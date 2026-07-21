@@ -615,26 +615,88 @@ async function fetchWeather(lat: number, lng: number): Promise<WeatherInfo | nul
   }
 }
 
-// 네이버 이미지 검색으로 장소 대표 사진 1장 확보.
-// link(원본)는 핫링크 차단이 잦아 네이버 CDN 썸네일(search.pstatic.net)을 쓰고,
-// type 파라미터만 키워 카드 배너 해상도로 올린다.
+// ── 대표 이미지 오매칭 방지 사전/유틸 ──
+// 이미지검색은 "장소"가 아니라 "웹 이미지"를 찾으므로, 결과가 이 장소의 사진인지 사후 검증한다.
+// 원칙: 애매하면 붙이지 않는다(null). 틀린 사진 한 장이 신뢰를 통째로 깬다.
+const IMG_HOTEL_RE = /모텔|호텔|무인텔|펜션|풀빌라|게스트하우스|리조트|숙박|객실|투숙/;
+const IMG_REALTY_RE = /부동산|공인중개|매물|원룸|투룸|오피스텔|아파트|분양|입주|전세|월세|임대|시세/;
+const IMG_NONPHOTO_RE = /지도|약도|찾아오시는|오시는\s*길|위치\s*안내|로고|채용|구인|구직/;
+const IMG_ADULT_RE = /유흥|노래방\s*도우미|성인/;
+const IMG_BADDOMAIN_RE = /yanolja|goodchoice|여기어때|agoda|booking\.|airbnb|hotelscombined|zigbang|dabang|r114|kbland|hogangnono/i;
+const IMG_FOOD_RE = /맛집|메뉴|안주|사케|하이볼|오마카세|회|꼬치|식당|요리|카페|디저트|맛있|존맛|술집|이자카야|포차|바베큐|고기|파스타|초밥|스시/;
+const IMG_REVIEW_RE = /후기|리뷰|방문|다녀왔|내돈내산/;
+
+function stripTags(s: string): string {
+  return s.replace(/<[^>]+>/g, '').replace(/&[a-z#0-9]+;/gi, ' ').replace(/\s+/g, ' ').trim();
+}
+function shortenCategory(category?: string | null): string {
+  if (!category) return '';
+  const parts = category.split(/[>·,/|]/).map((s) => s.trim()).filter(Boolean);
+  return (parts[parts.length - 1] ?? '').slice(0, 20);
+}
+function placeNameTokens(name: string): string[] {
+  return name.split(/[\s()[\]·,./&]+/).map((t) => t.trim()).filter((t) => t.length >= 2);
+}
+
+// 네이버 이미지 검색으로 장소 대표 사진 1장 확보 — 단, 상호가 제목에서 확인되고
+// 오탐 사전(모텔·부동산·비사진 등)을 통과하며 보조 신호가 있을 때만. 미달이면 null(이미지 없음).
 async function fetchPlaceImage(
   name: string,
   area: string,
+  category: string,
   clientId: string,
   clientSecret: string,
 ): Promise<string | null> {
   try {
-    const query = `${area} ${name}`.trim();
-    const url = `https://openapi.naver.com/v1/search/image?query=${encodeURIComponent(query)}&display=1&sort=sim`;
+    const cat = shortenCategory(category);
+    const query = [area, name, cat].filter(Boolean).join(' ').trim();
+    const url = `https://openapi.naver.com/v1/search/image?query=${encodeURIComponent(query)}&display=10&sort=sim`;
     const res = await fetch(url, {
       headers: { 'X-Naver-Client-Id': clientId, 'X-Naver-Client-Secret': clientSecret },
     });
     if (!res.ok) return null;
-    const data = await res.json() as { items?: { thumbnail?: string }[] };
-    const thumb = data.items?.[0]?.thumbnail;
-    if (!thumb || !thumb.startsWith('https://')) return null;
-    return thumb.replace(/type=b\d+/, 'type=b400');
+    const data = await res.json() as { items?: { title?: string; link?: string; thumbnail?: string; sizewidth?: string; sizeheight?: string }[] };
+    const items = data.items ?? [];
+
+    const tokens = placeNameTokens(name);
+    // 짧은/일반명사 상호는 오탐 급증 → area 매칭까지 사실상 필수화(임계 상향)
+    const isShortName = tokens.length <= 1 && name.replace(/\s/g, '').length <= 2;
+    const T = isShortName ? 75 : 60;
+
+    let best: string | null = null;
+    let bestScore = -1;
+    items.forEach((it, idx) => {
+      const thumb = it.thumbnail ?? '';
+      if (!thumb.startsWith('https://')) return;
+      const title = stripTags(it.title ?? '');
+      const link = it.link ?? '';
+      const w = Number(it.sizewidth) || 0;
+      const h = Number(it.sizeheight) || 0;
+
+      // 하드 제외 게이트
+      if (IMG_HOTEL_RE.test(title) || IMG_REALTY_RE.test(title) || IMG_NONPHOTO_RE.test(title) || IMG_ADULT_RE.test(title)) return;
+      if (IMG_BADDOMAIN_RE.test(link)) return;
+      if (w && h && (w < 200 || h < 200)) return;         // 아이콘/로고
+      if (w && h && (w / h > 3 || h / w > 3)) return;      // 배너·간판 스트립·지도
+
+      // 상호 토큰 매칭 필수 — 없으면 채택 불가(모텔 사고 직접 차단선)
+      const nameHit = name.length >= 2 && title.includes(name);
+      const tokenHit = tokens.some((t) => title.includes(t));
+      if (!nameHit && !tokenHit) return;
+
+      let score = nameHit ? 60 : 50;
+      if (area && title.includes(area)) score += 15;
+      if ((cat && title.includes(cat)) || IMG_FOOD_RE.test(title)) score += 10;
+      if (IMG_REVIEW_RE.test(title)) score += 5;
+      if (/blog\.naver|post\.naver|instagram/.test(link)) score += 5;
+      if (/메뉴판|가격표|배달/.test(title)) score -= 10;
+      score += Math.max(0, 5 - idx); // sim 상위 타이브레이크
+
+      if (score > bestScore) { bestScore = score; best = thumb; }
+    });
+
+    if (!best || bestScore < T) return null; // 애매하면 이미지 없음
+    return (best as string).replace(/type=b\d+/, 'type=b400');
   } catch {
     return null;
   }
@@ -716,7 +778,7 @@ async function handleEnrich(req: VercelRequest, res: VercelResponse) {
   const body = req.body as { places?: unknown };
   const raw = Array.isArray(body.places) ? body.places : [];
   const places = raw
-    .filter((p): p is { placeName: string; lat: number; lng: number; area?: string } =>
+    .filter((p): p is { placeName: string; lat: number; lng: number; area?: string; category?: string } =>
       !!p && typeof p === 'object'
       && typeof (p as { placeName?: unknown }).placeName === 'string'
       && (p as { placeName: string }).placeName.length <= 80
@@ -731,7 +793,7 @@ async function handleEnrich(req: VercelRequest, res: VercelResponse) {
     const [placeUrl, imageUrl] = await Promise.all([
       kakaoRestKey && hasCoords ? searchKakaoPlaceUrl(p.placeName, p.lat, p.lng, kakaoRestKey) : Promise.resolve(null),
       naverImgId && naverImgSecret
-        ? fetchPlaceImage(p.placeName, toSearchName(typeof p.area === 'string' ? p.area : ''), naverImgId, naverImgSecret)
+        ? fetchPlaceImage(p.placeName, toSearchName(typeof p.area === 'string' ? p.area : ''), typeof p.category === 'string' ? p.category.slice(0, 60) : '', naverImgId, naverImgSecret)
         : Promise.resolve(null),
     ]);
     return { placeName: p.placeName, kakaoPlaceUrl: placeUrl ?? undefined, imageUrl: imageUrl ?? undefined };

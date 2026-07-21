@@ -979,7 +979,7 @@ export default function Home() {
       // 재추천 레이스 방지용 reqId 가드 (오래된 응답이 새 결과를 덮지 않게). 3차도 함께 보강.
       const enrichId = ++enrichReqRef.current;
       const enrichTargets = [...recommendation, ...(thirdStop ? [thirdStop] : [])];
-      enrichPlaces(enrichTargets.map((p) => ({ placeName: p.placeName, lat: p.lat, lng: p.lng, area: p.area })))
+      enrichPlaces(enrichTargets.map((p) => ({ placeName: p.placeName, lat: p.lat, lng: p.lng, area: p.area, category: p.category })))
         .then((enriched) => {
           if (enrichId !== enrichReqRef.current || enriched.length === 0) return;
           const apply = (p: PlaceRecommendation) => {
