@@ -1275,7 +1275,7 @@ export default function Home() {
         )}
         <div className="max-w-md mx-auto px-4 pb-[calc(6rem+env(safe-area-inset-bottom))] pt-[max(1rem,env(safe-area-inset-top))]">
           {/* 헤더 3요소: 좌 '조건 수정'(값 유지), 중앙 브랜드 마크(클릭 불가), 우 '처음부터'(확인 후 전체 초기화) */}
-          <div className="flex items-center justify-between mb-1">
+          <div className="relative flex items-center justify-between mb-1">
             <button
               onClick={() => {
                 // 결과에서 조건 수정 = 바로 이전 입력 화면(마지막 스텝)으로. 입력값은 그대로 유지해 바로 수정·재추천 가능.
@@ -1287,7 +1287,14 @@ export default function Home() {
             >
               ← 조건 수정
             </button>
-            <span className="text-[#3CDBC0] font-black text-lg select-none">MINT</span>
+            {/* 로고 = 랜딩페이지로 탈출. 좌우 버튼 폭과 무관하게 절대 중앙 정렬. */}
+            <button
+              onClick={() => { window.location.href = '/'; }}
+              aria-label="MINT 홈으로"
+              className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-[#3CDBC0] font-black text-lg select-none active:scale-95 transition-transform"
+            >
+              MINT
+            </button>
             <button
               onClick={handleFullReset}
               className="flex items-center gap-1 rounded-lg px-2 py-1.5 text-[11px] font-bold text-gray-400 transition-colors hover:text-gray-600"
