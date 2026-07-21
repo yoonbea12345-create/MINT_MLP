@@ -1402,6 +1402,16 @@ ${fitScoreGuide}
       console.error('[recommend] thirdStop attach failed', e);
     }
 
+    // 파일럿 일련번호 — 유저에겐 안 보이는 내부 조인키(혼동문자 0/O·1/I·L 제외 6자).
+    // 추천 응답에 실어 클라이언트가 localStorage에 보관 → 파일럿에서 이 추천을 되살린다.
+    const makeSerial = (): string => {
+      const cs = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+      let s = '';
+      for (let i = 0; i < 6; i++) s += cs[Math.floor(Math.random() * cs.length)];
+      return s;
+    };
+    let serial = makeSerial();
+
     // L4: 후보별 신호·노출·선택 기록 (분석은 v2 스코프 — 지금은 기록만, 실패해도 응답엔 무영향)
     try {
       const supabase = getSupabaseAdmin();
@@ -1432,7 +1442,17 @@ ${fitScoreGuide}
           await supabase.from('recommendation_log').update({ retried: true }).eq('session_key', sessionKey);
         }
 
-        await supabase.from('recommendation_log').insert({
+        // 사람이 읽는 추천장소 스냅샷 — candidates엔 해시키만 있어 파일럿/어드민에서 못 읽으므로 별도 저장
+        const placesDisplay: { rank: number | null; placeName: string; category: string | null; address: string | null }[] =
+          places.slice(0, 8).map((p) => ({
+            rank: (p.rank as number) ?? null,
+            placeName: p.placeName,
+            category: p.category ?? null,
+            address: p.address ?? null,
+          }));
+        if (thirdStop) placesDisplay.push({ rank: 99, placeName: thirdStop.placeName, category: thirdStop.category ?? null, address: thirdStop.address ?? null });
+
+        const baseRow = {
           session_key: sessionKey,
           group_size: groupSize,
           purpose_first: purpose.first,
@@ -1443,7 +1463,16 @@ ${fitScoreGuide}
           midpoint_lat: midLat,
           midpoint_lng: midLng,
           candidates,
-        });
+        };
+        // serial/places_display 포함 insert → 컬럼 미배포(42703) 시 레거시 insert 폴백, serial 충돌(23505) 시 1회 재발급
+        let ins = await supabase.from('recommendation_log').insert({ ...baseRow, serial, places_display: placesDisplay });
+        if (ins.error?.code === '23505') {
+          serial = makeSerial();
+          ins = await supabase.from('recommendation_log').insert({ ...baseRow, serial, places_display: placesDisplay });
+        }
+        if (ins.error?.code === '42703') {
+          await supabase.from('recommendation_log').insert(baseRow);
+        }
       }
     } catch (e) {
       console.error('[recommend] L4 recommendation_log insert failed', e);
@@ -1451,6 +1480,8 @@ ${fitScoreGuide}
 
     return res.status(200).json({
       places,
+      // 파일럿 일련번호 — 클라이언트가 localStorage에 보관(유저 비노출, 내부 조인키)
+      serial,
       // 3차(이어서 갈 곳) — 없으면 null. 클라이언트는 있을 때만 렌더한다.
       thirdStop,
       thirdLabel,

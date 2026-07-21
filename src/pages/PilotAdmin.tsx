@@ -12,10 +12,19 @@ interface PilotFeedback {
   selections: Selections | null;
   placeName: string | null;
   claimCode: string | null;
+  serial: string | null;
+  entryType: string | null;
+  recSnapshot: RecSnapshot | null;
+  visited: VisitedItem[] | null;
+  qaAnswers: QaAnswers | null;
   recommendationImageUrls: string[];
   paymentImageUrls: string[];
 }
 interface Selections { purpose?: string | null; relation?: string | null; region?: string; vibes?: string[]; source?: string }
+interface CoursePick { course: string; rank: number; placeName: string; category?: string | null }
+interface RecSnapshot { conditions?: { purpose?: string | null; relation?: string | null; region?: string | null; vibes?: string[]; budget?: string | null }; coursePicks?: CoursePick[] }
+interface VisitedItem { course: string; choice: string; otherName?: string }
+interface QaAnswers { reason?: string[]; issues?: string[]; budget?: string | null; vibeFit?: number | null; reuse?: string | null }
 interface PilotSummary { count: number; avgFitRating: number | null; distribution: number[] }
 interface Prize {
   id: string; title: string; tier: string; status: string; claimCode: string | null;
@@ -178,19 +187,60 @@ function FeedbackTab({ records, summary }: { records: PilotFeedback[]; summary: 
                 </div>
                 <div className="flex flex-col items-end gap-1">
                   {r.claimCode && <span className="text-[10px] font-black text-white bg-[#3CDBC0] px-2.5 py-1 rounded-full">{r.claimCode}</span>}
-                  <span className="text-[10px] font-bold text-gray-400 bg-gray-100 px-2.5 py-1 rounded-full">{r.id}</span>
+                  <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full ${r.entryType === 'auto' ? 'bg-[#E8F8F5] text-[#2AB5A0]' : 'bg-gray-100 text-gray-400'}`}>
+                    {r.entryType === 'auto' ? `일련번호 ${r.serial ?? ''}` : '수동'}
+                  </span>
                 </div>
               </div>
 
-              {/* 입력 조건 칩 */}
-              {(r.selections || r.placeName) && (
+              {/* 입력 조건 (일련번호 경로면 DB 원본, 아니면 자기신고) */}
+              {(() => {
+                const c = r.recSnapshot?.conditions ?? null;
+                const purpose = c?.purpose ?? r.selections?.purpose;
+                const relation = c?.relation ?? r.selections?.relation;
+                const region = c?.region ?? r.selections?.region ?? r.placeName;
+                const vibes = c?.vibes ?? r.selections?.vibes ?? [];
+                if (!purpose && !relation && !region && vibes.length === 0) return null;
+                return (
+                  <div className="flex flex-wrap gap-1.5 mb-3">
+                    {purpose && <Chip>🍽️ {purpose}</Chip>}
+                    {relation && <Chip>👥 {relation}</Chip>}
+                    {region && <Chip>📍 {region}</Chip>}
+                    {c?.budget && <Chip>💰 {c.budget}</Chip>}
+                    {vibes.map((v) => <Chip key={v}>#{v}</Chip>)}
+                  </div>
+                );
+              })()}
+
+              {/* 추천 vs 실제 방문 */}
+              {r.recSnapshot?.coursePicks && r.recSnapshot.coursePicks.length > 0 && (
+                <div className="bg-[#F5FBF8] rounded-2xl px-4 py-3 mb-3">
+                  <p className="text-[11px] font-bold text-[#2AB5A0] uppercase tracking-widest mb-2">추천 → 실제 방문</p>
+                  {groupCourses(r.recSnapshot.coursePicks).map(([course, picks]) => {
+                    const v = (r.visited ?? []).find((x) => x.course === course);
+                    return (
+                      <div key={course} className="mb-1.5 last:mb-0">
+                        <span className="text-[11px] font-bold text-gray-500">{course}: </span>
+                        {picks.map((p) => {
+                          const went = v?.choice === p.placeName;
+                          return <span key={p.placeName} className={`text-[11px] mr-1.5 ${went ? 'font-black text-[#2AB5A0]' : 'text-gray-400'}`}>{went ? '✅ ' : ''}{p.rank}.{p.placeName}</span>;
+                        })}
+                        {v?.choice === '__other' && <span className="text-[11px] font-black text-orange-500">→ 다른 곳{v.otherName ? `: ${v.otherName}` : ''}</span>}
+                        {v?.choice === '__none' && <span className="text-[11px] text-gray-400">→ 안 감</span>}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* Q&A 요약 */}
+              {r.qaAnswers && (
                 <div className="flex flex-wrap gap-1.5 mb-3">
-                  {r.selections?.purpose && <Chip>🍽️ {r.selections.purpose}</Chip>}
-                  {r.selections?.relation && <Chip>👥 {r.selections.relation}</Chip>}
-                  {(r.selections?.region || r.placeName) && <Chip>📍 {r.selections?.region || r.placeName}</Chip>}
-                  {r.selections?.vibes?.map((v) => <Chip key={v}>#{v}</Chip>)}
-                  {r.sessionKey && <span className="text-[10px] text-gray-400 bg-gray-50 border border-gray-100 px-2 py-0.5 rounded-full">session:{r.sessionKey.slice(0, 8)}</span>}
-                  {r.selections?.source && <span className="text-[10px] text-gray-400 bg-gray-50 border border-gray-100 px-2 py-0.5 rounded-full">{r.selections.source === 'session' ? '자동첨부' : '칩선택'}</span>}
+                  {r.qaAnswers.reason?.map((x) => <span key={x} className="text-[10px] text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">이유·{x}</span>)}
+                  {r.qaAnswers.issues?.map((x) => <span key={x} className="text-[10px] text-red-500 bg-red-50 px-2 py-0.5 rounded-full">불만·{x}</span>)}
+                  {r.qaAnswers.budget && <span className="text-[10px] text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">예산·{({ ok: '안에서', slightly: '약간초과', over: '많이초과' } as Record<string, string>)[r.qaAnswers.budget] ?? r.qaAnswers.budget}</span>}
+                  {r.qaAnswers.vibeFit != null && <span className="text-[10px] text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">분위기부합·{r.qaAnswers.vibeFit}/5</span>}
+                  {r.qaAnswers.reuse && <span className="text-[10px] text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">재이용·{({ always: '무조건', conditional: '조건부', no: '글쎄' } as Record<string, string>)[r.qaAnswers.reuse] ?? r.qaAnswers.reuse}</span>}
                 </div>
               )}
 
@@ -339,6 +389,11 @@ function PrizeList({ prizes, onVoid, showAssigned }: { prizes: Prize[]; onVoid: 
 function Chip({ children }: { children: ReactNode }) {
   return <span className="text-[11px] font-bold text-[#2AB5A0] bg-[#E8F8F5] border border-[#3CDBC0]/30 px-2.5 py-1 rounded-full">{children}</span>;
 }
+function groupCourses(picks: CoursePick[]): [string, CoursePick[]][] {
+  const m = new Map<string, CoursePick[]>();
+  for (const p of picks) { const a = m.get(p.course) ?? []; a.push(p); m.set(p.course, a); }
+  return [...m.entries()];
+}
 function TextBlock({ title, text }: { title: string; text: string }) {
   return (
     <div className="bg-[#F5FBF8] rounded-2xl px-4 py-3">
@@ -348,6 +403,7 @@ function TextBlock({ title, text }: { title: string; text: string }) {
   );
 }
 function ImageGroup({ title, urls }: { title: string; urls: string[] }) {
+  if (urls.length === 0) return null;
   return (
     <div>
       <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-2">{title}</p>

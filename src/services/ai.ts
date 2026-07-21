@@ -49,6 +49,7 @@ export interface RecommendationResult {
   weather: WeatherSummary | null;
   thirdStop?: PlaceRecommendation | null;   // 3차 '이어서 갈 곳' — 서버가 붙여줌(없으면 null)
   thirdLabel?: string | null;               // 3차 성격 라벨(예: '카페·디저트', '술 한잔')
+  serial?: string | null;                   // 파일럿 일련번호(내부 조인키, 유저 비노출)
 }
 
 // 행정단위 스코프 — 시/구/동 단위로 추천 범위를 고정 (있을 때만 전송)
@@ -90,6 +91,7 @@ export async function getAIRecommendation(
     // 구버전 서버 응답이면 undefined → null 처리(배포 스큐 안전)
     thirdStop: (data.thirdStop ?? null) as PlaceRecommendation | null,
     thirdLabel: (data.thirdLabel ?? null) as string | null,
+    serial: (data.serial ?? null) as string | null,
   };
 }
 

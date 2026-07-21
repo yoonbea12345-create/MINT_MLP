@@ -20,6 +20,7 @@ import type { PlaceRecommendation, UserInput, WeatherSummary, RegionScope } from
 import { saveResultSnapshot, loadResultSnapshot, clearResultSnapshot, saveHistory } from '../utils/history';
 import { computeTravelTimes } from '../services/travelTime';
 import { trackSessionDuration, trackEvent, setSessionKey, newSessionKey } from '../utils/analytics';
+import { savePilotHandoff, buildCoursePicks } from '../utils/pilotHandoff';
 import { aggregateVibe, aggregateBudget, splitMemberKeywords } from '../utils/groupAggregate';
 import type { GroupMember } from '../utils/groupAggregate';
 import LoadingScreen from '../components/home/LoadingScreen';
@@ -943,7 +944,7 @@ export default function Home() {
       }, 250);
 
       // 실제 마일스톤 2: AI 추천 완료 (재추천 시 이전 장소 제외)
-      const { places: recommendation, weather, thirdStop, thirdLabel } = await getAIRecommendation(input, midpoint, [], excludeNames, nearestAreas, scope, sessionKeyRef.current);
+      const { places: recommendation, weather, thirdStop, thirdLabel, serial } = await getAIRecommendation(input, midpoint, [], excludeNames, nearestAreas, scope, sessionKeyRef.current);
       clearInterval(aiProgressInterval);
       setLoadingProgress(100); // 실제 완료
 
@@ -951,6 +952,25 @@ export default function Home() {
       setResultThird(thirdStop ?? null);
       setResultThirdLabel(thirdLabel ?? null);
       setResultWeather(weather);
+
+      // 파일럿 핸드오프 저장 — 유저 비노출. /pilot에서 "○○집으로 추천받은 거 맞아요?" 자동 감지에 사용
+      if (serial) {
+        try {
+          const hasSecond = !!(purpose?.second && purpose.second !== '없음');
+          savePilotHandoff({
+            serial,
+            createdAt: Date.now(),
+            conditions: {
+              purpose: purpose?.first ?? null,
+              relation: purpose?.relation ?? null,
+              region: nearestAreas?.[0] ?? locations.find((l) => l.name)?.name ?? null,
+              vibes: vibeFirst.slice(0, 3),
+              budget: budget ?? null,
+            },
+            coursePicks: buildCoursePicks(recommendation, hasSecond, thirdStop ?? null),
+          });
+        } catch { /* 저장 실패해도 추천 흐름엔 무영향 */ }
+      }
       if (changeReason) {
         setChangeNote(buildChangeNote(prevFirst, recommendation[0], midpoint, changeReason));
       }

@@ -140,6 +140,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           selections: r.selections ?? null,
           placeName: r.place_name ?? null,
           claimCode: r.claim_code ?? null,
+          serial: r.serial ?? null,
+          entryType: r.entry_type ?? null,
+          recSnapshot: r.rec_snapshot ?? null,
+          visited: r.visited ?? null,
+          qaAnswers: r.qa_answers ?? null,
           recommendationImageUrls: recPaths.map(feedbackPublicUrl),
           paymentImageUrls: payPaths.map(feedbackPublicUrl),
         };
@@ -328,6 +333,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     sessionKey?: string | null;
     selections?: unknown;
     placeName?: string | null;
+    serial?: string | null;
+    entryType?: string | null;
+    recSnapshot?: unknown;
+    visited?: unknown;
+    qaAnswers?: unknown;
   };
 
   const id = (body.id ?? '').trim();
@@ -337,49 +347,61 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const contact = typeof body.contact === 'string' ? body.contact.trim() : null;
   const sessionKey = typeof body.sessionKey === 'string' ? body.sessionKey.trim().slice(0, 64) : null;
   const placeName = typeof body.placeName === 'string' ? body.placeName.trim().slice(0, 120) : null;
+  const serial = typeof body.serial === 'string' && /^[A-Z0-9]{6}$/.test(body.serial.trim().toUpperCase())
+    ? body.serial.trim().toUpperCase() : null;
+  const entryType = body.entryType === 'auto' ? 'auto' : 'manual';
 
-  let selections: unknown = null;
-  if (body.selections && typeof body.selections === 'object') {
-    try {
-      const raw = JSON.stringify(body.selections);
-      if (raw.length <= 2000) selections = body.selections;
-    } catch { /* ignore */ }
-  }
+  const jsonWithin = (v: unknown, max: number): unknown => {
+    if (!v || typeof v !== 'object') return null;
+    try { return JSON.stringify(v).length <= max ? v : null; } catch { return null; }
+  };
+  const selections = jsonWithin(body.selections, 2000);
+  const recSnapshot = jsonWithin(body.recSnapshot, 4000);
+  const visited = jsonWithin(body.visited, 2000);
+  const qaAnswers = jsonWithin(body.qaAnswers, 4000);
+
+  // 추천 결과 캡처는 auto 경로(일련번호가 증거)에선 불필요 → 없으면 빈 배열(레거시 NOT NULL 충족)
+  const recPaths: string[] = validPaths(body.recommendationImagePaths) ? (body.recommendationImagePaths as string[]) : [];
 
   if (!/^pf[a-z0-9]{14}$/i.test(id) ||
-      !validPaths(body.recommendationImagePaths) ||
       !validPaths(body.paymentImagePaths) ||
       !Number.isInteger(fitRating) || fitRating < 1 || fitRating > 5 ||
-      fitText.length < 1 || fitText.length > 2000 ||
+      fitText.length > 2000 ||
       extraText.length > 2000 ||
       (contact != null && contact.length > 100)) {
     return res.status(400).json({ error: '필수 항목을 확인해주세요.' });
   }
 
   const claimCode = makeClaimCode();
+  const fitTextSafe = fitText || '(후기 없음)'; // fit_text는 레거시 스키마에서 NOT NULL
   try {
     const { error } = await supabase.from('pilot_feedback').insert({
       id,
-      recommendation_image_paths: body.recommendationImagePaths,
+      recommendation_image_paths: recPaths,
       payment_image_paths: body.paymentImagePaths,
       fit_rating: fitRating,
-      fit_text: fitText,
+      fit_text: fitTextSafe,
       extra_text: extraText || null,
       contact,
       session_key: sessionKey,
       selections,
       place_name: placeName,
       claim_code: claimCode,
+      serial,
+      entry_type: entryType,
+      rec_snapshot: recSnapshot,
+      visited,
+      qa_answers: qaAnswers,
     });
     // 마이그레이션 미실행(신규 컬럼 없음/extra_text NOT NULL) → 레거시 컬럼으로 재시도
     if (error?.code === '42703' || error?.code === '23502') {
       const legacy = await supabase.from('pilot_feedback').insert({
         id,
-        recommendation_image_paths: body.recommendationImagePaths,
+        recommendation_image_paths: recPaths,
         payment_image_paths: body.paymentImagePaths,
         fit_rating: fitRating,
-        fit_text: fitText,
-        extra_text: extraText || fitText, // 구스키마 NOT NULL 충족(후기 1칸을 양쪽에)
+        fit_text: fitTextSafe,
+        extra_text: extraText || fitTextSafe, // 구스키마 NOT NULL 충족
         contact,
       });
       if (legacy.error) throw legacy.error;
