@@ -129,11 +129,12 @@ export async function lookupYearsAlive(store: PublicStore): Promise<number | und
   }
 }
 
-// localGem = 영업연차(10년=1.0 cap) × (1 - 버즈량 정규화). "오래 살았는데 조용하다" = 숨은 후보.
+// localGem = 영업연차(5년=1.0 cap) × (1 - 버즈량 정규화). "생존 검증됐는데 조용하다" = 숨은 후보.
+// 5년이면 생존 검증으로 충분 — 그 이상 업력은 추가 가산 없음(노포 편중 방지: 5년 비스트로·와인바가 40년 곱창집과 동률).
 // buzzCountForNormalization은 참고 가능한 버즈량 상한(예: 같은 배치 내 최대값)으로 정규화한다.
 export function computeLocalGem(yearsAlive: number | undefined, buzzCount: number, buzzCountCap = 200): number {
   if (yearsAlive === undefined) return 0;
-  const yearsNorm = Math.min(yearsAlive / 10, 1);
+  const yearsNorm = Math.min(yearsAlive / 5, 1);
   const buzzNorm = Math.min(buzzCount / buzzCountCap, 1);
   return yearsNorm * (1 - buzzNorm);
 }

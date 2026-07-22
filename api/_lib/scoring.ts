@@ -2,7 +2,7 @@
 export const SCORING_CONFIG = {
   bubblePenaltyWeight: 0.15, // bubbleScore * 0.15, 최대 15점 감점
   discrepancyPenalty: 8, // naverRank 상위 30% && fitScore 하위 50%
-  gemBonus: 5, // 공공데이터 발굴 후보(localGem 상위로 이미 선별됨) && fitScore 중위 이상
+  gemBonus: 3, // 공공데이터 발굴 후보(localGem 상위로 이미 선별됨) && fitScore 중위 이상 — 노포 편중 완화로 5→3(순위 넛지 수준)
   discrepancyNaverRankTopPct: 0.3,
   discrepancyFitScoreBottomPct: 0.5,
   gemFitScoreMinPct: 0.5,
