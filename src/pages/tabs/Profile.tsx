@@ -7,6 +7,7 @@ import {
   getNickname, getAvatarUrl, backfillHistoryIfNeeded, getActivityHistory, clearActivityCache,
   type ActivityRow,
 } from '../../utils/auth';
+import { IconUserCircle } from '../../components/icons';
 
 const CONTACT_MAIL = 'mailto:issuebell@naver.com?subject=MINT%20%EB%AC%B8%EC%9D%98';
 
@@ -117,7 +118,7 @@ export default function Profile() {
 
   return (
     <div className="max-w-md mx-auto px-5 pt-[max(1.5rem,env(safe-area-inset-top))]">
-      <h1 className="text-[22px] font-black text-gray-900">👤 프로필</h1>
+      <h1 className="flex items-center gap-2 text-[22px] font-black text-gray-900"><IconUserCircle className="h-[22px] w-[22px] text-[#2AB5A0]" />프로필</h1>
 
       {/* 요약 */}
       <div className="mt-4 rounded-2xl border border-gray-100 bg-white p-4">

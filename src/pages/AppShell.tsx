@@ -22,7 +22,7 @@ export default function AppShell() {
         <Home onChromeChange={setShowTabBar} />
       ) : (
         <div className="pb-[calc(5.5rem+env(safe-area-inset-bottom))]">
-          {activeTab === 'meetings' && <MyMeetings />}
+          {activeTab === 'meetings' && <MyMeetings onGoHome={() => setActiveTab('home')} />}
           {activeTab === 'discover' && <Discover />}
           {activeTab === 'shop' && <MintShop />}
           {activeTab === 'profile' && <Profile />}

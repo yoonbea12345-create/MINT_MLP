@@ -71,10 +71,14 @@ export function removeWish(key: string): WishItem[] {
   return next;
 }
 
-// 지도 딥링크 — 결과/공유 카드와 동일 규칙
-export function wishMapLink(w: WishItem): string {
-  if (w.lat && w.lng && w.lat !== 0) {
-    return `https://map.kakao.com/link/map/${encodeURIComponent(w.place_name)},${w.lat},${w.lng}`;
+// 지도 딥링크 — 결과/공유 카드와 동일 규칙. 찜 항목이 아닌 원석 카드도 쓸 수 있게 분리했다.
+export function buildMapLink(name: string, lat?: number | null, lng?: number | null): string {
+  if (lat && lng && lat !== 0) {
+    return `https://map.kakao.com/link/map/${encodeURIComponent(name)},${lat},${lng}`;
   }
-  return `https://map.kakao.com/link/search/${encodeURIComponent(w.place_name)}`;
+  return `https://map.kakao.com/link/search/${encodeURIComponent(name)}`;
+}
+
+export function wishMapLink(w: WishItem): string {
+  return buildMapLink(w.place_name, w.lat, w.lng);
 }
