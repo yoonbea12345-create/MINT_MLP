@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useLayoutEffect, useRef } from 'react';
 import StepProgress from '../components/StepProgress';
 import LocationInput from '../components/LocationInput';
 import type { LocationEntry } from '../components/LocationInput';
@@ -230,7 +230,7 @@ function buildChangeNote(
   }
 }
 
-export default function Home({ onExitFlow }: { onExitFlow?: () => void } = {}) {
+export default function Home({ onChromeChange }: { onChromeChange?: (showTabBar: boolean) => void } = {}) {
   const [appMode, setAppMode] = useState<AppMode>('mode-select');
   const [groupSize, setGroupSize] = useState<'2명' | '3~4명' | '5명 이상'>('2명');
   const [customOccasion, setCustomOccasion] = useState('');
@@ -314,7 +314,7 @@ export default function Home({ onExitFlow }: { onExitFlow?: () => void } = {}) {
   }, []);
 
   // 마지막 추천 결과 복원 (새로고침·홈 이탈·앱 전환 후 재진입 시 추천이 증발하지 않게)
-  useEffect(() => {
+  useLayoutEffect(() => {
     try {
       const saved = loadResultSnapshot() as {
         result?: PlaceRecommendation[];
@@ -349,7 +349,7 @@ export default function Home({ onExitFlow }: { onExitFlow?: () => void } = {}) {
   }, []);
 
   // 입력 초안 복원 — 결과가 없을 때만. 그룹도 링크 생성 전에는 서버 세션이 없으므로 로컬 초안에서 복원한다.
-  useEffect(() => {
+  useLayoutEffect(() => {
     try {
       if (loadResultSnapshot()) return; // 결과 복원이 우선
       // 구버전(sessionStorage) 초안도 한 번은 읽어줌 — 배포 시점에 입력 중이던 세션 보호
@@ -387,7 +387,7 @@ export default function Home({ onExitFlow }: { onExitFlow?: () => void } = {}) {
   }, []);
 
   // 그룹 호스트 세션 복원 — 결과 스냅샷이 없을 때만 (결과 화면이 우선)
-  useEffect(() => {
+  useLayoutEffect(() => {
     try {
       if (loadResultSnapshot()) return;
       const raw = localStorage.getItem(GROUP_SESSION_KEY);
@@ -410,6 +410,12 @@ export default function Home({ onExitFlow }: { onExitFlow?: () => void } = {}) {
     } catch { /* 손상된 그룹 세션 무시 */ }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // 탭바 표시 여부를 AppShell에 보고 — 입력 플로우 1단계(step 0)에서만 탭바가 보인다.
+  // useLayoutEffect: 페인트 전에 확정해 "탭바가 잠깐 보였다 사라지는" 깜빡임을 막는다.
+  useLayoutEffect(() => {
+    onChromeChange?.(view === 'steps' && step === 0);
+  }, [view, step, onChromeChange]);
 
   // 그룹 호스트 세션 저장 — sessionId가 살아있는 동안 코스·지역까지 함께 보존(새로고침 복원용)
   useEffect(() => {
@@ -742,7 +748,6 @@ export default function Home({ onExitFlow }: { onExitFlow?: () => void } = {}) {
     setTreasurer(null);
     setResultWeather(null);
     setChangeNote(null);
-    onExitFlow?.(); // 초기화 후에는 탭 홈으로 빠져나온다
   }
 
   // 그룹 확정 진입 직전: 멤버들이 각자 낸 출발지·분위기·취향을 하나로 집계.
@@ -1429,13 +1434,21 @@ export default function Home({ onExitFlow }: { onExitFlow?: () => void } = {}) {
 
   // 입력 플로우
   return (
-    <div className="h-[100dvh] bg-[#F5FBF8] overflow-hidden" style={{ height: 'var(--mint-app-height, 100dvh)' }}>
+    <div
+      className="bg-[#F5FBF8] overflow-hidden"
+      style={{
+        // step 0(탭바 보임)에서는 AppShell의 탭바 여백과 동일한 계산식으로 하단을 비워둔다.
+        height: step === 0
+          ? 'calc(var(--mint-app-height, 100dvh) - 5.5rem - env(safe-area-inset-bottom))'
+          : 'var(--mint-app-height, 100dvh)',
+      }}
+    >
       <div className="h-full max-w-md mx-auto flex flex-col">
 
         {/* 헤더 — 노치/상단 안전영역 반영(인앱·일반 세로모드에선 16px 그대로) */}
         <div className="flex-shrink-0 text-center pt-[max(1rem,env(safe-area-inset-top))] px-4 relative">
           <button
-            onClick={() => { window.location.href = '/'; }}
+            onClick={() => handleStepJump(0)}
             className="absolute left-2 top-1/2 -translate-y-1/2 flex items-center gap-1 rounded-lg px-2 py-2 text-xs font-bold text-gray-500 hover:text-[#2AB5A0] transition-colors"
             aria-label="홈으로 가기"
           >
@@ -1444,7 +1457,7 @@ export default function Home({ onExitFlow }: { onExitFlow?: () => void } = {}) {
           </button>
           <h1
             className="text-2xl font-black text-[#2AB5A0] tracking-tight cursor-pointer"
-            onClick={() => { window.location.href = '/'; }}
+            onClick={() => handleStepJump(0)}
           >
             MINT
           </h1>
@@ -1872,7 +1885,7 @@ export default function Home({ onExitFlow }: { onExitFlow?: () => void } = {}) {
 
         {/* 하단 버튼 — 홈 인디케이터/네이티브 툴바와 겹치지 않게 안전영역 반영
             (카톡 인앱 env=0 → 32px 그대로, 일반 브라우저에서만 더 벌어짐) */}
-        <div className="flex-shrink-0 px-4 pt-2 pb-[max(2rem,calc(env(safe-area-inset-bottom)+0.75rem))] flex flex-col gap-2">
+        <div className={`flex-shrink-0 px-4 pt-2 flex flex-col gap-2 ${step === 0 ? 'pb-3' : 'pb-[max(2rem,calc(env(safe-area-inset-bottom)+0.75rem))]'}`}>
           {step < 3 ? (
             <>
               <div className="flex gap-3">

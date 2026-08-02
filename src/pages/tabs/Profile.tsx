@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { getBalance, getLedger, getDeviceId } from '../../utils/points';
+import { loadHistory, openHistoryEntry, type HistoryEntry } from '../../utils/history';
 
 const CONTACT_MAIL = 'mailto:issuebell@naver.com?subject=MINT%20%EB%AC%B8%EC%9D%98';
 
@@ -8,6 +9,7 @@ export default function Profile() {
   const [balance] = useState(() => getBalance());
   const [ledger] = useState(() => getLedger());
   const [deviceId] = useState(() => getDeviceId());
+  const [history] = useState<HistoryEntry[]>(() => loadHistory());
   const [pushOn, setPushOn] = useState(true);
   const [marketingOn, setMarketingOn] = useState(false);
 
@@ -26,6 +28,30 @@ export default function Profile() {
         </div>
         <p className="mt-3 truncate text-[10px] text-gray-300">기기 ID · {deviceId}</p>
       </div>
+
+      {/* 지난 추천 — 스냅샷 복원 */}
+      {history.length > 0 && (
+        <>
+          <p className="mt-6 px-1 mb-2 text-[11px] font-bold uppercase tracking-widest text-gray-400">지난 추천</p>
+          <div className="flex flex-col gap-2">
+            {history.slice(0, 3).map((h) => (
+              <button
+                key={h.savedAt}
+                onClick={() => openHistoryEntry(h)}
+                className="w-full text-left rounded-2xl border border-gray-100 bg-white px-4 py-3 active:scale-[0.99] transition-transform"
+              >
+                <p className="text-sm font-black text-gray-800 truncate">
+                  {h.placeName}{h.secondPlaceName ? ` → ${h.secondPlaceName}` : ''}
+                </p>
+                <p className="mt-0.5 text-xs text-gray-400 truncate">
+                  {h.areaName ? `${h.areaName} · ` : ''}
+                  {new Date(h.savedAt).toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' })}
+                </p>
+              </button>
+            ))}
+          </div>
+        </>
+      )}
 
       {/* 적립 이력 */}
       <p className="mt-6 px-1 mb-2 text-[11px] font-bold uppercase tracking-widest text-gray-400">적립 내역</p>
