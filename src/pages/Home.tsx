@@ -99,11 +99,11 @@ const LOADING_SLOW_MESSAGE = '🍀 후보가 많은 동네라 꼼꼼히 보는 �
 
 // 결과·입력초안 모두 localStorage에 보관 — 홈버튼·공유로 앱을 벗어나 웹뷰가 재시작돼도 유지
 // (sessionStorage는 모바일에서 프로세스 재시작 시 통째로 사라짐)
-export const INPUT_DRAFT_KEY = 'mint_input_draft_v1';
+const INPUT_DRAFT_KEY = 'mint_input_draft_v1';
 const INPUT_DRAFT_TTL_MS = 6 * 60 * 60 * 1000; // 입력하다 만 초안은 6시간까지만 복원
 
 // 그룹 호스트 세션 — sessionId는 서버 세션의 유일한 열쇠라 state에만 두면 새로고침 시 링크·대기현황이 통째로 증발한다
-export const GROUP_SESSION_KEY = 'mint_group_session_v1';
+const GROUP_SESSION_KEY = 'mint_group_session_v1';
 const GROUP_SESSION_TTL_MS = 6 * 60 * 60 * 1000; // 그룹 대기 세션도 6시간까지만 복원
 
 // 공유 투표용 ID (세션 아님 — 공유 클릭마다 새로 발급)

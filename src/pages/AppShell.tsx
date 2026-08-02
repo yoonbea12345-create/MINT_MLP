@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import Home, { INPUT_DRAFT_KEY, GROUP_SESSION_KEY } from './Home';
+import Home from './Home';
 import { loadResultSnapshot } from '../utils/history';
 import BottomTabBar, { type TabKey } from '../components/BottomTabBar';
 import HomeTab from './tabs/HomeTab';
@@ -12,12 +12,16 @@ import Profile from './tabs/Profile';
 // 탭 상태는 URL에 싣지 않는다(기존 path 라우터를 건드리지 않기 위해).
 export default function AppShell() {
   const [activeTab, setActiveTab] = useState<TabKey>('home');
-  // 결과·입력초안·그룹세션이 남아 있으면 새로고침해도 플로우로 복귀 — 탭바 뒤로 결과가 숨는 회귀 방지
+  // 플로우로 바로 복귀하는 경우는 둘뿐이다.
+  // 입력 초안·그룹 세션은 일부러 보지 않는다 — 초안은 '혼자/다같이'를 누르는 순간 저장돼 6시간 남으므로,
+  // 그걸 근거로 삼으면 한 번이라도 플로우에 들어간 사용자는 탭바를 영영 못 본다.
+  // 초안·그룹 세션은 CTA로 재진입할 때 Home이 알아서 복원하니 잃는 것도 없다.
   const [inFlow, setInFlow] = useState<boolean>(() => {
     try {
+      // 게스트 입력을 받은 호스트가 /app?grp=로 돌아오는 딥링크 — 곧장 들어가야 자동 추천이 이어진다
+      if (new URLSearchParams(window.location.search).has('grp')) return true;
+      // 보던 결과가 살아 있으면(24h TTL) 새로고침해도 그대로 — 결과가 탭바 뒤로 숨지 않게
       if (loadResultSnapshot()) return true;
-      if (localStorage.getItem(INPUT_DRAFT_KEY) || sessionStorage.getItem(INPUT_DRAFT_KEY)) return true;
-      if (localStorage.getItem(GROUP_SESSION_KEY)) return true;
     } catch { /* ignore */ }
     return false;
   });
