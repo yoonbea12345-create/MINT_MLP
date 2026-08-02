@@ -1,10 +1,16 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import type { User } from '@supabase/supabase-js';
 import { getBalance, getLedger, getDeviceId } from '../../utils/points';
 import { loadHistory, openHistoryEntry, type HistoryEntry } from '../../utils/history';
+import {
+  getSession, onAuthChange, signInWithKakao, signOut, syncProfile, deleteAccount,
+  getNickname, getAvatarUrl,
+} from '../../utils/auth';
 
 const CONTACT_MAIL = 'mailto:issuebell@naver.com?subject=MINT%20%EB%AC%B8%EC%9D%98';
 
 // 프로필 탭 — 적립 이력은 실제 데이터(getLedger), 설정은 대부분 목업.
+// 로그인은 선택이다. 비로그인 상태의 화면·기능은 로그인 이전과 완전히 동일하게 둔다.
 export default function Profile() {
   const [balance] = useState(() => getBalance());
   const [ledger] = useState(() => getLedger());
@@ -12,6 +18,51 @@ export default function Profile() {
   const [history] = useState<HistoryEntry[]>(() => loadHistory());
   const [pushOn, setPushOn] = useState(true);
   const [marketingOn, setMarketingOn] = useState(false);
+  const [user, setUser] = useState<User | null>(null);
+  const [signingIn, setSigningIn] = useState(false);
+
+  useEffect(() => {
+    let alive = true;
+    void getSession().then((s) => {
+      if (!alive) return;
+      setUser(s?.user ?? null);
+      if (s?.user) void syncProfile();
+    });
+    const unsubscribe = onAuthChange((s) => {
+      setUser(s?.user ?? null);
+      if (s?.user) void syncProfile();
+    });
+    return () => { alive = false; unsubscribe(); };
+  }, []);
+
+  const nickname = getNickname(user);
+  const avatarUrl = getAvatarUrl(user);
+
+  const handleSignIn = async () => {
+    setSigningIn(true);
+    try {
+      await signInWithKakao();
+    } catch {
+      setSigningIn(false);
+      alert('로그인을 시작하지 못했어요. 잠시 후 다시 시도해주세요.');
+    }
+  };
+
+  const handleSignOut = async () => {
+    await signOut();
+    setUser(null);
+  };
+
+  const handleDeleteAccount = async () => {
+    if (!window.confirm('정말 탈퇴하시겠어요? 로그인 정보가 모두 삭제돼요.')) return;
+    const r = await deleteAccount();
+    if (r.ok) {
+      setUser(null);
+      alert('탈퇴가 완료됐어요. 그동안 이용해주셔서 고마워요.');
+    } else {
+      alert(r.error ?? '탈퇴 처리에 실패했어요. 잠시 후 다시 시도해주세요.');
+    }
+  };
 
   return (
     <div className="max-w-md mx-auto px-5 pt-[max(1.5rem,env(safe-area-inset-top))]">
@@ -20,14 +71,40 @@ export default function Profile() {
       {/* 요약 */}
       <div className="mt-4 rounded-2xl border border-gray-100 bg-white p-4">
         <div className="flex items-center gap-3">
-          <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#E8F8F5] text-2xl">🌿</span>
+          {avatarUrl ? (
+            <img src={avatarUrl} alt="" className="h-12 w-12 shrink-0 rounded-full object-cover" />
+          ) : (
+            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#E8F8F5] text-2xl">🌿</span>
+          )}
           <div className="min-w-0 flex-1">
-            <p className="text-sm font-black text-gray-800">MINT 이용자님</p>
+            <p className="truncate text-sm font-black text-gray-800">{user ? `${nickname ?? '카카오 이용자'}님` : 'MINT 이용자님'}</p>
             <p className="text-xs text-gray-400">방문 인증 {ledger.length}회 · 적립 {balance.toLocaleString()}P</p>
           </div>
+          {user && (
+            <button onClick={() => void handleSignOut()} className="shrink-0 text-[11px] text-gray-400 underline">로그아웃</button>
+          )}
         </div>
         <p className="mt-3 truncate text-[10px] text-gray-300">기기 ID · {deviceId}</p>
       </div>
+
+      {/* 로그인 유도 — 비로그인 상태에서만. 로그인은 어디까지나 선택이다. */}
+      {!user && (
+        <div className="mt-3 rounded-2xl border border-gray-100 bg-white p-4">
+          <p className="text-sm font-black text-gray-800">기기가 바뀌면 기록이 사라져요</p>
+          <p className="mt-0.5 text-xs text-gray-400">카카오로 로그인하면 다음에도 이어져요</p>
+          <button
+            onClick={() => void handleSignIn()}
+            disabled={signingIn}
+            className="mt-3 w-full flex items-center justify-center gap-2 rounded-2xl bg-[#FEE500] py-3 text-sm font-black text-[#191919] active:scale-[0.99] transition-transform disabled:opacity-60"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="#191919" aria-hidden="true">
+              <path d="M12 3C6.99 3 3 6.2 3 10.15c0 2.5 1.65 4.7 4.14 5.97l-.9 3.3c-.09.32.27.58.55.4l3.96-2.6c.4.04.82.06 1.25.06 5.01 0 9-3.2 9-7.13S17.01 3 12 3z" />
+            </svg>
+            카카오로 로그인
+          </button>
+          <p className="mt-2 text-[11px] text-gray-400">닉네임과 프로필 사진만 사용해요. 이메일·전화번호는 요구하지 않아요.</p>
+        </div>
+      )}
 
       {/* 지난 추천 — 스냅샷 복원 */}
       {history.length > 0 && (
@@ -93,6 +170,20 @@ export default function Profile() {
           <span className="text-sm font-bold text-gray-700">문의하기</span>
           <span className="text-xs text-gray-300">›</span>
         </a>
+        {user && (
+          <>
+            <div className="h-px bg-gray-100" />
+            <LinkRow label="로그아웃" onClick={() => void handleSignOut()} />
+            <div className="h-px bg-gray-100" />
+            <button
+              onClick={() => void handleDeleteAccount()}
+              className="flex w-full items-center justify-between px-4 py-3.5 text-left active:bg-gray-50"
+            >
+              <span className="text-sm font-bold text-red-500">회원 탈퇴</span>
+              <span className="text-xs text-gray-300">›</span>
+            </button>
+          </>
+        )}
       </div>
 
       <p className="mt-5 text-center text-[11px] text-gray-400">알림 설정은 아직 저장되지 않아요 · 출시 준비 중</p>

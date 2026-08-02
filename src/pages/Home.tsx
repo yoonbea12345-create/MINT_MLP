@@ -29,6 +29,7 @@ import { encodeHostContext } from '../utils/groupLink';
 import PointsBadge from '../components/PointsBadge';
 import WishlistSheet from '../components/WishlistSheet';
 import { getBalance } from '../utils/points';
+import { logActivityIfSignedIn } from '../utils/auth';
 
 type Step = 0 | 1 | 2 | 3;
 type View = 'steps' | 'result' | 'reserve';
@@ -285,6 +286,7 @@ export default function Home({ onChromeChange }: { onChromeChange?: (showTabBar:
   const lastRecommendRef = useRef<(() => void) | null>(null); // 실패 시 같은 조건 원탭 재시도용
   const sessionKeyRef = useRef<string | null>(null);          // 탐색 에피소드 세션키 — recommendation_log·events 조인용
   const lastSessionResultRef = useRef<string | null>(null); // 그룹 결과 세션 저장 중복 억제
+  const loggedActivityRef = useRef<string | null>(null);    // 활동 로그 적재한 세션키 — 에피소드당 1건 보장
   const stepScrollRef = useRef<HTMLDivElement>(null);
   const isGroup = appMode === 'group';
 
@@ -458,7 +460,19 @@ export default function Home({ onChromeChange }: { onChromeChange?: (showTabBar:
       purposeFirst: purpose?.first ?? null,
       snapshot,
     });
-  }, [view, result, resultThird, resultThirdLabel, purpose, midpointData, treasurer, meetingLocation, resultTravelTimes, resultWeather, vibe, keywords, excludeFoods]);
+    // 활동 로그는 탐색 에피소드당 1건 — 이 effect는 enrich·이동시간 갱신마다 다시 도니 세션키로 걸러낸다.
+    // 세션키가 없으면(스냅샷 복원으로 결과만 되살아난 경우) 새 추천이 아니므로 적재하지 않는다.
+    if (sessionKeyRef.current && loggedActivityRef.current !== sessionKeyRef.current) {
+      loggedActivityRef.current = sessionKeyRef.current;
+      void logActivityIfSignedIn({
+        placeName: result[0].placeName,
+        secondPlaceName: hasSecondCourse ? result[1]?.placeName ?? null : null,
+        areaName: midpointData?.areaName ?? null,
+        purposeFirst: purpose?.first ?? null,
+        groupSize: isGroup ? `${expectedCount}명` : groupSize,
+      });
+    }
+  }, [view, result, resultThird, resultThirdLabel, purpose, midpointData, treasurer, meetingLocation, resultTravelTimes, resultWeather, vibe, keywords, excludeFoods, isGroup, expectedCount, groupSize]);
 
   // 그룹 호스트가 추천을 받으면 결과 요약을 세션에 저장 → 게스트 done 화면이 폴링으로 수신(협업 루프 완결).
   // enrich·재추천으로 결과가 바뀌면 자동 재저장. 실패는 무해(게스트가 못 볼 뿐, 카톡 공유로도 전달 가능).

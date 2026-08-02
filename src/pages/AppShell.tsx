@@ -10,7 +10,10 @@ import Profile from './tabs/Profile';
 // 탭바를 보여도 되는지는 Home이 onChromeChange로 보고한다(셸은 localStorage를 보지 않는다).
 // 탭 상태는 URL에 싣지 않는다(기존 path 라우터를 건드리지 않기 위해).
 export default function AppShell() {
-  const [activeTab, setActiveTab] = useState<TabKey>('home');
+  // 카카오 로그인 복귀(/app?tab=profile)에서만 프로필 탭으로 연다.
+  const [activeTab, setActiveTab] = useState<TabKey>(() =>
+    new URLSearchParams(window.location.search).get('tab') === 'profile' ? 'profile' : 'home'
+  );
   const [showTabBar, setShowTabBar] = useState(true);
 
   return (
