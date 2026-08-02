@@ -7,6 +7,11 @@ import type { MapPin } from './MiniMap';
 import { findCertifications } from '../data/certifications';
 import type { CertSource } from '../data/certifications';
 import { trackEvent } from '../utils/analytics';
+import WishlistButton from './WishlistButton';
+import VisitCertModal from './VisitCertModal';
+import TreasurerPlanSheet from './TreasurerPlanSheet';
+import { getPlanFrame, planPriceLabel, isPreregistered } from '../utils/plan';
+import { getDeviceId } from '../utils/points';
 
 // 선택 신호(ground truth) — 노출된 후보 중 실제로 어떤 순위를 눌러 지도를 열었나.
 // recommend.ts가 이미 기록 중인 노출 순위(finalRank)와 대비하면 랭킹 튜닝 학습셋이 된다.
@@ -57,6 +62,7 @@ interface Props {
   onAdjust?: () => void;
   onReserve: () => void;
   onReject?: (reason: 'expensive' | 'far' | 'vibe') => void;
+  onPointsChange?: (balance: number) => void;
 }
 
 function GpsPin({ className = '' }: { className?: string }) {
@@ -102,6 +108,7 @@ interface CardProps {
   extraResults?: PlaceRecommendation[];
   gradient: string;
   shadowColor: string;
+  wishRank?: 'first' | 'second' | 'candidate';
 }
 
 // 대안 추천 카드 — 항상 펼쳐진 독립 카드
@@ -140,6 +147,7 @@ function AltsSection({ alts, accentColor = '#3CDBC0', label }: { alts: PlaceReco
               {p.fitScore != null && (
                 <span className="text-sm font-black" style={{ color: accentColor }}>{p.fitScore}점</span>
               )}
+              <WishlistButton place={p} rank="candidate" source="result" tone="light" />
               {p.imageUrl && (
                 <img
                   src={p.imageUrl}
@@ -199,7 +207,7 @@ function FitScoreBar({ score, className = '' }: { score?: number; className?: st
   );
 }
 
-function PlaceCard({ place, extraResults = [], gradient, shadowColor }: CardProps) {
+function PlaceCard({ place, extraResults = [], gradient, shadowColor, wishRank = 'first' }: CardProps) {
   const [moreVisible, setMoreVisible] = useState(false);
   const [openCertId, setOpenCertId] = useState<string | null>(null);
   const openStatus = parseOpenStatus(place.openingHours);
@@ -249,12 +257,15 @@ function PlaceCard({ place, extraResults = [], gradient, shadowColor }: CardProp
               </button>
             ))}
           </div>
-          {place.congestionLevel && (
-            <div className="flex items-center gap-1">
-              <span className={`${cong.dot} text-xs leading-none`}>●</span>
-              <span className="text-xs text-white/80">{cong.label}</span>
-            </div>
-          )}
+          <div className="flex items-center gap-2 shrink-0">
+            {place.congestionLevel && (
+              <div className="flex items-center gap-1">
+                <span className={`${cong.dot} text-xs leading-none`}>●</span>
+                <span className="text-xs text-white/80">{cong.label}</span>
+              </div>
+            )}
+            <WishlistButton place={place} rank={wishRank} source="result" tone="onDark" />
+          </div>
         </div>
 
         {/* 장소명 */}
@@ -416,8 +427,13 @@ export default function ResultCard({
   onAdjust,
   onReserve,
   onReject,
+  onPointsChange,
 }: Props) {
   const [showTreasurerPopup, setShowTreasurerPopup] = useState(false);
+  const [showVisitCert, setShowVisitCert] = useState(false);
+  const [showPlanSheet, setShowPlanSheet] = useState(false);
+  const [preregistered, setPreregistered] = useState(() => isPreregistered());
+  const planFrame = getPlanFrame();
   const [destTarget, setDestTarget] = useState<'first' | 'second'>('first');
   const [transportMode, setTransportMode] = useState<'transit' | 'driving'>('transit');
 
@@ -618,12 +634,15 @@ export default function ResultCard({
                     <span className="text-xs font-black bg-white/20 text-white px-3 py-0.5 rounded-full border border-white/20">
                       {secondResult.category}
                     </span>
-                    {secondResult.congestionLevel && (
-                      <div className="flex items-center gap-1">
-                        <span className={`${cong.dot} text-xs leading-none`}>●</span>
-                        <span className="text-xs text-white/80">{cong.label}</span>
-                      </div>
-                    )}
+                    <div className="flex items-center gap-2 shrink-0">
+                      {secondResult.congestionLevel && (
+                        <div className="flex items-center gap-1">
+                          <span className={`${cong.dot} text-xs leading-none`}>●</span>
+                          <span className="text-xs text-white/80">{cong.label}</span>
+                        </div>
+                      )}
+                      <WishlistButton place={secondResult} rank="second" source="result" tone="onDark" />
+                    </div>
                   </div>
                 );
               })()}
@@ -772,6 +791,15 @@ export default function ResultCard({
         </div>
       </div>
 
+      {/* ── 방문 인증 → 포인트 (추천→실제 방문 전환율 씨앗) ── */}
+      <button
+        onClick={() => { trackEvent('visit_cert_open', { device_id: getDeviceId(), place_key: `${result.placeName}|${result.address ?? ''}`, source: 'result' }); setShowVisitCert(true); }}
+        className="w-full py-3 rounded-2xl bg-[#E8F8F5] border-2 border-[#3CDBC0]/40 text-[#2AB5A0] font-black text-sm flex items-center justify-center gap-2 active:scale-95 transition-all"
+      >
+        <span className="text-lg">📍</span>
+        <span>여기 방문 인증하고 500P 받기</span>
+      </button>
+
       {/* ── 보조: 총무 + 예약(연동 준비 중) ── */}
       <div className="flex gap-2">
         <button
@@ -790,7 +818,39 @@ export default function ResultCard({
         </button>
       </div>
 
+      {/* ── 총무 플랜 '가짜 문' — 장소 독박 해방 구독 검증 ── */}
+      <button
+        onClick={() => { trackEvent('plan_entry_click', { device_id: getDeviceId(), frame: planFrame }); setShowPlanSheet(true); }}
+        className="w-full text-left rounded-2xl bg-gradient-to-r from-amber-50 to-yellow-50 border-2 border-amber-200 px-4 py-3 flex items-center gap-3 active:scale-[0.99] transition-all"
+      >
+        <span className="text-2xl shrink-0">🙋</span>
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-black text-amber-800 leading-snug break-keep">매번 장소 정하는 거, 이제 독박 그만</p>
+          <p className="text-xs text-amber-600 mt-0.5">
+            {preregistered ? '사전등록 완료 · 출시되면 알려드릴게요' : `총무 플랜 ${planPriceLabel(planFrame)} · 자세히 알아보기 →`}
+          </p>
+        </div>
+      </button>
+
       <div className="pb-2" />
+
+      {/* 방문 인증 모달 */}
+      {showVisitCert && (
+        <VisitCertModal
+          place={result}
+          source="result"
+          onClose={() => setShowVisitCert(false)}
+          onCertified={(bal) => onPointsChange?.(bal)}
+        />
+      )}
+
+      {/* 총무 플랜 상세 시트 */}
+      {showPlanSheet && (
+        <TreasurerPlanSheet
+          frame={planFrame}
+          onClose={() => { setShowPlanSheet(false); setPreregistered(isPreregistered()); }}
+        />
+      )}
 
       {/* 총무 팝업 */}
       {showTreasurerPopup && treasurer && (

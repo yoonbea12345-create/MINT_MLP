@@ -21,7 +21,15 @@ type EventType = 'landing_view' | 'cta_click' | 'reservation_attempt' | 'session
   | 'step_next_0' | 'step_next_1' | 'step_next_2'
   | 'location_search_zero' | 'location_search_error'
   // 그룹 링크 생성(바이럴 루프 분해)
-  | 'group_session_create';
+  | 'group_session_create'
+  // A. 방문 인증 + 포인트 — 추천→실제 방문 전환율 씨앗
+  | 'visit_cert_open' | 'visit_cert_done' | 'visit_cert_fail' | 'points_store_teaser_click'
+  // B. 총무 플랜 가짜 문 — 가격 검증(frame별 전환율)
+  | 'plan_entry_click' | 'plan_detail_view' | 'plan_preregister' | 'plan_detail_close'
+  // C. 참석 확정(가요/못가요)
+  | 'rsvp_submit'
+  // D. 찜(발굴) 기록 — 1호 발굴자 소급 씨앗
+  | 'wishlist_add' | 'wishlist_remove' | 'wishlist_open';
 
 const PAUSE_KEY = 'mint_tracking_paused';
 

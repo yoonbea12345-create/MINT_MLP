@@ -26,6 +26,9 @@ import type { GroupMember } from '../utils/groupAggregate';
 import LoadingScreen from '../components/home/LoadingScreen';
 import GroupWaiting from '../components/home/GroupWaiting';
 import { encodeHostContext } from '../utils/groupLink';
+import PointsBadge from '../components/PointsBadge';
+import WishlistSheet from '../components/WishlistSheet';
+import { getBalance } from '../utils/points';
 
 type Step = 0 | 1 | 2 | 3;
 type View = 'steps' | 'result' | 'reserve';
@@ -265,6 +268,8 @@ export default function Home() {
   } | null>(null);
   const [resultTravelTimes, setResultTravelTimes] = useState<ResultTravelTimes | null>(null);
   const [treasurer, setTreasurer] = useState<string | null>(null);
+  const [pointsBalance, setPointsBalance] = useState<number>(() => getBalance());
+  const [showWishlist, setShowWishlist] = useState(false);
   const [resultWeather, setResultWeather] = useState<WeatherSummary | null>(null);
   const [resultThird, setResultThird] = useState<PlaceRecommendation | null>(null);       // 3차 '이어서 갈 곳'
   const [resultThirdLabel, setResultThirdLabel] = useState<string | null>(null);
@@ -297,7 +302,9 @@ export default function Home() {
       regionName: meetingLocation?.type === 'manual' ? meetingLocation.area : null,
       regionId: meetingLocation?.type === 'manual' ? meetingLocation.regionId : null,
     });
-    return `${window.location.origin}/join?id=${sessionId}&${ctx}`;
+    // 참석 응답 마감시각(기본 24시간 후) — 게스트 카운트다운·마감 판정용. 서버 저장 없이 링크로 전달.
+    const rsvpBy = Date.now() + 24 * 60 * 60 * 1000;
+    return `${window.location.origin}/join?id=${sessionId}&${ctx}&rsvp_by=${rsvpBy}`;
   }
 
   useEffect(() => {
@@ -1304,6 +1311,18 @@ export default function Home() {
             </button>
           </div>
 
+          {/* 포인트·찜 바 — 방문 인증 적립 잔액 + 내 찜 목록 진입 */}
+          <div className="flex items-center justify-end gap-2 mb-1.5">
+            <button
+              onClick={() => setShowWishlist(true)}
+              aria-label="내 찜 목록"
+              className="flex items-center gap-1 rounded-full bg-white border border-gray-200 px-2.5 py-1.5 text-xs font-black text-gray-500 active:scale-95 transition-transform"
+            >
+              <span className="text-sm leading-none">🤍</span>찜
+            </button>
+            <PointsBadge balance={pointsBalance} />
+          </div>
+
           {/* 상단 단계바 — 결과 화면에서도 특정 단계를 눌러 바로 수정하러 갈 수 있게(값 유지). */}
           <StepProgress
             current={4}
@@ -1360,6 +1379,7 @@ export default function Home() {
             onAdjust={handleAdjust}
             onReserve={() => setView('reserve')}
             onReject={handleReject}
+            onPointsChange={setPointsBalance}
           />
 
           {/* 하단 sticky 카톡 공유 바 — 유일한 공유 CTA. 결과 어디서든 한 탭(핵심 유입).
@@ -1399,6 +1419,8 @@ export default function Home() {
               onClose={() => setShowRetryModal(false)}
             />
           )}
+
+          {showWishlist && <WishlistSheet onClose={() => setShowWishlist(false)} />}
         </div>
       </div>
     );

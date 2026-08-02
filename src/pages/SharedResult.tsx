@@ -1,6 +1,10 @@
 import { useEffect, useState } from 'react';
 import { congestionDotClass } from '../services/seoulData';
 import MiniMap from '../components/MiniMap';
+import WishlistButton from '../components/WishlistButton';
+import VisitCertModal from '../components/VisitCertModal';
+import { trackEvent } from '../utils/analytics';
+import { getDeviceId } from '../utils/points';
 
 // 공유 URL에 실려오는 투표 후보 (슬림 포맷: n=이름, c=카테고리, s=적합도)
 interface VoteCandidate {
@@ -154,6 +158,7 @@ function VoteSection({ shareId, candidates }: { shareId: string; candidates: Vot
 export default function SharedResult() {
   const [result, setResult] = useState<SnapshotPayload | null>(null);
   const [error, setError] = useState(false);
+  const [showCert, setShowCert] = useState(false);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -235,12 +240,15 @@ export default function SharedResult() {
               <span className="text-xs font-semibold opacity-80 bg-white/20 px-2.5 py-1 rounded-full">
                 {result.purposeFirst ? `1차 · ${result.purposeFirst}` : f.category}
               </span>
-              {f.congestionLevel && (
-                <div className="flex items-center gap-1.5">
-                  <div className={`w-2 h-2 rounded-full ${congestionDotClass(f.congestionLevel as Parameters<typeof congestionDotClass>[0])}`} />
-                  <span className="text-xs opacity-90">{f.congestionLevel}</span>
-                </div>
-              )}
+              <div className="flex items-center gap-2 shrink-0">
+                {f.congestionLevel && (
+                  <div className="flex items-center gap-1.5">
+                    <div className={`w-2 h-2 rounded-full ${congestionDotClass(f.congestionLevel as Parameters<typeof congestionDotClass>[0])}`} />
+                    <span className="text-xs opacity-90">{f.congestionLevel}</span>
+                  </div>
+                )}
+                <WishlistButton place={f} rank="first" source="shared" tone="onDark" />
+              </div>
             </div>
 
             <h2 className="text-2xl font-black mt-3 mb-1 leading-tight">
@@ -292,12 +300,30 @@ export default function SharedResult() {
           </div>
         )}
 
+        {/* 방문 인증 → 포인트 (공유받은 게스트도 방문자) */}
+        <button
+          onClick={() => { trackEvent('visit_cert_open', { device_id: getDeviceId(), place_key: `${f.placeName}|${f.address ?? ''}`, source: 'shared' }); setShowCert(true); }}
+          className="w-full mb-3 py-3.5 rounded-2xl bg-[#E8F8F5] border-2 border-[#3CDBC0]/40 text-[#2AB5A0] font-black text-sm flex items-center justify-center gap-2 active:scale-95 transition-all"
+        >
+          <span className="text-lg">📍</span>
+          <span>여기 방문 인증하고 500P 받기</span>
+        </button>
+
         <div className="text-center mb-4">
           <p className="text-xs text-gray-500">AI가 이 모임에 딱 맞는 곳을 골라줬어요</p>
         </div>
         <a href="/app" className="block w-full py-4 rounded-2xl bg-[#3CDBC0] text-white font-black text-base text-center shadow-lg shadow-[#3CDBC0]/30 hover:bg-[#2AB5A0] transition-colors active:scale-95">
           🌿 나도 30초 만에 추천받기
         </a>
+
+        {showCert && (
+          <VisitCertModal
+            place={f}
+            source="shared"
+            onClose={() => setShowCert(false)}
+            onCertified={() => { /* 공유 화면엔 포인트 배지 없음 — 적립은 events/localStorage에 기록 */ }}
+          />
+        )}
         <a href="/" className="block w-full py-3 text-center text-sm text-gray-500 hover:text-[#2AB5A0] transition-colors mt-1">
           MINT가 뭔지 알아보기 →
         </a>
@@ -313,14 +339,17 @@ function CourseCard({ place, label, accent, mapLink }: { place: SlimPlace; label
       href={mapLink(place)}
       target="_blank"
       rel="noreferrer"
-      className="block bg-white rounded-2xl border border-gray-200 border-l-4 p-4 mb-4 shadow-sm active:scale-[0.99] transition-transform"
+      className="relative block bg-white rounded-2xl border border-gray-200 border-l-4 p-4 mb-4 shadow-sm active:scale-[0.99] transition-transform"
       style={{ borderLeftColor: accent }}
     >
+      <div className="absolute top-3 right-3">
+        <WishlistButton place={place} rank="candidate" source="shared" tone="light" />
+      </div>
       <div className="flex items-start gap-3">
         {place.imageUrl && (
           <img src={place.imageUrl} alt={place.placeName} className="w-16 h-16 rounded-xl object-cover flex-shrink-0" loading="lazy" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
         )}
-        <div className="min-w-0 flex-1">
+        <div className="min-w-0 flex-1 pr-8">
           <span className="inline-block text-[11px] font-bold px-2 py-0.5 rounded-full mb-1" style={{ color: accent, background: `${accent}1a` }}>{label}</span>
           <p className="text-base font-black text-gray-800 leading-tight">{place.placeName}</p>
           {place.description && <p className="text-xs text-gray-500 leading-snug mt-0.5">{place.description}</p>}
