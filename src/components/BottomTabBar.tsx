@@ -33,12 +33,14 @@ function IconCalendar({ active }: { active: boolean }) {
   );
 }
 
-function IconGem() {
+// 나침반 — '발굴'은 캐는 게 아니라 아직 안 알려진 곳을 찾아 나서는 것에 가깝다.
+function IconCompass({ active }: { active: boolean }) {
   return (
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-      strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M7 3.5h10l3.6 5.2L12 20.5 3.4 8.7 7 3.5Z" fill="currentColor" fillOpacity="0.15" />
-      <path d="M7.6 3.5 12 8.7l4.4-5.2M3.4 8.7h17.2M9 8.7 12 20.5l3-11.8" />
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      strokeWidth={active ? 2.2 : 1.8} strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="8.6" />
+      <path d="M15.4 8.6l-1.9 5.1-5.1 1.9 1.9-5.1 5.1-1.9Z"
+        fill={active ? 'currentColor' : 'none'} fillOpacity={active ? 0.2 : 0} />
     </svg>
   );
 }
@@ -66,16 +68,18 @@ function IconProfile({ active }: { active: boolean }) {
   );
 }
 
-type SideTab = { key: TabKey; Icon: (p: { active: boolean }) => ReactElement; label: string };
+type Tab = { key: TabKey; Icon: (p: { active: boolean }) => ReactElement; label: string };
 
-const SIDE_TABS: SideTab[] = [
+const TABS: Tab[] = [
   { key: 'home', Icon: IconHome, label: '홈' },
   { key: 'meetings', Icon: IconCalendar, label: '내 모임' },
+  { key: 'discover', Icon: IconCompass, label: '발굴' },
   { key: 'shop', Icon: IconGift, label: '민트샵' },
   { key: 'profile', Icon: IconProfile, label: '프로필' },
 ];
 
-// 하단 탭바 — 가운데 '발굴'만 바 위로 튀어나온 FAB(핵심 액션 강조)
+// 하단 탭바 — 다섯 탭을 같은 무게로 둔다.
+// '발굴'을 튀어나온 FAB로 강조했더니 앱이 게임처럼 보였다. 탭바는 이동 수단이지 광고판이 아니다.
 export default function BottomTabBar({ active, onChange }: Props) {
   function go(tab: TabKey) {
     onChange(tab);
@@ -85,24 +89,7 @@ export default function BottomTabBar({ active, onChange }: Props) {
   return (
     <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-gray-100 bg-white/95 backdrop-blur">
       <div className="mx-auto max-w-md grid grid-cols-5 px-2 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
-        {SIDE_TABS.slice(0, 2).map((t) => (
-          <TabButton key={t.key} tab={t} active={active === t.key} onClick={() => go(t.key)} />
-        ))}
-
-        {/* 가운데 발굴 FAB */}
-        <div className="relative flex items-center justify-center">
-          <button
-            onClick={() => go('discover')}
-            aria-label="발굴"
-            className={`absolute -top-6 flex flex-col items-center justify-center gap-0.5 w-14 h-14 rounded-full text-white shadow-lg shadow-[#3CDBC0]/40 active:scale-95 transition-transform ${active === 'discover' ? 'ring-4 ring-[#E8F8F5]' : ''}`}
-            style={{ background: 'linear-gradient(135deg, #3CDBC0 0%, #2AB5A0 100%)' }}
-          >
-            <IconGem />
-          </button>
-          <span className={`mt-7 text-[11px] font-bold ${active === 'discover' ? 'text-[#2AB5A0]' : 'text-gray-400'}`}>발굴</span>
-        </div>
-
-        {SIDE_TABS.slice(2).map((t) => (
+        {TABS.map((t) => (
           <TabButton key={t.key} tab={t} active={active === t.key} onClick={() => go(t.key)} />
         ))}
       </div>
@@ -110,7 +97,7 @@ export default function BottomTabBar({ active, onChange }: Props) {
   );
 }
 
-function TabButton({ tab, active, onClick }: { tab: SideTab; active: boolean; onClick: () => void }) {
+function TabButton({ tab, active, onClick }: { tab: Tab; active: boolean; onClick: () => void }) {
   return (
     <button
       onClick={onClick}

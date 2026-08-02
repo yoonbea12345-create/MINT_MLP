@@ -125,7 +125,9 @@ export default function Profile() {
           {avatarUrl ? (
             <img src={avatarUrl} alt="" className="h-12 w-12 shrink-0 rounded-full object-cover" />
           ) : (
-            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#E8F8F5] text-2xl">🌿</span>
+            <span className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#E8F8F5]">
+              <img src="/image/mascot-bird.webp" alt="" aria-hidden="true" className="h-9 w-9 select-none" />
+            </span>
           )}
           <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-black text-gray-800">{user ? `${nickname ?? '카카오 이용자'}님` : 'MINT 이용자님'}</p>

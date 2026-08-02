@@ -26,7 +26,12 @@ export async function signInWithKakao(): Promise<void> {
   // 로그인 후 프로필 탭으로 복귀 (커스텀 라우터는 pathname만 보므로 ?tab=profile은 /app으로 매칭된다)
   await supabase.auth.signInWithOAuth({
     provider: 'kakao',
-    options: { redirectTo: `${window.location.origin}/app?tab=profile` },
+    options: {
+      redirectTo: `${window.location.origin}/app?tab=profile`,
+      // scope를 반드시 명시한다 — Supabase의 카카오 기본 scope에 account_email이 들어 있어서,
+      // 비즈니스 인증 전이라 그 항목을 못 쓰는 우리 앱에서는 KOE205로 로그인이 통째로 막힌다.
+      scopes: 'profile_nickname profile_image',
+    },
   });
 }
 
