@@ -7,6 +7,18 @@ import type { ReservationRecord } from './Reserve';
 //
 // 기획점검(fable5) 반영: analytics.ts 이벤트 15종을 퍼널·거절사유·재시도 관점으로 노출.
 
+// 쿠폰 알림신청 순 수요(add-remove) 행 — payload에 실려온 매장 메타 포함
+interface CouponNotifyRow {
+  couponId: string;
+  shopName: string;
+  benefitType: string;
+  area: string;
+  tier: string;
+  adds: number;
+  removes: number;
+  net: number;
+}
+
 interface AdminAnalytics {
   landingViews: number;
   ctaClicks: number;
@@ -44,6 +56,37 @@ interface AdminAnalytics {
   demoPlaceClicks: number;
   avgStaySeconds: number | null;
   medianStaySeconds: number | null;
+  // 탭 셸
+  tabClicks: Record<string, number>;
+  tabClicksTotal: number;
+  meetingsEmptyCtaClicks: number;
+  // 민트샵(가짜 문)
+  shopCouponClicks: number;
+  shopFilterClicks: Record<string, number>;
+  shopFilterClicksTotal: number;
+  shopPageChanges: number;
+  couponNotifyAdds: number;
+  couponNotifyRemoves: number;
+  couponNotifyTop: CouponNotifyRow[];
+  // 총무 플랜 퍼널
+  planEntryClicks: number;
+  planDetailViews: number;
+  planPreregisters: number;
+  planDetailCloses: number;
+  // 발굴·찜·방문인증
+  wishlistAdds: number;
+  wishlistRemoves: number;
+  wishlistOpens: number;
+  discoverGemMapOpens: number;
+  visitCertOpens: number;
+  visitCertDones: number;
+  visitCertFails: number;
+  pointsStoreTeaserClicks: number;
+  // 참석 확정
+  rsvpGoing: number;
+  rsvpNotGoing: number;
+  rsvpUndecided: number;
+  rsvpSubmitTotal: number;
 }
 
 const EMPTY_ANALYTICS: AdminAnalytics = {
@@ -59,6 +102,23 @@ const EMPTY_ANALYTICS: AdminAnalytics = {
   retryFresh: 0, retryAdjust: 0,
   kakaoShares: 0, kakaoShareFallbacks: 0, pwaInstallClicks: 0, demoPlaceClicks: 0,
   avgStaySeconds: null, medianStaySeconds: null,
+  tabClicks: {}, tabClicksTotal: 0, meetingsEmptyCtaClicks: 0,
+  shopCouponClicks: 0, shopFilterClicks: {}, shopFilterClicksTotal: 0, shopPageChanges: 0,
+  couponNotifyAdds: 0, couponNotifyRemoves: 0, couponNotifyTop: [],
+  planEntryClicks: 0, planDetailViews: 0, planPreregisters: 0, planDetailCloses: 0,
+  wishlistAdds: 0, wishlistRemoves: 0, wishlistOpens: 0, discoverGemMapOpens: 0,
+  visitCertOpens: 0, visitCertDones: 0, visitCertFails: 0, pointsStoreTeaserClicks: 0,
+  rsvpGoing: 0, rsvpNotGoing: 0, rsvpUndecided: 0, rsvpSubmitTotal: 0,
+};
+
+// 탭·필터 key → 화면 라벨 (서버가 모르는 key를 보내도 key 그대로 렌더된다)
+const TAB_LABELS: Record<string, string> = {
+  home: '홈', meetings: '내 모임', discover: '발굴', shop: '민트샵', profile: '프로필',
+};
+const TAB_ORDER = ['home', 'meetings', 'discover', 'shop', 'profile'];
+const SHOP_FILTER_LABELS: Record<string, string> = {
+  all: '전체', side: '사이드', drink: '음료', discount: '할인',
+  time: '시간대', group: '모임', first_visit: '첫 방문',
 };
 
 type RangeKey = 'today' | '7d' | '30d' | 'all';
@@ -205,9 +265,16 @@ export default function Admin() {
   const retryTotal = a.retryFresh + a.retryAdjust;
   const deeplinkTotal = a.deeplinkCatchtable + a.deeplinkNaver + a.deeplinkKakaomap;
   const placeClickTotal = a.placeClickRank1 + a.placeClickSecond + a.placeClickCandidate + a.placeClickThird;
+  const tabCounts = a.tabClicks ?? {};
+  const tabTotal = TAB_ORDER.reduce((sum, k) => sum + (tabCounts[k] ?? 0), 0);
+  const shopFilterEntries = Object.entries(a.shopFilterClicks ?? {}).sort((x, y) => y[1] - x[1]);
+  const shopFilterTotal = shopFilterEntries.reduce((sum, [, v]) => sum + v, 0);
+  const couponTop = a.couponNotifyTop ?? [];
+  const rsvpTotal = a.rsvpGoing + a.rsvpNotGoing + a.rsvpUndecided;
 
-  function applyData(data: { analytics?: AdminAnalytics; reservations?: ReservationRecord[] }) {
-    setAnalytics(data.analytics ?? EMPTY_ANALYTICS);
+  function applyData(data: { analytics?: Partial<AdminAnalytics>; reservations?: ReservationRecord[] }) {
+    // 서버가 아직 새 필드를 안 보내는 배포 시점에도 기본값으로 안전하게 렌더된다.
+    setAnalytics({ ...EMPTY_ANALYTICS, ...(data.analytics ?? {}) });
     setRecords(Array.isArray(data.reservations) ? data.reservations : []);
   }
 
@@ -314,6 +381,42 @@ export default function Admin() {
       ['데모 장소 클릭', a.demoPlaceClicks],
       ['평균 체류(초)', a.avgStaySeconds],
       ['중앙값 체류(초)', a.medianStaySeconds],
+      // ↓ 신규 지표는 기존 행 순서를 건드리지 않고 뒤에만 추가한다.
+      ['탭·홈', tabCounts.home ?? 0],
+      ['탭·내 모임', tabCounts.meetings ?? 0],
+      ['탭·발굴', tabCounts.discover ?? 0],
+      ['탭·민트샵', tabCounts.shop ?? 0],
+      ['탭·프로필', tabCounts.profile ?? 0],
+      ['탭 이동 합계', a.tabClicksTotal],
+      ['빈 모임 CTA 클릭', a.meetingsEmptyCtaClicks],
+      ['민트샵 쿠폰 탭', a.shopCouponClicks],
+      ['민트샵 필터 클릭', a.shopFilterClicksTotal],
+      ...shopFilterEntries.map(([key, count]) => [`민트샵 필터·${SHOP_FILTER_LABELS[key] ?? key}`, count]),
+      ['민트샵 페이지 이동', a.shopPageChanges],
+      ['쿠폰 알림신청', a.couponNotifyAdds],
+      ['쿠폰 알림취소', a.couponNotifyRemoves],
+      ['쿠폰 순 알림신청', a.couponNotifyAdds - a.couponNotifyRemoves],
+      ['플랜 진입 클릭', a.planEntryClicks],
+      ['플랜 상세 열람', a.planDetailViews],
+      ['플랜 사전 신청', a.planPreregisters],
+      ['플랜 상세 이탈', a.planDetailCloses],
+      ['찜 추가', a.wishlistAdds],
+      ['찜 해제', a.wishlistRemoves],
+      ['찜 목록 열람', a.wishlistOpens],
+      ['발굴 지도 열기', a.discoverGemMapOpens],
+      ['방문인증 시작', a.visitCertOpens],
+      ['방문인증 완료', a.visitCertDones],
+      ['방문인증 전환율(%)', pct(a.visitCertDones, a.visitCertOpens)],
+      ['방문인증 실패', a.visitCertFails],
+      ['포인트샵 티저 클릭', a.pointsStoreTeaserClicks],
+      ['참석·가요', a.rsvpGoing],
+      ['참석·못가요', a.rsvpNotGoing],
+      ['참석·미정', a.rsvpUndecided],
+      ['참석 응답 합계', a.rsvpSubmitTotal],
+      [],
+      ['쿠폰 알림신청 Top 10'],
+      ['순위', '쿠폰ID', '매장', '지역', '혜택유형', '등급', '순신청', '신청', '취소'],
+      ...couponTop.map((cp, i) => [i + 1, cp.couponId, cp.shopName, cp.area, cp.benefitType, cp.tier, cp.net, cp.adds, cp.removes]),
       [],
       ['예약 목록'],
       ['장소명', '주소', '예약자', '인원', '요청시간'],
@@ -544,6 +647,128 @@ export default function Admin() {
             </div>
           </section>
         </div>
+
+        {/* ── 탭 사용 ── */}
+        <section className="mb-6">
+          <h2 className="text-sm font-black text-gray-600 mb-3">📱 탭 사용 <span className="text-gray-300 font-normal">(어떤 탭이 실제로 쓰이나)</span></h2>
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
+            {tabTotal === 0 ? (
+              <p className="text-xs text-gray-400 text-center py-3">아직 탭 이동 기록이 없어요.</p>
+            ) : (
+              <div className="flex flex-col gap-2">
+                <BarRow label={TAB_LABELS.home} count={tabCounts.home ?? 0} total={tabTotal} />
+                <BarRow label={TAB_LABELS.meetings} count={tabCounts.meetings ?? 0} total={tabTotal} color="#0EA5E9" />
+                <BarRow label={TAB_LABELS.discover} count={tabCounts.discover ?? 0} total={tabTotal} color="#8B5CF6" />
+                <BarRow label={TAB_LABELS.shop} count={tabCounts.shop ?? 0} total={tabTotal} color="#F59E0B" />
+                <BarRow label={TAB_LABELS.profile} count={tabCounts.profile ?? 0} total={tabTotal} color="#94A3B8" />
+                <div className="text-[11px] text-gray-400 mt-1 pt-2 border-t border-gray-50">
+                  총 {a.tabClicksTotal || tabTotal}회 이동 · 빈 모임 CTA 클릭 {a.meetingsEmptyCtaClicks}회
+                </div>
+              </div>
+            )}
+          </div>
+        </section>
+
+        {/* ── 민트샵 반응 ── */}
+        <section className="mb-6">
+          <h2 className="text-sm font-black text-gray-600 mb-3">🛍️ 민트샵 반응 <span className="text-gray-300 font-normal">(쿠폰 수요 = 가짜 문)</span></h2>
+          <div className="grid grid-cols-2 gap-3 mb-3">
+            <StatCard label="쿠폰 탭" value={a.shopCouponClicks} unit="회" sub={`페이지 이동 ${a.shopPageChanges}회`} />
+            <StatCard label="순 알림신청" value={a.couponNotifyAdds - a.couponNotifyRemoves} unit="건" sub={`신청 ${a.couponNotifyAdds} · 취소 ${a.couponNotifyRemoves}`} highlight />
+          </div>
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 mb-3">
+            <p className="text-xs font-black text-gray-500 mb-2">필터 사용 <span className="text-gray-300 font-normal">(어떤 혜택을 찾나)</span></p>
+            {shopFilterTotal === 0 ? (
+              <p className="text-xs text-gray-400 text-center py-3">아직 필터 기록이 없어요.</p>
+            ) : (
+              <div className="flex flex-col gap-2">
+                {shopFilterEntries.map(([key, count]) => (
+                  <BarRow key={key} label={SHOP_FILTER_LABELS[key] ?? key} count={count} total={shopFilterTotal} color="#F59E0B" />
+                ))}
+                <div className="text-[11px] text-gray-400 mt-1 pt-2 border-t border-gray-50">총 {a.shopFilterClicksTotal || shopFilterTotal}회 필터</div>
+              </div>
+            )}
+          </div>
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
+            <p className="text-xs font-black text-gray-500 mb-2">쿠폰 알림신청 Top 10 <span className="text-gray-300 font-normal">(신청 − 취소)</span></p>
+            {couponTop.length === 0 ? (
+              <p className="text-xs text-gray-400 text-center py-3">아직 알림신청이 없어요.</p>
+            ) : (
+              <div className="flex flex-col gap-1.5">
+                {couponTop.map((cp, i) => (
+                  <div key={cp.couponId} className="flex items-center gap-2 text-xs py-1 border-b border-gray-50 last:border-0">
+                    <span className="w-5 text-gray-300 font-black shrink-0">{i + 1}</span>
+                    <span className="flex-1 min-w-0">
+                      <span className="block font-bold text-gray-700 truncate">{cp.shopName || cp.couponId}</span>
+                      <span className="block text-[11px] text-gray-400 truncate">
+                        {[cp.area, cp.benefitType, cp.tier].filter(Boolean).join(' · ') || cp.couponId}
+                      </span>
+                    </span>
+                    <span className="text-right shrink-0">
+                      <span className="block font-black text-[#36CFA0]">{cp.net}건</span>
+                      {cp.removes > 0 && <span className="block text-[11px] text-gray-300">취소 {cp.removes}</span>}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </section>
+
+        {/* ── 총무 플랜 퍼널 ── */}
+        <section className="mb-6">
+          <h2 className="text-sm font-black text-gray-600 mb-3">🙋 총무 플랜 퍼널 <span className="text-gray-300 font-normal">(가격 검증)</span></h2>
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 flex flex-col gap-2">
+            <FunnelStep label="진입 클릭" value={a.planEntryClicks} rate={null} />
+            <FunnelStep label="상세 열람" value={a.planDetailViews} rate={pct(a.planDetailViews, a.planEntryClicks)} />
+            <FunnelStep label="사전 신청" value={a.planPreregisters} rate={pct(a.planPreregisters, a.planDetailViews)} last />
+          </div>
+          <p className="text-[11px] text-gray-400 mt-2 px-1">
+            * 상세만 보고 닫음(이탈) {a.planDetailCloses}건 — 열람 대비 {pct(a.planDetailCloses, a.planDetailViews)}%
+          </p>
+        </section>
+
+        {/* ── 발굴·찜·방문인증 ── */}
+        <div className="grid md:grid-cols-2 gap-3 mb-6">
+          <section>
+            <h2 className="text-sm font-black text-gray-600 mb-3">🧭 발굴·찜</h2>
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
+              <MiniStat label="찜 추가" value={a.wishlistAdds} />
+              <MiniStat label="찜 해제" value={a.wishlistRemoves} />
+              <MiniStat label="찜 목록 열람" value={a.wishlistOpens} />
+              <MiniStat label="지도 열기" value={a.discoverGemMapOpens} />
+              <MiniStat label="포인트샵 티저" value={a.pointsStoreTeaserClicks} />
+              <MiniStat label="순 찜" value={a.wishlistAdds - a.wishlistRemoves} />
+            </div>
+          </section>
+          <section>
+            <h2 className="text-sm font-black text-gray-600 mb-3">📍 방문 인증</h2>
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 flex flex-col gap-2">
+              <FunnelStep label="인증 시작" value={a.visitCertOpens} rate={null} />
+              <FunnelStep label="인증 완료" value={a.visitCertDones} rate={pct(a.visitCertDones, a.visitCertOpens)} last />
+              <div className="text-[11px] text-gray-400 pt-2 border-t border-gray-50">
+                전환율 {pct(a.visitCertDones, a.visitCertOpens)}% · 실패 {a.visitCertFails}건
+              </div>
+            </div>
+          </section>
+        </div>
+
+        {/* ── 참석 확정 ── */}
+        <section className="mb-8">
+          <h2 className="text-sm font-black text-gray-600 mb-3">🗳️ 참석 확정 <span className="text-gray-300 font-normal">(가요/못가요)</span></h2>
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
+            {rsvpTotal === 0 ? (
+              <p className="text-xs text-gray-400 text-center py-3">아직 참석 응답이 없어요.</p>
+            ) : (
+              <div className="flex flex-col gap-2">
+                <BarRow label="가요" count={a.rsvpGoing} total={rsvpTotal} color="#22C55E" />
+                <BarRow label="못가요" count={a.rsvpNotGoing} total={rsvpTotal} color="#EF4444" />
+                <BarRow label="미정" count={a.rsvpUndecided} total={rsvpTotal} color="#94A3B8" />
+                <div className="text-[11px] text-gray-400 mt-1 pt-2 border-t border-gray-50">총 {a.rsvpSubmitTotal || rsvpTotal}건 응답</div>
+              </div>
+            )}
+          </div>
+        </section>
 
         {/* ── 예약 목록 ── */}
         <div className="flex items-center justify-between mb-3">

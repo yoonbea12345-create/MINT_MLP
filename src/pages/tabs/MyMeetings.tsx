@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { MOCK_MEETINGS, type MockMeeting } from '../../data/mock/meetings';
 import { getPlanFrame, isPreregistered, planPriceLabel } from '../../utils/plan';
 import { getDeviceId } from '../../utils/points';
@@ -28,14 +28,20 @@ function ddayLabel(dateISO: string): string | null {
 
 interface Props {
   onGoHome?: () => void;
+  onChromeChange?: (showTabBar: boolean) => void;
 }
 
 // 내 모임 탭 — 모임 카드는 아직 목업(서버 기능 없음), 총무 플랜 배너만 실제 계측된다.
-export default function MyMeetings({ onGoHome }: Props) {
+export default function MyMeetings({ onGoHome, onChromeChange }: Props) {
   const [planFrame] = useState(() => getPlanFrame());
   const [prereg, setPrereg] = useState(() => isPreregistered());
   const [showPlanSheet, setShowPlanSheet] = useState(false);
   const [showPast, setShowPast] = useState(false);
+
+  // 총무 플랜 시트가 열리면 하단 탭바를 내린다 — 안 그러면 시트 하단 CTA가 탭바에 가린다.
+  useEffect(() => {
+    onChromeChange?.(!showPlanSheet);
+  }, [showPlanSheet, onChromeChange]);
 
   const upcoming = MOCK_MEETINGS.filter((m) => m.status !== 'past');
   const past = MOCK_MEETINGS.filter((m) => m.status === 'past');

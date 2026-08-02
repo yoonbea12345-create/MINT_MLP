@@ -3,19 +3,33 @@ import { getBalance, getLedger, getDeviceId } from '../utils/points';
 import { trackEvent } from '../utils/analytics';
 
 // 헤더 포인트 배지 + 탭 시 적립 내역 시트. 스토어는 아직 없음 — "곧 쓸 수 있다" 예고만.
-export default function PointsBadge({ balance }: { balance: number }) {
+// onOpenChange: 시트 열림 상태를 부모에 알린다(탭 화면에서 하단 탭바를 내리기 위해).
+// 선택 prop이라 넘기지 않으면 동작·외형 모두 이전과 완전히 동일하다.
+export default function PointsBadge({
+  balance,
+  onOpenChange,
+}: {
+  balance: number;
+  onOpenChange?: (open: boolean) => void;
+}) {
   const [open, setOpen] = useState(false);
+
+  function setSheetOpen(v: boolean) {
+    setOpen(v);
+    onOpenChange?.(v);
+  }
+
   return (
     <>
       <button
-        onClick={() => setOpen(true)}
+        onClick={() => setSheetOpen(true)}
         aria-label="내 포인트"
         className="flex items-center gap-1 rounded-full bg-[#E8F8F5] border border-[#3CDBC0]/40 px-2.5 py-1.5 text-xs font-black text-[#2AB5A0] active:scale-95 transition-transform"
       >
         <span className="text-sm leading-none">🌿</span>
         {balance.toLocaleString()}P
       </button>
-      {open && <PointsSheet onClose={() => setOpen(false)} />}
+      {open && <PointsSheet onClose={() => setSheetOpen(false)} />}
     </>
   );
 }

@@ -49,7 +49,7 @@ export default function TreasurerPlanSheet({ frame, onClose }: { frame: PlanFram
   return (
     <div className="fixed inset-0 z-50 bg-black/50" onClick={close}>
       <div
-        className="fixed inset-x-0 bottom-0 z-50 max-w-md mx-auto bg-[#F5FBF8] rounded-t-3xl max-h-[92vh] flex flex-col animate-fade-in-up"
+        className="fixed inset-x-0 bottom-0 z-50 max-w-md mx-auto bg-[#F5FBF8] rounded-t-3xl max-h-[85dvh] flex flex-col animate-fade-in-up"
         onClick={(e) => e.stopPropagation()}
       >
         {/* 헤더 */}
@@ -111,7 +111,7 @@ export default function TreasurerPlanSheet({ frame, onClose }: { frame: PlanFram
         </div>
 
         {/* 하단 고정 CTA */}
-        <div className="shrink-0 px-5 pt-3 pb-[max(1.5rem,calc(env(safe-area-inset-bottom)+0.75rem))] bg-white border-t border-gray-100">
+        <div className="shrink-0 px-5 pt-3 pb-[max(2rem,calc(env(safe-area-inset-bottom)+0.75rem))] bg-white border-t border-gray-100">
           {prereg ? (
             <div className="text-center py-2">
               <p className="text-sm font-black text-[#2AB5A0]">✓ 사전등록 완료!</p>

@@ -251,6 +251,11 @@ export default function Discover() {
       {/* 섹션 2 — 오늘의 원석 */}
       <section className="mt-7">
         <p className="px-1 mb-1 text-[11px] font-bold uppercase tracking-widest text-gray-400">오늘의 원석</p>
+        {/* 편집 기준 고지 — 외부 지표를 인용하는 게 아니라 MINT 스스로의 선정 방식을 밝히는 문장이라
+            "사실만 신호" 원칙과 충돌하지 않는다. '광고 아니냐'는 의심을 선제 차단한다. */}
+        <p className="px-1 mb-1 text-xs leading-relaxed text-gray-500 break-keep">
+          순위나 언급량이 아니라, MINT가 직접 확인하고 고른 곳들이에요.
+        </p>
         {/* 내 기기 기준 개인화 카피 — 다른 사람 순위를 말하지 않는다 */}
         <p className="px-1 mb-2.5 text-xs leading-relaxed text-gray-400 break-keep">
           먼저 찜해두면 나중에 이 동네를 처음 찾은 사람으로 기록될 수 있어요

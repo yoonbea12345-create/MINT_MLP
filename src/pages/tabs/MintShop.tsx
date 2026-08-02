@@ -44,8 +44,12 @@ const FILTERS: { key: string; label: string; types: CouponBenefitType[] | null }
   { key: 'first_visit', label: '첫 방문', types: ['first_visit'] },
 ];
 
+interface Props {
+  onChromeChange?: (showTabBar: boolean) => void;
+}
+
 // 민트샵 — 아직 교환은 열리지 않았다(가짜 문). 탭은 '알림 신청'일 뿐 포인트는 절대 차감되지 않는다.
-export default function MintShop() {
+export default function MintShop({ onChromeChange }: Props) {
   const [balance] = useState(() => getBalance());
   const [notified, setNotified] = useState<string[]>(() => getNotifyList());
   const [filterKey, setFilterKey] = useState('all');
@@ -98,15 +102,15 @@ export default function MintShop() {
           <IconGift className="h-6 w-6 text-[#2AB5A0]" />
           민트샵
         </h1>
-        <PointsBadge balance={balance} />
+        {/* 시트가 열리면 하단 탭바를 내린다 — 시트가 탭바에 가리지 않게 */}
+        <PointsBadge balance={balance} onOpenChange={(open) => onChromeChange?.(!open)} />
       </div>
 
-      {/* 포인트 잔액 히어로 */}
-      <div className="mt-4 rounded-3xl bg-gradient-to-br from-[#3CDBC0] to-[#2AB5A0] px-6 py-7 text-white shadow-lg shadow-[#3CDBC0]/25">
-        <p className="text-xs font-bold tracking-widest opacity-90">내 포인트</p>
-        <p className="mt-1 text-4xl font-black">{balance.toLocaleString()}P</p>
-        <p className="mt-2 text-xs opacity-90 break-keep">추천받은 곳에 방문하고 인증하면 한 번에 500P씩 쌓여요.</p>
-      </div>
+      {/* 잔액은 헤더 배지가 이미 말한다 — 히어로로 같은 숫자를 반복하지 않는다.
+          대신 적립 방법과 "배지를 누를 수 있다"는 발견성만 한 줄로 남긴다. */}
+      <p className="mt-1 text-xs text-gray-400 break-keep">
+        방문 인증하면 500P씩 쌓여요 · 포인트를 누르면 적립 내역을 볼 수 있어요
+      </p>
 
       {/* 혜택 유형 필터 */}
       <p className="mt-6 px-1 text-sm font-black text-gray-800">어떤 혜택을 찾으세요?</p>

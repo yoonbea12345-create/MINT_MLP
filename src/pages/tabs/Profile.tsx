@@ -10,11 +10,16 @@ import {
 import { IconUserCircle, IconGift } from '../../components/icons';
 import PointsBadge from '../../components/PointsBadge';
 
-const CONTACT_MAIL = 'mailto:issuebell@naver.com?subject=MINT%20%EB%AC%B8%EC%9D%98';
+// 문의는 메일 대신 카카오톡 오픈채팅으로 받는다(답장 속도·피드백 수집).
+const CONTACT_URL = 'https://open.kakao.com/o/skLK6YGi';
+
+interface Props {
+  onChromeChange?: (showTabBar: boolean) => void;
+}
 
 // 프로필 탭 — 적립 이력은 실제 데이터(getLedger), 설정은 대부분 목업.
 // 로그인은 선택이다. 비로그인 상태의 화면·기능은 로그인 이전과 완전히 동일하게 둔다.
-export default function Profile() {
+export default function Profile({ onChromeChange }: Props) {
   const [balance] = useState(() => getBalance());
   const [ledger] = useState(() => getLedger());
   const [deviceId] = useState(() => getDeviceId());
@@ -150,7 +155,8 @@ export default function Profile() {
         </div>
         {/* 포인트 표기는 홈·민트샵과 같은 공유 컴포넌트로 통일(맨 텍스트 금지) */}
         <div className="mt-3 flex items-center justify-between gap-3">
-          <PointsBadge balance={balance} />
+          {/* 시트가 열리면 하단 탭바를 내린다 — 시트가 탭바에 가리지 않게 */}
+          <PointsBadge balance={balance} onOpenChange={(open) => onChromeChange?.(!open)} />
           <p className="min-w-0 truncate text-[10px] text-gray-300">기기 ID · {deviceId}</p>
         </div>
       </div>
@@ -277,9 +283,14 @@ export default function Profile() {
         <div className="h-px bg-gray-100" />
         <LinkRow label="개인정보처리방침" onClick={() => alert('개인정보처리방침은 출시 준비 중이에요.')} />
         <div className="h-px bg-gray-100" />
-        <a href={CONTACT_MAIL} className="flex min-h-10 items-center justify-between px-4 py-3.5 active:bg-gray-50">
-          <span className="text-sm font-bold text-gray-700">문의하기</span>
-          <span className="text-xs text-gray-300">›</span>
+        <a
+          href={CONTACT_URL}
+          target="_blank"
+          rel="noreferrer"
+          className="flex min-h-10 items-center justify-between px-4 py-3.5 active:bg-gray-50"
+        >
+          <span className="text-sm font-bold text-gray-700">문의하기 &amp; 서비스 피드백</span>
+          <span aria-hidden className="text-xs text-gray-300">↗</span>
         </a>
         {user && (
           <>
