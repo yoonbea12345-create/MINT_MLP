@@ -4,7 +4,8 @@ import { getBalance, getLedger, getDeviceId } from '../../utils/points';
 import { loadHistory, openHistoryEntry, type HistoryEntry } from '../../utils/history';
 import {
   getSession, onAuthChange, signInWithKakao, signOut, syncProfile, deleteAccount,
-  getNickname, getAvatarUrl,
+  getNickname, getAvatarUrl, backfillHistoryIfNeeded, getActivityHistory, clearActivityCache,
+  type ActivityRow,
 } from '../../utils/auth';
 
 const CONTACT_MAIL = 'mailto:issuebell@naver.com?subject=MINT%20%EB%AC%B8%EC%9D%98';
@@ -20,20 +21,66 @@ export default function Profile() {
   const [marketingOn, setMarketingOn] = useState(false);
   const [user, setUser] = useState<User | null>(null);
   const [signingIn, setSigningIn] = useState(false);
+  const [serverRows, setServerRows] = useState<ActivityRow[]>([]);
+  const [serverCount, setServerCount] = useState<number | null>(null);
+  const [serverLoading, setServerLoading] = useState(false);
+  const [serverError, setServerError] = useState(false);
 
   useEffect(() => {
     let alive = true;
+
+    // 로그인 사용자만: 최초 1회 로컬 기록을 계정으로 올린 뒤 계정 기록을 읽는다.
+    const loadServerHistory = async () => {
+      if (!alive) return;
+      setServerLoading(true);
+      setServerError(false);
+      await backfillHistoryIfNeeded();
+      try {
+        const r = await getActivityHistory();
+        if (!alive || !r) return;
+        setServerRows(r.rows);
+        setServerCount(r.count);
+      } catch {
+        if (alive) setServerError(true);
+      } finally {
+        if (alive) setServerLoading(false);
+      }
+    };
+
     void getSession().then((s) => {
       if (!alive) return;
       setUser(s?.user ?? null);
-      if (s?.user) void syncProfile();
+      if (s?.user) { void syncProfile(); void loadServerHistory(); }
     });
     const unsubscribe = onAuthChange((s) => {
+      if (!alive) return;
       setUser(s?.user ?? null);
-      if (s?.user) void syncProfile();
+      if (s?.user) { void syncProfile(); void loadServerHistory(); }
     });
     return () => { alive = false; unsubscribe(); };
   }, []);
+
+  const retryServerHistory = async () => {
+    setServerLoading(true);
+    setServerError(false);
+    try {
+      const r = await getActivityHistory(true);
+      if (r) { setServerRows(r.rows); setServerCount(r.count); }
+    } catch {
+      setServerError(true);
+    } finally {
+      setServerLoading(false);
+    }
+  };
+
+  // Section A가 화면에 그리는 항목과 겹치는 서버 기록은 숨긴다.
+  // 서버 created_at과 로컬 savedAt은 별도 Date.now()라 정확히 일치하지 않으므로 장소명으로만 맞춘다.
+  const shownLocalKeys = new Set(
+    history.slice(0, 3).map((h) => `${h.placeName}|${h.secondPlaceName ?? ''}`),
+  );
+  const remoteOnlyRows = serverRows.filter(
+    (r) => !shownLocalKeys.has(`${r.place_name ?? ''}|${r.second_place_name ?? ''}`),
+  );
 
   const nickname = getNickname(user);
   const avatarUrl = getAvatarUrl(user);
@@ -51,6 +98,10 @@ export default function Profile() {
   const handleSignOut = async () => {
     await signOut();
     setUser(null);
+    // 다른 계정으로 재로그인할 때 이전 계정 기록이 잠깐 보이지 않도록
+    clearActivityCache();
+    setServerRows([]);
+    setServerCount(null);
   };
 
   const handleDeleteAccount = async () => {
@@ -79,6 +130,14 @@ export default function Profile() {
           <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-black text-gray-800">{user ? `${nickname ?? '카카오 이용자'}님` : 'MINT 이용자님'}</p>
             <p className="text-xs text-gray-400">방문 인증 {ledger.length}회 · 적립 {balance.toLocaleString()}P</p>
+            {/* 로딩·에러 중에는 이 줄 자체를 숨긴다 — 틀린 숫자를 잠깐이라도 보여주지 않기 위해 */}
+            {user && !serverLoading && !serverError && serverCount !== null && (
+              <p className="mt-0.5 text-[11px] text-gray-400">
+                {serverCount >= 1
+                  ? `카카오 계정으로 총 ${serverCount}번째 모임이에요`
+                  : '이 계정은 아직 첫 모임 전이에요. 다음 추천부터 자동으로 기록돼요.'}
+              </p>
+            )}
           </div>
           {user && (
             <button onClick={() => void handleSignOut()} className="shrink-0 text-[11px] text-gray-400 underline">로그아웃</button>
@@ -90,8 +149,9 @@ export default function Profile() {
       {/* 로그인 유도 — 비로그인 상태에서만. 로그인은 어디까지나 선택이다. */}
       {!user && (
         <div className="mt-3 rounded-2xl border border-gray-100 bg-white p-4">
-          <p className="text-sm font-black text-gray-800">기기가 바뀌면 기록이 사라져요</p>
-          <p className="mt-0.5 text-xs text-gray-400">카카오로 로그인하면 다음에도 이어져요</p>
+          {/* 지키지 못할 약속은 쓰지 않는다 — 계정에 남는 건 장소 기록뿐이고 찜·포인트는 아직 로컬이다 */}
+          <p className="text-sm font-black text-gray-800">다른 기기에서도 지난 모임을 보고 싶다면</p>
+          <p className="mt-0.5 text-xs text-gray-400">카카오로 로그인하면 어떤 곳으로 갔는지는 계정에 남아요. 찜·포인트·방문 인증은 아직 이 기기에만 저장돼요.</p>
           <button
             onClick={() => void handleSignIn()}
             disabled={signingIn}
@@ -127,6 +187,42 @@ export default function Profile() {
               </button>
             ))}
           </div>
+        </>
+      )}
+
+      {/* 계정에 저장된 모임 — 서버엔 스냅샷이 없어 복원 불가. 읽기 전용임을 시각적으로 먼저 알린다. */}
+      {user && (serverLoading || serverError || remoteOnlyRows.length > 0) && (
+        <>
+          <p className="mt-6 px-1 mb-2 text-[11px] font-bold uppercase tracking-widest text-gray-400">계정에 저장된 모임</p>
+          {serverLoading ? (
+            <p className="px-1 text-xs text-gray-300">기록을 불러오는 중이에요…</p>
+          ) : serverError ? (
+            <div className="flex items-center justify-between gap-3 px-1">
+              <p className="text-xs text-gray-400">기록을 불러오지 못했어요. 잠시 후 다시 시도해주세요.</p>
+              <button onClick={() => void retryServerHistory()} className="shrink-0 text-[11px] text-gray-400 underline">다시 시도</button>
+            </div>
+          ) : (
+            <div className="flex flex-col gap-2">
+              {remoteOnlyRows.map((r) => (
+                <button
+                  key={r.id}
+                  onClick={() => alert('다른 기기에서 만든 기록이라 지금 기기에서는 다시 볼 수 없어요. 장소명은 계정에 안전하게 남아있어요.')}
+                  className="w-full text-left rounded-2xl border border-gray-100 bg-white px-4 py-3"
+                >
+                  <div className="flex items-center gap-2">
+                    <p className="min-w-0 flex-1 truncate text-sm font-bold text-gray-400">
+                      {r.place_name ?? '이름 없는 장소'}{r.second_place_name ? ` → ${r.second_place_name}` : ''}
+                    </p>
+                    <span className="shrink-0 rounded-full bg-gray-50 px-2 py-0.5 text-[10px] text-gray-400">읽기 전용</span>
+                  </div>
+                  <p className="mt-0.5 text-xs text-gray-300 truncate">
+                    {r.area_name ? `${r.area_name} · ` : ''}
+                    {new Date(r.created_at).toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' })}
+                  </p>
+                </button>
+              ))}
+            </div>
+          )}
         </>
       )}
 
