@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { getBalance, getLedger, getDeviceId } from '../../utils/points';
 
-const CONTACT_MAIL = 'mailto:yoonbea12345@gmail.com?subject=MINT%20%EB%AC%B8%EC%9D%98';
+const CONTACT_MAIL = 'mailto:issuebell@naver.com?subject=MINT%20%EB%AC%B8%EC%9D%98';
 
 // 프로필 탭 — 적립 이력은 실제 데이터(getLedger), 설정은 대부분 목업.
 export default function Profile() {
