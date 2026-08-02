@@ -6,7 +6,7 @@ import { trackEvent } from '../utils/analytics';
 interface Props {
   place: WishTargetInput & { priceRange?: string };
   rank: 'first' | 'second' | 'candidate';
-  source: 'result' | 'shared';
+  source: 'result' | 'shared' | 'discover';
   // 카드 위(어두운 그라디언트)에 얹으면 'onDark', 흰 카드면 'light'
   tone?: 'onDark' | 'light';
   onChange?: () => void;

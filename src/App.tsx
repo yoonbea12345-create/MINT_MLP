@@ -2,7 +2,7 @@ import { Component, lazy, Suspense, useEffect, useState, type ReactNode } from '
 import { requestAppFullscreen } from './utils/fullscreen';
 
 // 페이지별 코드 스플리팅 — 랜딩만 보는 방문자가 Home/Admin 번들까지 받지 않도록
-const Home = lazy(() => import('./pages/Home'));
+const AppShell = lazy(() => import('./pages/AppShell'));
 const Landing = lazy(() => import('./pages/Landing'));
 const SharedResult = lazy(() => import('./pages/SharedResult'));
 const Admin = lazy(() => import('./pages/Admin'));
@@ -67,7 +67,7 @@ function Router() {
   if (path === '/pilot') return <Pilot />;
   if (path === '/join') return <MemberInput />;
   if (path === '/shared' || locationKey.includes('data=')) return <SharedResult />;
-  if (path === '/app') return <Home />;
+  if (path === '/app') return <AppShell />;
   return <Landing />;
 }
 

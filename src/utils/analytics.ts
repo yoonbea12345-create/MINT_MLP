@@ -29,7 +29,9 @@ type EventType = 'landing_view' | 'cta_click' | 'reservation_attempt' | 'session
   // C. 참석 확정(가요/못가요)
   | 'rsvp_submit'
   // D. 찜(발굴) 기록 — 1호 발굴자 소급 씨앗
-  | 'wishlist_add' | 'wishlist_remove' | 'wishlist_open';
+  | 'wishlist_add' | 'wishlist_remove' | 'wishlist_open'
+  // E. 탭 셸 — 어떤 탭이 실제로 쓰이나 + 민트샵 쿠폰 수요(가짜 문)
+  | 'tab_click' | 'shop_coupon_click';
 
 const PAUSE_KEY = 'mint_tracking_paused';
 
