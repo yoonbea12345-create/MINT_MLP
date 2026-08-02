@@ -1,4 +1,4 @@
-import { useMemo, useState, type ReactElement, type ReactNode } from 'react';
+import { useMemo, useState, type ReactElement } from 'react';
 import { getBalance, getDeviceId } from '../../utils/points';
 import { trackEvent } from '../../utils/analytics';
 import { MOCK_COUPONS, type CouponBenefitType, type MintCoupon } from '../../data/mock/coupons';
@@ -6,10 +6,23 @@ import { getNotifyList, toggleNotify } from '../../utils/couponNotify';
 import PointsBadge from '../../components/PointsBadge';
 import {
   IconGift, IconUtensils, IconCup, IconTag, IconClock, IconUsers, IconSparkle,
-  IconCheck, IconBell, type IconProps,
+  IconCheck, IconBell, IconChevronDown, type IconProps,
 } from '../../components/icons';
 
 const PAGE_SIZE = 10;
+
+// 페이지 버튼은 40px 터치 타깃이라 320px 폭에서 5개가 다 들어가지 않는다.
+// 4페이지 이하는 전부, 5페이지 이상은 [처음 · 현재 · 마지막]으로 축약한다(최대 폭 280px).
+function pageItems(current: number, count: number): (number | 'gap')[] {
+  if (count <= 4) return Array.from({ length: count }, (_, i) => i + 1);
+  const nums = [...new Set([1, current, count])].sort((a, b) => a - b);
+  const out: (number | 'gap')[] = [];
+  nums.forEach((n, i) => {
+    if (i > 0 && n - nums[i - 1] > 1) out.push('gap');
+    out.push(n);
+  });
+  return out;
+}
 
 const BENEFIT_ICON: Record<CouponBenefitType, (p: IconProps) => ReactElement> = {
   side: IconUtensils,
@@ -82,7 +95,7 @@ export default function MintShop() {
     <div className="max-w-md mx-auto px-5 pt-[max(1.5rem,env(safe-area-inset-top))]">
       <div className="flex items-center justify-between">
         <h1 className="flex items-center gap-2 text-[22px] font-black text-gray-900">
-          <IconGift className="h-[22px] w-[22px] text-[#2AB5A0]" />
+          <IconGift className="h-6 w-6 text-[#2AB5A0]" />
           민트샵
         </h1>
         <PointsBadge balance={balance} />
@@ -97,24 +110,28 @@ export default function MintShop() {
 
       {/* 혜택 유형 필터 */}
       <p className="mt-6 px-1 text-sm font-black text-gray-800">어떤 혜택을 찾으세요?</p>
-      <div className="-mx-5 mt-2.5 overflow-x-auto px-5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-        <div className="flex w-max gap-2">
-          {FILTERS.map((f) => {
-            const on = f.key === filterKey;
-            return (
-              <button
-                key={f.key}
-                onClick={() => selectFilter(f.key)}
-                aria-pressed={on}
-                className={`shrink-0 rounded-full px-3.5 py-2 text-xs font-bold transition-colors active:scale-95 ${
-                  on ? 'bg-[#3CDBC0] text-white' : 'border border-gray-100 bg-white text-gray-500'
-                }`}
-              >
-                {f.label}
-              </button>
-            );
-          })}
+      <div className="relative -mx-5 mt-2.5">
+        <div className="overflow-x-auto px-5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <div className="flex w-max gap-2">
+            {FILTERS.map((f) => {
+              const on = f.key === filterKey;
+              return (
+                <button
+                  key={f.key}
+                  onClick={() => selectFilter(f.key)}
+                  aria-pressed={on}
+                  className={`flex h-10 shrink-0 items-center rounded-full border px-4 text-xs font-bold transition-colors active:scale-95 ${
+                    on ? 'border-[#3CDBC0] bg-[#E8F8F5] text-[#2AB5A0]' : 'border-gray-200 bg-white text-gray-700'
+                  }`}
+                >
+                  {f.label}
+                </button>
+              );
+            })}
+          </div>
         </div>
+        {/* 뒤쪽 칩이 더 있다는 신호 */}
+        <span className="pointer-events-none absolute inset-y-0 right-0 w-6 bg-gradient-to-l from-[#F5FBF8] to-transparent" />
       </div>
 
       {/* 쿠폰 그리드 */}
@@ -134,21 +151,28 @@ export default function MintShop() {
       </div>
 
       {pageCount > 1 && (
-        <div className="mt-5 flex items-center justify-center gap-1.5">
-          <PageArrow label="이전 페이지" disabled={current === 1} onClick={() => goPage(current - 1)}>‹</PageArrow>
-          {Array.from({ length: pageCount }, (_, i) => i + 1).map((n) => (
-            <button
-              key={n}
-              onClick={() => goPage(n)}
-              aria-current={n === current ? 'page' : undefined}
-              className={`h-8 w-8 rounded-full text-xs font-black transition-colors ${
-                n === current ? 'bg-[#3CDBC0] text-white' : 'text-gray-400 active:bg-gray-50'
-              }`}
-            >
-              {n}
-            </button>
-          ))}
-          <PageArrow label="다음 페이지" disabled={current === pageCount} onClick={() => goPage(current + 1)}>›</PageArrow>
+        <div className="mt-5 flex items-center justify-center gap-2">
+          <PageArrow label="이전 페이지" disabled={current === 1} onClick={() => goPage(current - 1)} direction="prev" />
+          {pageItems(current, pageCount).map((item, i) =>
+            item === 'gap' ? (
+              <span key={`gap-${i}`} className="w-4 shrink-0 text-center text-xs font-bold text-gray-300">…</span>
+            ) : (
+              <button
+                key={item}
+                onClick={() => goPage(item)}
+                aria-current={item === current ? 'page' : undefined}
+                aria-label={`${item}페이지`}
+                className={`h-10 w-10 shrink-0 rounded-full border text-xs font-black transition-colors ${
+                  item === current
+                    ? 'border-[#3CDBC0] bg-[#E8F8F5] text-[#2AB5A0]'
+                    : 'border-gray-200 bg-white text-gray-700 active:bg-gray-50'
+                }`}
+              >
+                {item}
+              </button>
+            ),
+          )}
+          <PageArrow label="다음 페이지" disabled={current === pageCount} onClick={() => goPage(current + 1)} direction="next" />
         </div>
       )}
 
@@ -165,15 +189,15 @@ export default function MintShop() {
   );
 }
 
-function PageArrow({ label, disabled, onClick, children }: { label: string; disabled: boolean; onClick: () => void; children: ReactNode }) {
+function PageArrow({ label, disabled, onClick, direction }: { label: string; disabled: boolean; onClick: () => void; direction: 'prev' | 'next' }) {
   return (
     <button
       onClick={onClick}
       disabled={disabled}
       aria-label={label}
-      className="h-8 w-8 rounded-full text-sm font-black text-gray-400 disabled:text-gray-200"
+      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-700 transition-colors active:bg-gray-50 disabled:border-gray-100 disabled:bg-white disabled:text-gray-300"
     >
-      {children}
+      <IconChevronDown className={`h-4 w-4 ${direction === 'prev' ? 'rotate-90' : '-rotate-90'}`} strokeWidth={2.4} />
     </button>
   );
 }
@@ -193,34 +217,39 @@ function CouponCard({ coupon, applied, balance, onTap }: { coupon: MintCoupon; a
     >
       <div className="flex items-start justify-between gap-1">
         <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-[#E8F8F5] text-[#2AB5A0]">
-          <Icon className="h-[18px] w-[18px]" />
+          <Icon className="h-5 w-5" />
         </span>
         {applied && (
-          <span className="flex shrink-0 items-center gap-0.5 text-[10px] font-black text-[#2AB5A0]">
+          <span className="flex shrink-0 items-center gap-0.5 rounded-full bg-[#E8F8F5] px-2 py-1 text-[11px] font-bold text-[#2AB5A0]">
             <IconCheck className="h-3 w-3" strokeWidth={2.6} />
             신청됨
           </span>
         )}
       </div>
 
-      <p className="mt-3 truncate text-[11px] font-bold text-gray-500">{coupon.shopName}</p>
-      <p className="truncate text-[10px] text-gray-400">{coupon.area} · {coupon.category}</p>
-      <p className="mt-1.5 text-sm font-black leading-snug text-gray-800 break-keep">{coupon.title}</p>
+      {/* 상호(작고 흐리게) → 혜택(크고 진하게)로 위계를 벌리고, 동네·업종은 한 줄로 합친다 */}
+      <p className="mt-3 truncate text-[11px] font-bold text-gray-400">
+        {coupon.shopName}
+      </p>
+      <p className="truncate text-[11px] text-gray-400">
+        {coupon.area} · {coupon.category}
+      </p>
+      <p className="mt-1 text-[15px] font-black leading-snug text-gray-900 break-keep">{coupon.title}</p>
 
-      <div className="mt-auto pt-2.5">
-        <p className={`text-sm font-black ${applied ? 'text-[#2AB5A0]/50' : enough ? 'text-[#2AB5A0]' : 'text-gray-400'}`}>
+      <div className="mt-auto flex items-end justify-between gap-1 pt-3">
+        <p className={`text-[15px] font-black ${applied ? 'text-[#2AB5A0]/50' : enough ? 'text-[#2AB5A0]' : 'text-gray-400'}`}>
           {coupon.pointCost.toLocaleString()}P
         </p>
-        {!enough && !applied && (
-          <p className="mt-0.5 text-[10px] text-gray-400">{short.toLocaleString()}P 더 필요해요</p>
-        )}
         {!applied && (
-          <p className="mt-1.5 flex items-center justify-end gap-0.5 text-[10px] font-bold text-gray-300">
+          <span className="flex shrink-0 items-center gap-0.5 whitespace-nowrap text-[11px] font-bold text-gray-400">
             <IconBell className="h-3 w-3" />
             알림 받기
-          </p>
+          </span>
         )}
       </div>
+      {!enough && !applied && (
+        <p className="mt-1 text-[11px] text-gray-400">{short.toLocaleString()}P 더 필요해요</p>
+      )}
     </button>
   );
 }

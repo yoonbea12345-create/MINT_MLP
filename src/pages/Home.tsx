@@ -1300,9 +1300,11 @@ export default function Home({ onChromeChange }: { onChromeChange?: (showTabBar:
             </div>
           </div>
         )}
-        <div className="max-w-md mx-auto px-4 pb-[calc(6rem+env(safe-area-inset-bottom))] pt-[max(1rem,env(safe-area-inset-top))]">
-          {/* 헤더 3요소: 좌 '조건 수정'(값 유지), 중앙 브랜드 마크(클릭 불가), 우 '처음부터'(확인 후 전체 초기화) */}
-          <div className="relative flex items-center justify-between mb-1">
+        <div className="max-w-md mx-auto px-5 pb-[calc(6rem+env(safe-area-inset-bottom))] pt-[max(1rem,env(safe-area-inset-top))]">
+          {/* 헤더 3요소: 좌 '조건 수정'(값 유지), 중앙 브랜드 마크(클릭 불가), 우 '처음부터'(확인 후 전체 초기화).
+              입력 단계 헤더와 동일 문법: 높이 h-10, 좌우는 같은 소형 텍스트 버튼, 로고는 절대 중앙 정렬.
+              -mx-2로 버튼 내부 px-2를 상쇄해 글자 시작선을 콘텐츠 px-5에 맞춘다. */}
+          <div className="relative -mx-2 flex h-10 items-center justify-between mb-1">
             <button
               onClick={() => {
                 // 결과에서 조건 수정 = 바로 이전 입력 화면(마지막 스텝)으로. 입력값은 그대로 유지해 바로 수정·재추천 가능.
@@ -1310,7 +1312,7 @@ export default function Home({ onChromeChange }: { onChromeChange?: (showTabBar:
                 setView('steps');
                 setStep(3);
               }}
-              className="flex items-center gap-1 rounded-full border border-[#3CDBC0]/40 bg-white px-3 py-1.5 text-xs font-bold text-[#2AB5A0] shadow-sm transition-all active:scale-95 hover:bg-[#E8F8F5]"
+              className="flex min-h-10 items-center gap-1 rounded-lg px-2 text-xs font-bold text-gray-500 transition-colors hover:text-[#2AB5A0]"
             >
               ← 조건 수정
             </button>
@@ -1318,13 +1320,13 @@ export default function Home({ onChromeChange }: { onChromeChange?: (showTabBar:
             <button
               onClick={() => { window.location.href = '/'; }}
               aria-label="MINT 홈으로"
-              className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-[#3CDBC0] font-black text-lg select-none active:scale-95 transition-transform"
+              className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-[#2AB5A0] font-black text-2xl tracking-tight select-none active:scale-95 transition-transform"
             >
               MINT
             </button>
             <button
               onClick={handleFullReset}
-              className="flex items-center gap-1 rounded-lg px-2 py-1.5 text-[11px] font-bold text-gray-400 transition-colors hover:text-gray-600"
+              className="flex min-h-10 items-center gap-1 rounded-lg px-2 text-xs font-bold text-gray-500 transition-colors hover:text-[#2AB5A0]"
               title="처음부터 다시 (입력·결과 초기화)"
             >
               ↺ 처음부터
@@ -1404,7 +1406,7 @@ export default function Home({ onChromeChange }: { onChromeChange?: (showTabBar:
 
           {/* 하단 sticky 카톡 공유 바 — 유일한 공유 CTA. 결과 어디서든 한 탭(핵심 유입).
               콘텐츠 컨테이너 pb로 마지막 버튼(총무/예약)이 이 바에 가리지 않게 여백 확보됨. */}
-          <div className="fixed inset-x-0 bottom-0 z-40 border-t border-gray-100 bg-white/95 px-4 pt-2.5 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur">
+          <div className="fixed inset-x-0 bottom-0 z-40 border-t border-gray-100 bg-white/95 px-5 pt-2.5 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur">
             <div className="mx-auto max-w-md">
               <button
                 onClick={handleShare}
@@ -1451,30 +1453,37 @@ export default function Home({ onChromeChange }: { onChromeChange?: (showTabBar:
     <div
       className="bg-[#F5FBF8] overflow-hidden"
       style={{
-        // step 0(탭바 보임)에서는 AppShell의 탭바 여백과 동일한 계산식으로 하단을 비워둔다.
-        height: step === 0
-          ? 'calc(var(--mint-app-height, 100dvh) - 5.5rem - env(safe-area-inset-bottom))'
-          : 'var(--mint-app-height, 100dvh)',
+        // 높이는 스텝과 무관하게 항상 동일. step 0→1에서 탭바가 사라져도 컨테이너가
+        // 재계산되지 않아 콘텐츠가 튀지 않는다(탭바 자리는 아래 padding-bottom이 흡수).
+        height: 'var(--mint-app-height, 100dvh)',
       }}
     >
-      <div className="h-full max-w-md mx-auto flex flex-col">
+      {/* step 0(탭바 보임)에서만 AppShell 탭바와 동일한 계산식으로 하단을 padding으로 비워둔다. */}
+      <div
+        className={`h-full max-w-md mx-auto flex flex-col ${
+          step === 0 ? 'pb-[calc(5.5rem+env(safe-area-inset-bottom))]' : ''
+        }`}
+      >
 
-        {/* 헤더 — 노치/상단 안전영역 반영(인앱·일반 세로모드에선 16px 그대로) */}
-        <div className="flex-shrink-0 text-center pt-[max(1rem,env(safe-area-inset-top))] px-4 relative">
-          <button
-            onClick={() => handleStepJump(0)}
-            className="absolute left-2 top-1/2 -translate-y-1/2 flex items-center gap-1 rounded-lg px-2 py-2 text-xs font-bold text-gray-500 hover:text-[#2AB5A0] transition-colors"
-            aria-label="홈으로 가기"
-          >
-            <span className="text-base leading-none" aria-hidden>←</span>
-            <span>홈</span>
-          </button>
-          <h1
-            className="text-2xl font-black text-[#2AB5A0] tracking-tight cursor-pointer"
-            onClick={() => handleStepJump(0)}
-          >
-            MINT
-          </h1>
+        {/* 헤더 — 노치/상단 안전영역 반영(인앱·일반 세로모드에선 16px 그대로).
+            결과 화면 헤더와 같은 문법: 높이 h-10, 소형 텍스트 버튼, 로고 절대 중앙 정렬. */}
+        <div className="flex-shrink-0 px-5 pt-[max(1rem,env(safe-area-inset-top))]">
+          <div className="relative -mx-2 flex h-10 items-center justify-center">
+            <button
+              onClick={() => handleStepJump(0)}
+              className="absolute left-0 top-1/2 -translate-y-1/2 flex min-h-10 items-center gap-1 rounded-lg px-2 text-xs font-bold text-gray-500 transition-colors hover:text-[#2AB5A0]"
+              aria-label="홈으로 가기"
+            >
+              <span aria-hidden>←</span>
+              <span>홈</span>
+            </button>
+            <h1
+              className="text-2xl font-black text-[#2AB5A0] tracking-tight cursor-pointer select-none"
+              onClick={() => handleStepJump(0)}
+            >
+              MINT
+            </h1>
+          </div>
         </div>
 
         {/* 스텝 프로그레스 — 전 화면 4단계 고정 (그룹은 라벨만 교체) */}
@@ -1489,7 +1498,7 @@ export default function Home({ onChromeChange }: { onChromeChange?: (showTabBar:
         </div>
 
         {/* 스텝 제목 */}
-        <div className="flex-shrink-0 text-center px-4 pt-2 pb-0">
+        <div className="flex-shrink-0 text-center px-5 pt-2 pb-0">
           <h2 className="text-xl font-black text-gray-800">
             {step === 0 && (isGroup ? '무슨 코스로 모일까요?' : '어떤 모임인가요?')}
             {step === 1 && (isGroup ? '어디서 만날까요?' : '누구와 함께하나요?')}
@@ -1497,22 +1506,22 @@ export default function Home({ onChromeChange }: { onChromeChange?: (showTabBar:
             {step === 3 && (isGroup ? '다 모였어요!' : '원하는 분위기를 골라봐요')}
           </h2>
           {step === 1 && !isGroup && (
-            <p className="text-xs text-[#2AB5A0] font-medium mt-1">모두 선택사항 · 선택할수록 추천이 정확해져요</p>
+            <p className="text-xs text-gray-400 mt-1">모두 선택사항 · 선택할수록 추천이 정확해져요</p>
           )}
           {step === 1 && isGroup && (
-            <p className="text-xs text-[#2AB5A0] font-medium mt-1">중간지점 자동 · 또는 만날 동네 직접 선택</p>
+            <p className="text-xs text-gray-400 mt-1">중간지점 자동 · 또는 만날 동네 직접 선택</p>
           )}
           {step === 2 && !isGroup && (
-            <p className="text-xs text-[#2AB5A0] font-medium mt-1">원하는 동네 선택 · 또는 중간지점을 AI에게 맡겨요</p>
+            <p className="text-xs text-gray-400 mt-1">원하는 동네 선택 · 또는 중간지점을 AI에게 맡겨요</p>
           )}
           {step === 2 && isGroup && (
-            <p className="text-xs text-[#2AB5A0] font-medium mt-1">링크를 공유하고 각자 입력을 기다려요</p>
+            <p className="text-xs text-gray-400 mt-1">링크를 공유하고 각자 입력을 기다려요</p>
           )}
           {step === 3 && !isGroup && (
-            <p className="text-xs text-[#2AB5A0] font-medium mt-1">최소 1개 이상 선택 · 많이 고를수록 추천이 정확해져요</p>
+            <p className="text-xs text-gray-400 mt-1">최소 1개 이상 선택 · 많이 고를수록 추천이 정확해져요</p>
           )}
           {step === 3 && isGroup && (
-            <p className="text-xs text-[#2AB5A0] font-medium mt-1">모두의 취향이 모였어요 · 추천을 받아보세요</p>
+            <p className="text-xs text-gray-400 mt-1">모두의 취향이 모였어요 · 추천을 받아보세요</p>
           )}
         </div>
 
@@ -1523,15 +1532,15 @@ export default function Home({ onChromeChange }: { onChromeChange?: (showTabBar:
 
           {/* Step 0: 모임 유형 선택 */}
           {step === 0 && (
-            <div className="px-4 py-3 flex flex-col gap-4">
+            <div className="px-5 py-3 flex flex-col gap-4">
               {/* 혼자 / 그룹 선택 버튼 */}
               <div className="grid grid-cols-2 gap-3">
                 <button
                   onClick={() => { setAppMode('solo'); setSessionId(null); setGroupMembers([]); setGroupError(null); try { localStorage.removeItem(GROUP_SESSION_KEY); } catch { /* ignore */ } }}
                   aria-pressed={appMode === 'solo'}
-                  className={`flex flex-col items-center justify-center gap-0.5 py-3 rounded-2xl border-2 transition-all active:scale-[0.97] ${
+                  className={`flex flex-col items-center justify-center gap-0.5 py-3 rounded-2xl border transition-all active:scale-[0.97] ${
                     appMode === 'solo'
-                      ? 'border-[#3CDBC0] bg-[#E8F8F5] shadow-md shadow-[#3CDBC0]/20'
+                      ? 'border-[#3CDBC0] bg-[#E8F8F5]'
                       : 'border-gray-200 bg-white hover:border-[#3CDBC0]/50'
                   }`}
                 >
@@ -1542,9 +1551,9 @@ export default function Home({ onChromeChange }: { onChromeChange?: (showTabBar:
                 <button
                   onClick={() => { if (appMode !== 'group') setAppMode('group'); }}
                   aria-pressed={isGroup}
-                  className={`flex flex-col items-center justify-center gap-0.5 py-3 rounded-2xl border-2 transition-all active:scale-[0.97] ${
+                  className={`flex flex-col items-center justify-center gap-0.5 py-3 rounded-2xl border transition-all active:scale-[0.97] ${
                     isGroup
-                      ? 'border-[#3CDBC0] bg-[#E8F8F5] shadow-md shadow-[#3CDBC0]/20'
+                      ? 'border-[#3CDBC0] bg-[#E8F8F5]'
                       : 'border-gray-200 bg-white hover:border-[#3CDBC0]/50'
                   }`}
                 >
@@ -1572,9 +1581,9 @@ export default function Home({ onChromeChange }: { onChromeChange?: (showTabBar:
                           key={size}
                           onClick={() => setGroupSize(size)}
                           aria-pressed={groupSize === size}
-                          className={`flex items-center justify-center h-10 rounded-xl border-2 text-sm font-bold transition-all active:scale-[0.97] ${
+                          className={`flex items-center justify-center h-10 rounded-xl border text-sm font-bold transition-all active:scale-[0.97] ${
                             groupSize === size
-                              ? 'border-[#3CDBC0] bg-[#E8F8F5] text-[#2AB5A0] shadow-md shadow-[#3CDBC0]/20'
+                              ? 'border-[#3CDBC0] bg-[#E8F8F5] text-[#2AB5A0]'
                               : 'border-gray-200 bg-white text-gray-700 hover:border-[#3CDBC0]/50'
                           }`}
                         >
@@ -1600,9 +1609,9 @@ export default function Home({ onChromeChange }: { onChromeChange?: (showTabBar:
                         <button
                           key={n}
                           onClick={() => setExpectedCount(n)}
-                          className={`flex items-center justify-center h-10 rounded-xl border-2 text-sm font-black transition-all active:scale-[0.97] ${
+                          className={`flex items-center justify-center h-10 rounded-xl border text-sm font-black transition-all active:scale-[0.97] ${
                             expectedCount === n
-                              ? 'border-[#3CDBC0] bg-[#E8F8F5] text-[#2AB5A0] shadow-md shadow-[#3CDBC0]/20'
+                              ? 'border-[#3CDBC0] bg-[#E8F8F5] text-[#2AB5A0]'
                               : 'border-gray-200 bg-white text-gray-700 hover:border-[#3CDBC0]/50'
                           }`}
                         >
@@ -1686,21 +1695,21 @@ export default function Home({ onChromeChange }: { onChromeChange?: (showTabBar:
               });
             }
             return (
-              <div className="px-4 flex flex-col gap-3 pt-3 pb-4">
+              <div className="px-5 flex flex-col gap-3 pt-3 pb-4">
                 <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest">오늘 모임은?</p>
                 <div className="grid grid-cols-4 gap-2">
                   {REL_OPTIONS.map((opt) => {
                     const selected = !etcRelOpen && curRelation === opt.relation;
                     return (
                       <button key={opt.key} onClick={() => pickRel(opt.relation)}
-                        className={`flex flex-col items-center justify-center gap-1 h-[72px] rounded-2xl border-2 transition-all active:scale-[0.97] ${selected ? 'border-[#3CDBC0] bg-[#E8F8F5] shadow-md shadow-[#3CDBC0]/20' : 'border-gray-200 bg-white hover:border-[#3CDBC0]/50'}`}>
+                        className={`flex flex-col items-center justify-center gap-1 h-[72px] rounded-2xl border transition-all active:scale-[0.97] ${selected ? 'border-[#3CDBC0] bg-[#E8F8F5]' : 'border-gray-200 bg-white hover:border-[#3CDBC0]/50'}`}>
                         <span className="text-xl leading-none">{opt.emoji}</span>
                         <span className={`text-xs font-bold leading-none ${selected ? 'text-[#2AB5A0]' : 'text-gray-700'}`}>{opt.key}</span>
                       </button>
                     );
                   })}
                   <button onClick={openEtc}
-                    className={`flex flex-col items-center justify-center gap-1 h-[72px] rounded-2xl border-2 transition-all active:scale-[0.97] ${etcRelOpen ? 'border-[#3CDBC0] bg-[#E8F8F5] shadow-md shadow-[#3CDBC0]/20' : 'border-gray-200 bg-white hover:border-[#3CDBC0]/50'}`}>
+                    className={`flex flex-col items-center justify-center gap-1 h-[72px] rounded-2xl border transition-all active:scale-[0.97] ${etcRelOpen ? 'border-[#3CDBC0] bg-[#E8F8F5]' : 'border-gray-200 bg-white hover:border-[#3CDBC0]/50'}`}>
                     <span className="text-xl leading-none">🎯</span>
                     <span className={`text-xs font-bold leading-none ${etcRelOpen ? 'text-[#2AB5A0]' : 'text-gray-700'}`}>기타 콕!</span>
                   </button>
@@ -1715,7 +1724,7 @@ export default function Home({ onChromeChange }: { onChromeChange?: (showTabBar:
                         const on = occasionChip === chip.key;
                         return (
                           <button key={chip.key} onClick={() => pickOccasion(chip)}
-                            className={`flex flex-col items-center justify-center gap-1 h-[64px] rounded-2xl border-2 transition-all active:scale-[0.97] ${on ? 'border-[#3CDBC0] bg-[#E8F8F5] shadow-md shadow-[#3CDBC0]/20' : 'border-gray-200 bg-white hover:border-[#3CDBC0]/50'}`}>
+                            className={`flex flex-col items-center justify-center gap-1 h-[64px] rounded-2xl border transition-all active:scale-[0.97] ${on ? 'border-[#3CDBC0] bg-[#E8F8F5]' : 'border-gray-200 bg-white hover:border-[#3CDBC0]/50'}`}>
                             <span className="text-lg leading-none">{chip.emoji}</span>
                             <span className={`text-[11px] font-bold leading-none text-center px-0.5 ${on ? 'text-[#2AB5A0]' : 'text-gray-700'}`}>{chip.key}</span>
                           </button>
@@ -1740,7 +1749,7 @@ export default function Home({ onChromeChange }: { onChromeChange?: (showTabBar:
                       value={customOccasion}
                       onChange={(e) => handleEtcText(e.target.value)}
                       placeholder="🔎 상황을 직접 적어요 (예: 회식, 상견례, 생일, 졸업)"
-                      className={`w-full border-2 rounded-xl px-4 py-3 text-sm text-gray-700 placeholder-gray-400 focus:outline-none focus:border-[#3CDBC0] transition-colors ${
+                      className={`w-full border rounded-xl px-4 py-3 text-sm text-gray-700 placeholder-gray-400 focus:outline-none focus:border-[#3CDBC0] transition-colors ${
                         customOccasion.trim() ? 'border-[#3CDBC0] bg-[#E8F8F5]' : 'border-gray-200'
                       }`}
                     />
@@ -1748,7 +1757,7 @@ export default function Home({ onChromeChange }: { onChromeChange?: (showTabBar:
                   </div>
                 )}
 
-                <p className="text-[11px] text-[#2AB5A0] font-medium mt-1">모두 선택사항 · 고를수록 추천이 정확해져요</p>
+                <p className="text-xs text-gray-400 mt-1">모두 선택사항 · 고를수록 추천이 정확해져요</p>
               </div>
             );
           })()}
@@ -1760,7 +1769,7 @@ export default function Home({ onChromeChange }: { onChromeChange?: (showTabBar:
 
               {/* 중간지점(자동) 모드: 출발지 입력 */}
               {meetingLocation?.type === 'auto' && (
-                <div className="animate-fade-in-up border-t border-gray-100 pt-2 px-4">
+                <div className="animate-fade-in-up border-t border-gray-100 pt-2 px-5">
                   <LocationInput locations={locations} onChange={setLocations} />
                 </div>
               )}
@@ -1769,10 +1778,10 @@ export default function Home({ onChromeChange }: { onChromeChange?: (showTabBar:
 
           {/* Step 2 (그룹): 링크 생성 → 공유 → 실시간 참여 현황 */}
           {step === 2 && isGroup && (
-            <div className="px-4 py-3">
+            <div className="px-5 py-3">
               {!sessionId ? (
                 <div className="flex flex-col gap-4">
-                  <div className="bg-white rounded-2xl border-2 border-gray-100 shadow-sm p-5 text-center">
+                  <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 text-center">
                     <div className="text-3xl mb-2">🔗</div>
                     <p className="font-black text-gray-800 mb-1">참여 링크를 만들어요</p>
                     <p className="text-xs text-gray-400 leading-relaxed">
@@ -1830,8 +1839,8 @@ export default function Home({ onChromeChange }: { onChromeChange?: (showTabBar:
 
           {/* Step 3 (그룹): 확정 요약 */}
           {step === 3 && isGroup && (
-            <div className="px-4 py-3 flex flex-col gap-3">
-              <div className="bg-white rounded-2xl border-2 border-[#3CDBC0]/30 shadow-sm p-5">
+            <div className="px-5 py-3 flex flex-col gap-3">
+              <div className="bg-white rounded-2xl border border-[#3CDBC0]/30 shadow-sm p-5">
                 <p className="text-[10px] font-bold text-[#2AB5A0] uppercase tracking-widest mb-3">모임 요약</p>
                 <div className="flex flex-col gap-2.5 text-sm">
                   <div className="flex gap-2"><span className="text-gray-400 w-12 flex-shrink-0">코스</span>
@@ -1868,7 +1877,7 @@ export default function Home({ onChromeChange }: { onChromeChange?: (showTabBar:
           </div>
 
           {showVibeScrollHint && (
-            <div className="pointer-events-none absolute inset-x-0 bottom-0 z-20 flex justify-center bg-gradient-to-t from-[#F5FBF8] via-[#F5FBF8]/95 to-transparent px-4 pb-2 pt-9">
+            <div className="pointer-events-none absolute inset-x-0 bottom-0 z-20 flex justify-center bg-gradient-to-t from-[#F5FBF8] via-[#F5FBF8]/95 to-transparent px-5 pb-2 pt-9">
               <button
                 type="button"
                 onClick={() => stepScrollRef.current?.scrollBy({ top: 240, behavior: 'smooth' })}
@@ -1883,7 +1892,7 @@ export default function Home({ onChromeChange }: { onChromeChange?: (showTabBar:
 
         {/* 에러 */}
         {error && (
-          <div className="flex-shrink-0 mx-4 mb-2 p-3.5 bg-red-50 border border-red-200 rounded-xl text-center">
+          <div className="flex-shrink-0 mx-5 mb-2 p-3.5 bg-red-50 border border-red-200 rounded-xl text-center">
             <p className="text-sm text-red-600 leading-snug">{error}</p>
             <p className="mt-1 text-[11px] text-gray-500">입력하신 조건은 그대로 있어요.</p>
             {lastRecommendRef.current && (
@@ -1899,14 +1908,14 @@ export default function Home({ onChromeChange }: { onChromeChange?: (showTabBar:
 
         {/* 하단 버튼 — 홈 인디케이터/네이티브 툴바와 겹치지 않게 안전영역 반영
             (카톡 인앱 env=0 → 32px 그대로, 일반 브라우저에서만 더 벌어짐) */}
-        <div className={`flex-shrink-0 px-4 pt-2 flex flex-col gap-2 ${step === 0 ? 'pb-3' : 'pb-[max(2rem,calc(env(safe-area-inset-bottom)+0.75rem))]'}`}>
+        <div className={`flex-shrink-0 px-5 pt-2 flex flex-col gap-2 ${step === 0 ? 'pb-3' : 'pb-[max(2rem,calc(env(safe-area-inset-bottom)+0.75rem))]'}`}>
           {step < 3 ? (
             <>
               <div className="flex gap-3">
                 {step > 0 && (
                   <button
                     onClick={handleBack}
-                    className="w-[92px] py-4 rounded-2xl border-2 border-gray-200 bg-white text-gray-500 font-bold text-sm hover:border-gray-300 transition-all active:scale-95"
+                    className="w-[92px] py-4 rounded-2xl border border-gray-200 bg-white text-gray-500 font-bold text-sm hover:border-gray-300 transition-all active:scale-95"
                   >
                     ← 이전 단계
                   </button>
@@ -1936,7 +1945,7 @@ export default function Home({ onChromeChange }: { onChromeChange?: (showTabBar:
             </>
           ) : (
             <div className="flex flex-col gap-2">
-              <p className="text-center text-xs font-medium text-[#2AB5A0]">
+              <p className="text-center text-xs text-gray-400">
                 {purpose?.second && purpose.second !== '없음'
                   ? '추천 결과에서 1차 다른 후보와 2차 코스까지 함께 확인할 수 있어요'
                   : '추천 결과에서 1차 다른 후보도 함께 확인할 수 있어요'}
@@ -1944,7 +1953,7 @@ export default function Home({ onChromeChange }: { onChromeChange?: (showTabBar:
               <div className="flex gap-3">
                 <button
                   onClick={handleBack}
-                  className="w-[92px] py-4 rounded-2xl border-2 border-gray-200 bg-white text-gray-500 font-bold text-sm hover:border-gray-300 transition-all active:scale-95"
+                  className="w-[92px] py-4 rounded-2xl border border-gray-200 bg-white text-gray-500 font-bold text-sm hover:border-gray-300 transition-all active:scale-95"
                 >
                   ← 이전 단계
                 </button>

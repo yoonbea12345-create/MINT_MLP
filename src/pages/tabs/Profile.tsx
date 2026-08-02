@@ -7,7 +7,8 @@ import {
   getNickname, getAvatarUrl, backfillHistoryIfNeeded, getActivityHistory, clearActivityCache,
   type ActivityRow,
 } from '../../utils/auth';
-import { IconUserCircle } from '../../components/icons';
+import { IconUserCircle, IconGift } from '../../components/icons';
+import PointsBadge from '../../components/PointsBadge';
 
 const CONTACT_MAIL = 'mailto:issuebell@naver.com?subject=MINT%20%EB%AC%B8%EC%9D%98';
 
@@ -132,7 +133,8 @@ export default function Profile() {
           )}
           <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-black text-gray-800">{user ? `${nickname ?? '카카오 이용자'}님` : 'MINT 이용자님'}</p>
-            <p className="text-xs text-gray-400">방문 인증 {ledger.length}회 · 적립 {balance.toLocaleString()}P</p>
+            {/* 포인트는 아래 PointsBadge가 맡는다 — 같은 데이터를 두 번 말하지 않는다 */}
+            <p className="text-xs text-gray-400">방문 인증 {ledger.length}회</p>
             {/* 로딩·에러 중에는 이 줄 자체를 숨긴다 — 틀린 숫자를 잠깐이라도 보여주지 않기 위해 */}
             {user && !serverLoading && !serverError && serverCount !== null && (
               <p className="mt-0.5 text-[11px] text-gray-400">
@@ -143,10 +145,14 @@ export default function Profile() {
             )}
           </div>
           {user && (
-            <button onClick={() => void handleSignOut()} className="shrink-0 text-[11px] text-gray-400 underline">로그아웃</button>
+            <button onClick={() => void handleSignOut()} className="flex min-h-10 shrink-0 items-center px-1 text-[11px] text-gray-400 underline">로그아웃</button>
           )}
         </div>
-        <p className="mt-3 truncate text-[10px] text-gray-300">기기 ID · {deviceId}</p>
+        {/* 포인트 표기는 홈·민트샵과 같은 공유 컴포넌트로 통일(맨 텍스트 금지) */}
+        <div className="mt-3 flex items-center justify-between gap-3">
+          <PointsBadge balance={balance} />
+          <p className="min-w-0 truncate text-[10px] text-gray-300">기기 ID · {deviceId}</p>
+        </div>
       </div>
 
       {/* 로그인 유도 — 비로그인 상태에서만. 로그인은 어디까지나 선택이다. */}
@@ -198,11 +204,15 @@ export default function Profile() {
         <>
           <p className="mt-6 px-1 mb-2 text-[11px] font-bold uppercase tracking-widest text-gray-400">계정에 저장된 모임</p>
           {serverLoading ? (
-            <p className="px-1 text-xs text-gray-300">기록을 불러오는 중이에요…</p>
+            /* 스피너는 VisitCertModal의 로딩 패턴과 동일한 문법 */
+            <div className="flex items-center gap-2 px-1 text-xs text-gray-400">
+              <span className="h-4 w-4 shrink-0 animate-spin rounded-full border-2 border-[#3CDBC0] border-t-transparent" />
+              기록을 불러오는 중이에요…
+            </div>
           ) : serverError ? (
             <div className="flex items-center justify-between gap-3 px-1">
               <p className="text-xs text-gray-400">기록을 불러오지 못했어요. 잠시 후 다시 시도해주세요.</p>
-              <button onClick={() => void retryServerHistory()} className="shrink-0 text-[11px] text-gray-400 underline">다시 시도</button>
+              <button onClick={() => void retryServerHistory()} className="flex min-h-10 shrink-0 items-center px-1 text-[11px] text-gray-400 underline">다시 시도</button>
             </div>
           ) : (
             <div className="flex flex-col gap-2">
@@ -233,7 +243,9 @@ export default function Profile() {
       <p className="mt-6 px-1 mb-2 text-[11px] font-bold uppercase tracking-widest text-gray-400">적립 내역</p>
       {ledger.length === 0 ? (
         <div className="rounded-2xl border border-gray-100 bg-white py-10 text-center">
-          <p className="text-sm leading-relaxed text-gray-500">
+          {/* 다른 탭(내 모임·발견) 빈 상태와 같은 톤의 회색 글리프 */}
+          <IconGift className="mx-auto h-8 w-8 text-gray-200" />
+          <p className="mt-3 text-sm leading-relaxed text-gray-500">
             아직 적립 내역이 없어요.<br />추천받은 곳에 방문하고 인증하면 포인트가 쌓여요.
           </p>
         </div>
@@ -265,7 +277,7 @@ export default function Profile() {
         <div className="h-px bg-gray-100" />
         <LinkRow label="개인정보처리방침" onClick={() => alert('개인정보처리방침은 출시 준비 중이에요.')} />
         <div className="h-px bg-gray-100" />
-        <a href={CONTACT_MAIL} className="flex items-center justify-between px-4 py-3.5 active:bg-gray-50">
+        <a href={CONTACT_MAIL} className="flex min-h-10 items-center justify-between px-4 py-3.5 active:bg-gray-50">
           <span className="text-sm font-bold text-gray-700">문의하기</span>
           <span className="text-xs text-gray-300">›</span>
         </a>
@@ -276,7 +288,7 @@ export default function Profile() {
             <div className="h-px bg-gray-100" />
             <button
               onClick={() => void handleDeleteAccount()}
-              className="flex w-full items-center justify-between px-4 py-3.5 text-left active:bg-gray-50"
+              className="flex min-h-10 w-full items-center justify-between px-4 py-3.5 text-left active:bg-gray-50"
             >
               <span className="text-sm font-bold text-red-500">회원 탈퇴</span>
               <span className="text-xs text-gray-300">›</span>
@@ -292,7 +304,7 @@ export default function Profile() {
 
 function ToggleRow({ label, desc, on, onToggle }: { label: string; desc: string; on: boolean; onToggle: () => void }) {
   return (
-    <div className="flex items-center justify-between gap-3 px-4 py-3.5">
+    <div className="flex min-h-10 items-center justify-between gap-3 px-4 py-3.5">
       <div className="min-w-0">
         <p className="text-sm font-bold text-gray-700">{label}</p>
         <p className="text-[11px] text-gray-400">{desc}</p>
@@ -312,7 +324,7 @@ function ToggleRow({ label, desc, on, onToggle }: { label: string; desc: string;
 
 function LinkRow({ label, onClick }: { label: string; onClick: () => void }) {
   return (
-    <button onClick={onClick} className="flex w-full items-center justify-between px-4 py-3.5 text-left active:bg-gray-50">
+    <button onClick={onClick} className="flex min-h-10 w-full items-center justify-between px-4 py-3.5 text-left active:bg-gray-50">
       <span className="text-sm font-bold text-gray-700">{label}</span>
       <span className="text-xs text-gray-300">›</span>
     </button>
