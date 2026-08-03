@@ -6,6 +6,11 @@ export const RESULT_STORAGE_KEY = 'mint_last_result_v1';
 const HISTORY_KEY = 'mint_history_v1';
 const MAX_ENTRIES = 5;
 
+// 입력 초안·그룹 세션 키 — 원래 Home 안에 있었지만, 홈 바깥(로그인 복귀 안내 등)에서도
+// "다음에 홈을 열 때 무엇이 되살아나는가"를 통째로 끊어야 해서 여기로 모았다.
+export const INPUT_DRAFT_KEY = 'mint_input_draft_v1';
+export const GROUP_SESSION_KEY = 'mint_group_session_v1';
+
 // 결과 스냅샷은 localStorage에 보관 — 모바일에서 홈버튼·카톡 공유 등으로 앱을 벗어나면
 // OS가 웹뷰 프로세스를 재시작하며 sessionStorage가 통째로 날아가 추천이 초기화되던 문제 방지.
 // 유효기간이 지난 스냅샷은 자동 복원하지 않는다 (지난 약속이 불쑥 뜨지 않게 — 히스토리로는 여전히 열람 가능)
@@ -47,6 +52,53 @@ export function clearResultSnapshot() {
     localStorage.removeItem(RESULT_STORAGE_KEY);
     sessionStorage.removeItem(RESULT_STORAGE_KEY);
   } catch { /* ignore */ }
+}
+
+// 다음에 홈을 열 때 "앱을 처음 켠 첫 화면"이 나오게 한다 — 결과 복원과 입력 초안 복원을 함께 끊는다.
+// 결과만 지우면 입력 초안이 남아 마지막 단계로 되살아나므로 첫 화면이 아니게 된다.
+// 추천 자체는 히스토리(mint_history_v1)에 남아 '지난 추천'으로 다시 열 수 있다.
+export function clearRecommendSession() {
+  clearResultSnapshot();
+  try {
+    localStorage.removeItem(INPUT_DRAFT_KEY);
+    sessionStorage.removeItem(INPUT_DRAFT_KEY);
+    localStorage.removeItem(GROUP_SESSION_KEY);
+  } catch { /* ignore */ }
+}
+
+// "보던 추천이 아직 살아 있나"만 가볍게 확인할 때 쓴다(로그인 복귀 안내 등).
+// Home의 스냅샷 전체 타입을 셸까지 끌고 오지 않으려고 표시에 필요한 필드만 좁혀 읽는다.
+// TTL 판정은 loadResultSnapshot에 맡긴다 — 만료된 추천은 여기서도 없는 것으로 취급된다.
+export interface ResultSummary {
+  placeName: string;
+  secondPlaceName: string | null;
+  areaName: string | null;
+}
+
+export function loadResultSummary(): ResultSummary | null {
+  const snapshot = loadResultSnapshot() as {
+    result?: { placeName?: unknown }[];
+    purpose?: { second?: unknown };
+    midpointData?: { areaName?: unknown };
+  } | null;
+
+  const first = snapshot?.result?.[0];
+  if (!first || typeof first.placeName !== 'string' || !first.placeName) return null;
+
+  // 2차 장소는 '2차 코스를 고른 경우'에만 의미가 있다 — Home이 히스토리를 쌓는 규칙과 같게 맞춘다.
+  const second = snapshot?.result?.[1];
+  const hasSecondCourse =
+    typeof snapshot?.purpose?.second === 'string' && snapshot.purpose.second !== '없음';
+  const areaName = snapshot?.midpointData?.areaName;
+
+  return {
+    placeName: first.placeName,
+    secondPlaceName:
+      hasSecondCourse && typeof second?.placeName === 'string' && second.placeName
+        ? second.placeName
+        : null,
+    areaName: typeof areaName === 'string' && areaName ? areaName : null,
+  };
 }
 
 export interface HistoryEntry {

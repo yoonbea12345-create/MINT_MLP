@@ -1,21 +1,44 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import Home from './Home';
 import BottomTabBar, { type TabKey } from '../components/BottomTabBar';
 import MyMeetings from './tabs/MyMeetings';
 import Discover from './tabs/Discover';
 import MintShop from './tabs/MintShop';
 import Profile from './tabs/Profile';
+import ResumeRecommendSheet from '../components/ResumeRecommendSheet';
+import { clearRecommendSession, loadResultSummary, type ResultSummary } from '../utils/history';
+import { trackEvent } from '../utils/analytics';
 
 // /app 셸 — 홈 탭의 콘텐츠는 항상 추천 플로우(Home)다.
 // 탭바를 보여도 되는지는 각 탭이 onChromeChange로 보고한다(셸은 localStorage를 보지 않는다).
 // 홈은 입력 1단계에서만, 나머지 탭은 바텀시트가 열리면 탭바를 내린다(시트 하단 CTA 가림 방지).
 // 탭 상태는 URL에 싣지 않는다(기존 path 라우터를 건드리지 않기 위해).
+
+// 카카오 로그인 복귀 표식 — redirectTo가 /app?tab=profile인 곳은 auth.ts뿐이다.
+const isKakaoReturn = () =>
+  new URLSearchParams(window.location.search).get('tab') === 'profile';
+
 export default function AppShell() {
   // 카카오 로그인 복귀(/app?tab=profile)에서만 프로필 탭으로 연다.
-  const [activeTab, setActiveTab] = useState<TabKey>(() =>
-    new URLSearchParams(window.location.search).get('tab') === 'profile' ? 'profile' : 'home'
-  );
+  const [activeTab, setActiveTab] = useState<TabKey>(() => (isKakaoReturn() ? 'profile' : 'home'));
   const [showTabBar, setShowTabBar] = useState(true);
+
+  // 카카오 로그인은 페이지를 통째로 떠났다가 이 셸로 돌아온다. 보던 추천이 아직 살아 있으면
+  // 홈 탭을 직접 찾아 누르게 두지 말고 돌아갈지 물어본다.
+  // 판정에 쓴 ?tab=profile은 즉시 지운다 — 새로고침마다 다시 묻지 않도록.
+  // (App의 라우터는 popstate만 구독하므로 replaceState는 라우팅을 건드리지 않는다. pathname도 그대로다.)
+  // 해시는 반드시 보존한다 — 이 클라이언트는 flowType 기본값이 implicit이라 카카오 토큰이
+  // #access_token=…으로 돌아오고, supabase-js가 그걸 비동기로 파싱한다. 여기서 해시를 지우면
+  // 파싱 전에 토큰이 사라져 로그인이 통째로 실패할 수 있다. 해시 정리는 supabase가 알아서 한다.
+  const [resumeSummary, setResumeSummary] = useState<ResultSummary | null>(() =>
+    isKakaoReturn() ? loadResultSummary() : null
+  );
+  useEffect(() => {
+    if (!isKakaoReturn()) return;
+    window.history.replaceState(null, '', `/app${window.location.hash}`);
+    if (resumeSummary) trackEvent('resume_prompt_shown');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // 탭을 옮길 때는 항상 탭바를 되살린다 — 이전 탭에서 시트가 열려 있던 상태가 다음 탭으로 새면
   // 탭바가 영영 사라진다. 새 탭이 다시 보고하기 전의 기본값은 "보임"이어야 한다.
@@ -48,6 +71,23 @@ export default function AppShell() {
         )}
       </div>
       {showTabBar && <BottomTabBar active={activeTab} onChange={changeTab} />}
+      {resumeSummary && (
+        <ResumeRecommendSheet
+          summary={resumeSummary}
+          onResume={() => {
+            trackEvent('resume_prompt_accept');
+            setResumeSummary(null);
+            changeTab('home');   // Home이 마운트되며 스냅샷을 복원해 결과 화면으로 열린다
+          }}
+          onDiscard={() => {
+            trackEvent('resume_prompt_discard');
+            // 복원 재료를 지워야 홈이 '앱을 처음 켠 첫 화면'으로 열린다. 탭 전환은 하지 않는다 —
+            // 새로 시작하겠다는 뜻이지 지금 홈으로 가겠다는 뜻은 아니므로 프로필에 머문다.
+            clearRecommendSession();
+            setResumeSummary(null);
+          }}
+        />
+      )}
     </div>
   );
 }
