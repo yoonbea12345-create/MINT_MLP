@@ -1,4 +1,5 @@
 import { Component, lazy, Suspense, useEffect, useState, type ReactNode } from 'react';
+import { requestAppFullscreen } from './utils/fullscreen';
 
 // 페이지별 코드 스플리팅 — 랜딩만 보는 방문자가 Home/Admin 번들까지 받지 않도록
 const AppShell = lazy(() => import('./pages/AppShell'));
@@ -48,10 +49,18 @@ function Router() {
 
   const path = locationKey.split('?')[0];
 
-  // 첫 터치에 Fullscreen API를 부르지 않는다. 부르는 순간 안드로이드 크롬이
-  // "종료하려면 뒤로 가기를 누르세요" 안내를 브라우저 UI 레이어에 띄우는데,
-  // 그건 페이지 밖이라 웹에서 숨길 방법이 없다 — 전체화면 몇 픽셀보다 그 팝업이 더 거슬린다.
-  // 진짜 전체화면은 설치형(PWA manifest의 display: fullscreen)과 앱인토스 웹뷰가 담당한다.
+  // URL로 MVP/초대 화면에 바로 들어온 경우 자동 전체화면은 브라우저가 차단하므로 첫 터치에서 전환한다.
+  useEffect(() => {
+    if (path !== '/app' && path !== '/join') return;
+    if (
+      document.fullscreenElement ||
+      window.matchMedia('(display-mode: fullscreen)').matches
+    ) return;
+
+    const enterFullscreen = () => { void requestAppFullscreen(); };
+    window.addEventListener('pointerdown', enterFullscreen, { capture: true, once: true });
+    return () => window.removeEventListener('pointerdown', enterFullscreen, { capture: true });
+  }, [path]);
 
   if (path === '/admin') return <Admin />;
   if (path === '/pilot-admin') return <PilotAdmin />;

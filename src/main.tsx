@@ -6,20 +6,33 @@ import { initErrorLogging } from './utils/errorLog'
 
 initErrorLogging()
 
-// 모바일 브라우저 UI가 접히거나 펼쳐질 때 실제 가시 높이를 앱 레이아웃에 즉시 반영한다.
-// 전체화면 안내를 피하려고 104px을 비워두던 보정은 걷어냈다 — 애초에 전체화면을 부르지 않으니
-// 가릴 팝업도 없고, 그 보정은 정상 화면에서 CTA를 괜히 띄워 올리기만 했다.
+// 모바일 브라우저 UI가 접히거나 전체화면으로 전환될 때 실제 가시 높이를 앱 레이아웃에 즉시 반영한다.
+let fullscreenNoticeGuard = 0
+let fullscreenNoticeTimer: ReturnType<typeof setTimeout> | null = null
+
 function syncAppViewportHeight() {
   const height = window.visualViewport?.height ?? window.innerHeight
   document.documentElement.style.setProperty(
     '--mint-app-height',
-    `${Math.max(480, Math.round(height))}px`,
+    `${Math.max(480, Math.round(height - fullscreenNoticeGuard))}px`,
   )
 }
 
 syncAppViewportHeight()
 window.addEventListener('resize', syncAppViewportHeight)
 window.visualViewport?.addEventListener('resize', syncAppViewportHeight)
+document.addEventListener('fullscreenchange', () => {
+  if (fullscreenNoticeTimer) clearTimeout(fullscreenNoticeTimer)
+  // Android/Chrome의 강제 전체화면 안내가 하단 CTA를 가리는 동안만 버튼 영역을 위로 피한다.
+  fullscreenNoticeGuard = document.fullscreenElement ? 104 : 0
+  requestAnimationFrame(syncAppViewportHeight)
+  if (document.fullscreenElement) {
+    fullscreenNoticeTimer = setTimeout(() => {
+      fullscreenNoticeGuard = 0
+      syncAppViewportHeight()
+    }, 4200)
+  }
+})
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
