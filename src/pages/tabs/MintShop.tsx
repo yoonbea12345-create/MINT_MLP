@@ -1,12 +1,15 @@
-import { useMemo, useState, type ReactElement } from 'react';
+import { useEffect, useMemo, useState, type ReactElement } from 'react';
 import { getBalance, getDeviceId } from '../../utils/points';
 import { trackEvent } from '../../utils/analytics';
 import { MOCK_COUPONS, type CouponBenefitType, type MintCoupon } from '../../data/mock/coupons';
 import { getNotifyList, toggleNotify } from '../../utils/couponNotify';
 import PointsBadge from '../../components/PointsBadge';
+import Reserve from '../Reserve';
+import CouponDetailSheet from '../../components/CouponDetailSheet';
+import CouponPurchasePreparingModal from '../../components/CouponPurchasePreparingModal';
 import {
   IconGift, IconUtensils, IconCup, IconTag, IconClock, IconUsers, IconSparkle,
-  IconCheck, IconBell, IconChevronDown, type IconProps,
+  IconCheck, IconChevronDown, type IconProps,
 } from '../../components/icons';
 
 const PAGE_SIZE = 10;
@@ -55,6 +58,14 @@ export default function MintShop({ onChromeChange }: Props) {
   const [filterKey, setFilterKey] = useState('all');
   const [page, setPage] = useState(1);
   const [toast, setToast] = useState<string | null>(null);
+  const [selectedCoupon, setSelectedCoupon] = useState<MintCoupon | null>(null);
+  const [reservingCoupon, setReservingCoupon] = useState<MintCoupon | null>(null);
+  const [showPurchasePopup, setShowPurchasePopup] = useState(false);
+
+  // 상세 시트나 예약 화면이 떠 있으면 탭바를 내린다 — 시트 하단 CTA가 가리지 않게(PointsBadge와 같은 규칙).
+  useEffect(() => {
+    onChromeChange?.(!(selectedCoupon || reservingCoupon));
+  }, [selectedCoupon, reservingCoupon, onChromeChange]);
 
   const filtered = useMemo(() => {
     const types = FILTERS.find((f) => f.key === filterKey)?.types;
@@ -78,8 +89,13 @@ export default function MintShop({ onChromeChange }: Props) {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
-  function tapCoupon(c: MintCoupon) {
+  // 카드 탭은 이제 즉시 신청이 아니라 상세 열기다 — 가게를 보고 예약까지 갈 수 있어야 한다.
+  function openDetail(c: MintCoupon) {
     trackEvent('shop_coupon_click', { device_id: getDeviceId(), coupon_id: c.id, shop_name: c.shopName, point_cost: c.pointCost, balance });
+    setSelectedCoupon(c);
+  }
+
+  function toggleCouponNotify(c: MintCoupon) {
     const { list, applied } = toggleNotify(c.id);
     setNotified(list);
     if (applied) {
@@ -93,6 +109,33 @@ export default function MintShop({ onChromeChange }: Props) {
       setToast('신청을 취소했어요');
     }
     window.setTimeout(() => setToast(null), 2200);
+  }
+
+  function handleReserve(c: MintCoupon) {
+    trackEvent('coupon_reserve_click', {
+      device_id: getDeviceId(), coupon_id: c.id, shop_name: c.shopName, area: c.area, category: c.category, point_cost: c.pointCost,
+    });
+    setReservingCoupon(c);
+  }
+
+  function handlePurchase(c: MintCoupon) {
+    trackEvent('coupon_purchase_click', {
+      device_id: getDeviceId(), coupon_id: c.id, shop_name: c.shopName, point_cost: c.pointCost, tier: c.tier, balance,
+    });
+    setShowPurchasePopup(true);
+  }
+
+  // 예약은 기존 Reserve 화면을 그대로 쓴다(Home의 view === 'reserve'와 같은 전체화면 전환).
+  // 돌아올 때 selectedCoupon은 남겨둬서 그리드가 아니라 보던 쿠폰 상세로 복귀한다.
+  if (reservingCoupon) {
+    return (
+      <Reserve
+        placeName={reservingCoupon.shopName}
+        address={reservingCoupon.address}
+        openingHours={reservingCoupon.openingHours}
+        onBack={() => setReservingCoupon(null)}
+      />
+    );
   }
 
   return (
@@ -149,7 +192,7 @@ export default function MintShop({ onChromeChange }: Props) {
             coupon={c}
             applied={notified.includes(c.id)}
             balance={balance}
-            onTap={() => tapCoupon(c)}
+            onTap={() => openDetail(c)}
           />
         ))}
       </div>
@@ -184,8 +227,23 @@ export default function MintShop({ onChromeChange }: Props) {
         신청은 알림용이에요 · 포인트는 차감되지 않아요 · 아직 교환은 열리지 않았어요
       </p>
 
+      {selectedCoupon && (
+        <CouponDetailSheet
+          coupon={selectedCoupon}
+          applied={notified.includes(selectedCoupon.id)}
+          benefitIcon={BENEFIT_ICON[selectedCoupon.benefitType]}
+          onClose={() => setSelectedCoupon(null)}
+          onToggleNotify={() => toggleCouponNotify(selectedCoupon)}
+          onReserve={() => handleReserve(selectedCoupon)}
+          onPurchase={() => handlePurchase(selectedCoupon)}
+        />
+      )}
+
+      {showPurchasePopup && <CouponPurchasePreparingModal onClose={() => setShowPurchasePopup(false)} />}
+
+      {/* 토스트는 시트(z-50)·준비중 팝업(z-60)보다 위여야 시트 안에서 눌러도 보인다 */}
       {toast && (
-        <div className="fixed bottom-[max(6rem,calc(env(safe-area-inset-bottom)+5.5rem))] left-1/2 z-40 max-w-[90vw] -translate-x-1/2 rounded-full border border-[#3CDBC0]/35 bg-white/95 px-4 py-2.5 text-center text-xs font-bold text-[#2AB5A0] shadow-xl shadow-[#2AB5A0]/20 backdrop-blur">
+        <div className="fixed bottom-[max(6rem,calc(env(safe-area-inset-bottom)+5.5rem))] left-1/2 z-[70] max-w-[90vw] -translate-x-1/2 rounded-full border border-[#3CDBC0]/35 bg-white/95 px-4 py-2.5 text-center text-xs font-bold text-[#2AB5A0] shadow-xl shadow-[#2AB5A0]/20 backdrop-blur">
           {toast}
         </div>
       )}
@@ -245,9 +303,8 @@ function CouponCard({ coupon, applied, balance, onTap }: { coupon: MintCoupon; a
           {coupon.pointCost.toLocaleString()}P
         </p>
         {!applied && (
-          <span className="flex shrink-0 items-center gap-0.5 whitespace-nowrap text-[11px] font-bold text-gray-400">
-            <IconBell className="h-3 w-3" />
-            알림 받기
+          <span className="shrink-0 whitespace-nowrap text-[11px] font-bold text-gray-400">
+            자세히 보기
           </span>
         )}
       </div>

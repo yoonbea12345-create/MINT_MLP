@@ -35,6 +35,8 @@ type EventType = 'landing_view' | 'cta_click' | 'reservation_attempt' | 'session
   // F. 골목 쿠폰 알림 신청(가짜 문) — 어떤 혜택 유형·가격대를 원하나
   | 'coupon_notify_add' | 'coupon_notify_remove'
   | 'shop_filter_click' | 'shop_page_change'
+  // F-1. 쿠폰 상세에서의 의도 — 진짜 동작(예약) vs 가짜 문(구매) 클릭을 나눠 본다
+  | 'coupon_reserve_click' | 'coupon_purchase_click'
   | 'meetings_empty_cta_click'
   | 'discover_gem_map_open'
   // G. 카카오 로그인 복귀 — 보던 추천 이어보기 제안(수락/새로 시작)
