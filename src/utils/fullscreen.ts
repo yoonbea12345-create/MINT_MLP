@@ -1,16 +1,6 @@
-export async function requestAppFullscreen(): Promise<boolean> {
-  if (document.fullscreenElement) return true;
-  if (!document.documentElement.requestFullscreen) return false;
-
-  try {
-    await document.documentElement.requestFullscreen({ navigationUI: 'hide' });
-    return true;
-  } catch {
-    // 모바일 브라우저 정책이나 iOS 미지원 환경에서는 설치형 전체화면 설정으로 폴백한다.
-    return false;
-  }
-}
-
+// 전체화면 '진입'은 더 이상 웹에서 하지 않는다 — Fullscreen API를 부르면 안드로이드 크롬이
+// 페이지 밖 레이어에 종료 안내 팝업을 띄우고, 그건 어떤 웹 API로도 숨길 수 없다.
+// 해제만 남겨둔다: 브라우저 메뉴 등으로 이미 전체화면인 사용자에게 설치 안내를 보여줘야 하므로.
 export async function exitAppFullscreen(): Promise<void> {
   if (!document.fullscreenElement || !document.exitFullscreen) return;
 

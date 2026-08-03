@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { trackEvent } from '../utils/analytics';
-import { exitAppFullscreen, navigateInApp, requestAppFullscreen } from '../utils/fullscreen';
+import { exitAppFullscreen, navigateInApp } from '../utils/fullscreen';
 import CertShowcase from '../components/CertShowcase';
 
 interface BeforeInstallPromptEvent extends Event {
@@ -85,9 +85,8 @@ function useInstallPrompt() {
   return { canInstall, triggerInstall, isIOS, guide, setGuide };
 }
 
-async function goToApp() {
+function goToApp() {
   trackEvent('cta_click');
-  await requestAppFullscreen();
   navigateInApp('/app');
 }
 

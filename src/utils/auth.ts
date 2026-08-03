@@ -28,9 +28,11 @@ export async function signInWithKakao(): Promise<void> {
     provider: 'kakao',
     options: {
       redirectTo: `${window.location.origin}/app?tab=profile`,
-      // scope를 반드시 명시한다 — Supabase의 카카오 기본 scope에 account_email이 들어 있어서,
-      // 비즈니스 인증 전이라 그 항목을 못 쓰는 우리 앱에서는 KOE205로 로그인이 통째로 막힌다.
-      scopes: 'profile_nickname profile_image',
+      // 비즈앱 전환으로 account_email 권한이 열려 KOE205가 해소됐다. 그래도 scope는 계속 명시한다 —
+      // 우리가 무엇을 받는지 코드에 남겨두기 위해서, 그리고 기본 scope가 바뀌어도 흔들리지 않기 위해서.
+      // 이메일은 카카오에서 '선택 동의'라 거부하는 사용자가 있다. 그 경우 user.email이 비므로
+      // 이메일을 로그인의 전제로 삼지 않는다(Supabase의 'Allow users without an email' 유지).
+      scopes: 'profile_nickname profile_image account_email',
     },
   });
 }
