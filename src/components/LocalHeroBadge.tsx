@@ -35,7 +35,7 @@ export function LocalHeroSheet({
   place: { placeName?: string; address?: string };
   onClose: () => void;
 }) {
-  const { visitCount, activeYears } = deriveLocalHero(place);
+  const { name, visitCount, activeYears } = deriveLocalHero(place);
 
   return (
     <div className="fixed inset-0 z-50 bg-black/40" onClick={(e) => { e.stopPropagation(); onClose(); }}>
@@ -48,8 +48,8 @@ export function LocalHeroSheet({
           현지인이 추천하는 진짜 로컬 맛집
         </h3>
         <p className="mt-2 text-center text-sm leading-relaxed text-gray-600 break-keep">
-          이 동네에서 {activeYears}년째 활동 중인 현지인이 직접 다녀온 곳만 추천해요.
-          방문 {visitCount}회 넘게 다닌 단골이 알려주는 곳이라, 검색만으로는 나오지 않는
+          {name}님은 이 동네에서 {activeYears}년째 활동 중인 현지인이에요.
+          직접 {visitCount}번 넘게 다닌 단골이 골라준 곳이라, 검색만으로는 나오지 않는
           진짜 로컬 스팟이에요. 추천이 채택되면 현지인에게도 리워드가 돌아가요.
         </p>
         <p className="mt-3 text-center text-[11px] text-gray-400">민트 현지인 리워드 시스템</p>
