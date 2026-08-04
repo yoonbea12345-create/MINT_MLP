@@ -7,6 +7,7 @@ import PointsBadge from '../../components/PointsBadge';
 import Reserve from '../Reserve';
 import CouponDetailSheet from '../../components/CouponDetailSheet';
 import CouponPurchasePreparingModal from '../../components/CouponPurchasePreparingModal';
+import LocalHeroRewardPopup, { LOCAL_HERO_REWARD_MOCK_ENABLED } from '../../components/LocalHeroRewardPopup';
 import {
   IconGift, IconUtensils, IconCup, IconTag, IconClock, IconUsers, IconSparkle,
   IconCheck, IconChevronDown, type IconProps,
@@ -61,6 +62,8 @@ export default function MintShop({ onChromeChange }: Props) {
   const [selectedCoupon, setSelectedCoupon] = useState<MintCoupon | null>(null);
   const [reservingCoupon, setReservingCoupon] = useState<MintCoupon | null>(null);
   const [showPurchasePopup, setShowPurchasePopup] = useState(false);
+  // ⚠️ MOCK(촬영용) — 탭에 들어올 때마다 뜬다. 테이크를 다시 갈 수 있어야 해서 1회 제한을 두지 않았다.
+  const [showRewardPopup, setShowRewardPopup] = useState(LOCAL_HERO_REWARD_MOCK_ENABLED);
 
   // 상세 시트나 예약 화면이 떠 있으면 탭바를 내린다 — 시트 하단 CTA가 가리지 않게(PointsBadge와 같은 규칙).
   useEffect(() => {
@@ -240,6 +243,9 @@ export default function MintShop({ onChromeChange }: Props) {
       )}
 
       {showPurchasePopup && <CouponPurchasePreparingModal onClose={() => setShowPurchasePopup(false)} />}
+
+      {/* ⚠️ MOCK(촬영용) — src/components/LocalHeroRewardPopup.tsx 참고 */}
+      {showRewardPopup && <LocalHeroRewardPopup onClose={() => setShowRewardPopup(false)} />}
 
       {/* 토스트는 시트(z-50)·준비중 팝업(z-60)보다 위여야 시트 안에서 눌러도 보인다 */}
       {toast && (
