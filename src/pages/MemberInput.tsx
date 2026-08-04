@@ -204,14 +204,13 @@ export default function MemberInput() {
       // 멤버가 고른 vibe 전체(분위기·취향 그룹의 1·2차 모두) 수집.
       // 대표 분위기 1개만 vibe_atmosphere로 보내면 취향·2차 선택이 유실되므로,
       // 대표 1개는 집계 투표용으로, 나머지는 라벨로 vibe_keywords에 실어 추천에 빠짐없이 반영한다.
-      const allVibeKeys = Object.values(vibe).flatMap((g) => [g.first, g.second]).filter((k): k is string => !!k);
-      const primaryAtm = vibe['분위기']?.first ?? allVibeKeys[0] ?? null;
-      const extraVibeLabels = allVibeKeys
+      // 집계(vibe_atmosphere)는 대표 1개만 받으므로 '분위기' 1차의 첫 칩을 대표로 세운다.
+      const allFirstKeys = Object.values(vibe).flatMap((g) => g.first);
+      const secondVibeKeys = Object.values(vibe).flatMap((g) => g.second);
+      const primaryAtm = vibe['분위기']?.first[0] ?? allFirstKeys[0] ?? null;
+      const extraVibeLabels = allFirstKeys
         .filter((k) => k !== primaryAtm)
         .map((k) => VIBE_KEY_TO_LABEL[k] ?? k);
-      const secondVibeKeys = Object.values(vibe)
-        .map((g) => g.second)
-        .filter((k): k is string => !!k);
 
       const res = await fetch('/api/session-join', {
         method: 'POST',
@@ -276,8 +275,7 @@ export default function MemberInput() {
 
   // 내가 고른 취향 요약 (완료 화면용)
   const myVibeLabels = Object.values(vibe)
-    .flatMap((g) => [g.first, g.second])
-    .filter((k): k is string => !!k)
+    .flatMap((g) => [...g.first, ...g.second])
     .map((k) => VIBE_KEY_TO_LABEL[k] ?? k);
 
   if (phase === 'done') {

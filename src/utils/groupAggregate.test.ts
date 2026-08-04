@@ -59,7 +59,7 @@ describe('단일 멤버 집계', () => {
 
   it('예산·분위기·키워드가 유실 없이 집계된다', () => {
     expect(aggregateBudget([solo])).toBe('2~4만원');
-    expect(aggregateVibe([solo])).toEqual({ 분위기: { first: 'atm_cozy', second: null } });
+    expect(aggregateVibe([solo])).toEqual({ 분위기: { first: ['atm_cozy'], second: [] } });
     const { keywords, excludeFoods } = splitMemberKeywords([solo]);
     expect(keywords).toEqual(['조용한']);
     expect(excludeFoods).toEqual(['오이']);
@@ -73,6 +73,6 @@ describe('aggregateVibe', () => {
       { ...member([`${SECOND_VIBE_PREFIX}atm_quiet`]), vibe_atmosphere: 'atm_cozy' },
       { ...member([`${SECOND_VIBE_PREFIX}atm_hip`]), vibe_atmosphere: 'atm_loud' },
     ]);
-    expect(vibe).toEqual({ 분위기: { first: 'atm_loud', second: 'atm_quiet' } });
+    expect(vibe).toEqual({ 분위기: { first: ['atm_loud'], second: ['atm_quiet'] } });
   });
 });

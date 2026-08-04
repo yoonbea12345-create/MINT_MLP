@@ -73,7 +73,9 @@ export function aggregateVibe(members: GroupMember[]): VibeState {
   });
   const topFirst = Object.entries(firstCounts).sort((a, b) => b[1] - a[1])[0]?.[0] ?? null;
   const topSecond = Object.entries(secondCounts).sort((a, b) => b[1] - a[1])[0]?.[0] ?? null;
-  return topFirst || topSecond ? { 분위기: { first: topFirst, second: topSecond } } : {};
+  // 배열 타입에 맞춰 담기만 한다 — 집계 방식(최다 득표 1개)은 그대로다.
+  if (!topFirst && !topSecond) return {};
+  return { 분위기: { first: topFirst ? [topFirst] : [], second: topSecond ? [topSecond] : [] } };
 }
 
 // 멤버들이 각자 고른 예산을 하나로 집계 — 최빈값, 동률이면 낮은 예산 우선(보수적).

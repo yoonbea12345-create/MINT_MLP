@@ -25,8 +25,9 @@ const PRESET_KEYWORDS = ['루프탑', '가성비', '노포 맛집', '주차 가�
 export default function RetryWeightModal({ vibe, budget, onRetryWithWeights, onClose }: Props) {
   const selectedVibes: { key: string; label: string }[] = [];
   Object.values(vibe).forEach((g) => {
-    if (g.first) selectedVibes.push({ key: g.first, label: VIBE_KEY_TO_LABEL[g.first] ?? g.first });
-    if (g.second) selectedVibes.push({ key: g.second, label: VIBE_KEY_TO_LABEL[g.second] ?? g.second });
+    [...g.first, ...g.second].forEach((k) => {
+      selectedVibes.push({ key: k, label: VIBE_KEY_TO_LABEL[k] ?? k });
+    });
   });
 
   const initialWeights: VibeWeights = Object.fromEntries(selectedVibes.map((v) => [v.key, 3]));

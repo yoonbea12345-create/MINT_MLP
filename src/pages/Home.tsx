@@ -6,7 +6,7 @@ import PurposeSelect from '../components/PurposeSelect';
 import type { PurposeValue } from '../components/PurposeSelect';
 import VibeSelect from '../components/VibeSelect';
 import type { VibeState } from '../components/VibeSelect';
-import { VIBE_KEY_TO_LABEL } from '../components/VibeSelect';
+import { VIBE_KEY_TO_LABEL, migrateVibeState } from '../components/VibeSelect';
 import MeetingLocationSelect from '../components/MeetingLocationSelect';
 import type { MeetingLocation } from '../components/MeetingLocationSelect';
 import ResultCard from '../components/ResultCard';
@@ -342,7 +342,7 @@ export default function Home({ onChromeChange }: { onChromeChange?: (showTabBar:
       if (saved.meetingLocation) setMeetingLocation(saved.meetingLocation);
       if (saved.resultTravelTimes) setResultTravelTimes(saved.resultTravelTimes);
       if (saved.resultWeather) setResultWeather(saved.resultWeather);
-      if (saved.vibe) setVibe(saved.vibe);            // 개인화 배너 복원용
+      if (saved.vibe) setVibe(migrateVibeState(saved.vibe));            // 개인화 배너 복원용
       if (Array.isArray(saved.keywords)) setKeywords(saved.keywords);
       if (Array.isArray(saved.excludeFoods)) setExcludeFoods(saved.excludeFoods);
       setView('result');
@@ -369,7 +369,7 @@ export default function Home({ onChromeChange }: { onChromeChange?: (showTabBar:
       if (typeof d.expectedCount === 'number') setExpectedCount(d.expectedCount);
       if (d.groupSize) setGroupSize(d.groupSize);
       if (d.purpose) setPurpose(d.purpose);
-      if (d.vibe) setVibe(d.vibe);
+      if (d.vibe) setVibe(migrateVibeState(d.vibe));
       if (Array.isArray(d.keywords)) setKeywords(d.keywords);
       if (Array.isArray(d.excludeFoods)) setExcludeFoods(d.excludeFoods);
       if (d.vibeCustom) setVibeCustom(d.vibeCustom);
@@ -921,8 +921,8 @@ export default function Home({ onChromeChange }: { onChromeChange?: (showTabBar:
       const vibeFirst: string[] = [];
       const vibeSecond: string[] = [];
       Object.values(vibe).forEach((g) => {
-        if (g.first) vibeFirst.push(VIBE_KEY_TO_LABEL[g.first] ?? g.first);
-        if (g.second) vibeSecond.push(VIBE_KEY_TO_LABEL[g.second] ?? g.second);
+        g.first.forEach((k) => vibeFirst.push(VIBE_KEY_TO_LABEL[k] ?? k));
+        g.second.forEach((k) => vibeSecond.push(VIBE_KEY_TO_LABEL[k] ?? k));
       });
 
       const input: UserInput = {
@@ -1115,24 +1115,21 @@ export default function Home({ onChromeChange }: { onChromeChange?: (showTabBar:
     if (reason === 'expensive') {
       // 현재 vibe 유지 + 저렴한 힌트
       Object.values(vibe).forEach((g) => {
-        if (g.first) rejectWeights[VIBE_KEY_TO_LABEL[g.first] ?? g.first] = 3;
-        if (g.second) rejectWeights[VIBE_KEY_TO_LABEL[g.second] ?? g.second] = 3;
+        [...g.first, ...g.second].forEach((k) => { rejectWeights[VIBE_KEY_TO_LABEL[k] ?? k] = 3; });
       });
       rejectWeights['저렴한'] = 5;
       rejectWeights['가성비'] = 5;
     } else if (reason === 'far') {
       // 현재 vibe 유지 + 접근성 힌트
       Object.values(vibe).forEach((g) => {
-        if (g.first) rejectWeights[VIBE_KEY_TO_LABEL[g.first] ?? g.first] = 3;
-        if (g.second) rejectWeights[VIBE_KEY_TO_LABEL[g.second] ?? g.second] = 3;
+        [...g.first, ...g.second].forEach((k) => { rejectWeights[VIBE_KEY_TO_LABEL[k] ?? k] = 3; });
       });
       rejectWeights['가까운'] = 5;
       rejectWeights['접근하기 쉬운'] = 5;
     } else {
       // vibe 거절: 현재 분위기 weight 낮추고 다른 분위기 탐색
       Object.values(vibe).forEach((g) => {
-        if (g.first) rejectWeights[VIBE_KEY_TO_LABEL[g.first] ?? g.first] = 1;
-        if (g.second) rejectWeights[VIBE_KEY_TO_LABEL[g.second] ?? g.second] = 1;
+        [...g.first, ...g.second].forEach((k) => { rejectWeights[VIBE_KEY_TO_LABEL[k] ?? k] = 1; });
       });
       rejectWeights['새로운 분위기'] = 5;
     }
@@ -1392,7 +1389,7 @@ export default function Home({ onChromeChange }: { onChromeChange?: (showTabBar:
             showTravelTime={meetingLocation?.type === 'auto'}
             midpointAreaName={midpointData?.areaName}
             purpose={purpose?.first ? { first: purpose.first, second: purpose.second ?? null } : undefined}
-            vibeLabels={Object.values(vibe).flatMap((g) => [g.first, g.second]).filter((k): k is string => !!k).map((k) => VIBE_KEY_TO_LABEL[k] ?? k)}
+            vibeLabels={Object.values(vibe).flatMap((g) => [...g.first, ...g.second]).map((k) => VIBE_KEY_TO_LABEL[k] ?? k)}
             keywords={keywords}
             genreLabels={[purpose?.firstGenre, purpose?.secondGenre].filter((g): g is string => !!g)}
             excludeFoods={excludeFoods}
@@ -1857,7 +1854,7 @@ export default function Home({ onChromeChange }: { onChromeChange?: (showTabBar:
 
               {/* 모인 취향 */}
               {(() => {
-                const vibeLabels = Object.values(vibe).flatMap((g) => [g.first, g.second]).filter((k): k is string => !!k).map((k) => VIBE_KEY_TO_LABEL[k] ?? k);
+                const vibeLabels = Object.values(vibe).flatMap((g) => [...g.first, ...g.second]).map((k) => VIBE_KEY_TO_LABEL[k] ?? k);
                 if (vibeLabels.length === 0 && !budget && keywords.length === 0 && excludeFoods.length === 0) return null;
                 return (
                   <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">

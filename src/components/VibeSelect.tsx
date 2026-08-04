@@ -1,7 +1,26 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 
-export type GroupVibeState = { first: string | null; second: string | null };
+// 코스별로 여러 개 고를 수 있다. 예전엔 슬롯 2칸이라 3번째를 누르면 첫 선택이 말없이 밀려났다.
+export type GroupVibeState = { first: string[]; second: string[] };
 export type VibeState = Record<string, GroupVibeState>;
+
+// 구버전 저장값({first: string|null, second: string|null})을 배열로 승격한다.
+// 로컬에 남은 초안·결과 스냅샷이 새 코드에서 깨지지 않게, vibe를 로컬에서 읽는 지점은 전부 이걸 거친다.
+export function migrateVibeState(raw: unknown): VibeState {
+  if (!raw || typeof raw !== 'object') return {};
+  const toArray = (v: unknown): string[] => {
+    if (Array.isArray(v)) return v.filter((x): x is string => typeof x === 'string');
+    if (typeof v === 'string') return [v];
+    return [];
+  };
+  const result: VibeState = {};
+  for (const [groupLabel, g] of Object.entries(raw as Record<string, unknown>)) {
+    if (!g || typeof g !== 'object') continue;
+    const { first, second } = g as { first?: unknown; second?: unknown };
+    result[groupLabel] = { first: toArray(first), second: toArray(second) };
+  }
+  return result;
+}
 
 export const VIBE_KEY_TO_LABEL: Record<string, string> = {
   atm_loud:     '시끌벅적',
@@ -82,6 +101,9 @@ function orderByPurpose<T extends { key: string }>(options: T[], purpose?: { fir
 }
 
 // 값은 서버(recommend.ts)·집계(groupAggregate BUDGET_ORDER)와 반드시 일치시켜야 검색 프리픽스/예산 반영이 작동한다
+// 코스당 소프트 상한 — 무제한이면 AI 프롬프트에 넘길 라벨이 산만해진다
+const MAX_PER_COURSE = 6;
+
 const BUDGET_OPTIONS = [
   { value: '~2만원',  label: '~2만원',  emoji: '💵', sub: '가성비' },
   { value: '2~4만원', label: '2~4만원', emoji: '🍽️', sub: '적당히' },
@@ -111,6 +133,8 @@ export default function VibeSelect({ value, onChange, purpose, budget = null, on
   const showMood = section === 'all' || section === 'mood';
   const showExtras = section === 'all' || section === 'extras';
   const [excludeInput, setExcludeInput] = useState('');
+  const [capMsg, setCapMsg] = useState<string | null>(null);
+  const capTimerRef = useRef<number | null>(null);
 
   function removeExcludeFood(label: string) {
     if (!onExcludeFoodsChange) return;
@@ -130,30 +154,42 @@ export default function VibeSelect({ value, onChange, purpose, budget = null, on
     setExcludeInput('');
   }
 
+  // 상한을 넘겨 누르면 짧게 알려준다 — 조용히 씹히면 사용자는 앱이 고장난 줄 안다
+  function showCap(groupLabel: string) {
+    setCapMsg(`${groupLabel}는 한 코스에 최대 ${MAX_PER_COURSE}개까지 고를 수 있어요`);
+    if (capTimerRef.current) window.clearTimeout(capTimerRef.current);
+    capTimerRef.current = window.setTimeout(() => setCapMsg(null), 1800);
+  }
+
   function toggle(groupLabel: string, key: string) {
-    const g = value[groupLabel] ?? { first: null, second: null };
-    let { first, second } = g;
-    const isFirst = first === key;
-    const isSecond = second === key;
-    if (isFirst && isSecond) {
-      // 1차+2차 동시 지정 상태 → 해제
-      first = null;
-      second = null;
-    } else if (isFirst) {
-      // 1차만 지정됨: 2차가 비었으면 같은 분위기를 2차로도(중복 허용), 아니면 1차 해제
-      if (second === null) second = key;
-      else { first = second; second = null; }
-    } else if (isSecond) {
-      // 2차만 지정됨: 1차가 비었으면 같은 분위기를 1차로도, 아니면 2차 해제
-      if (first === null) first = key;
-      else second = null;
-    } else {
-      // 미선택: 빈 슬롯에 채우고, 둘 다 차있으면 밀어낸다
-      if (first === null) first = key;
-      else if (second === null) second = key;
-      else { first = second; second = key; }
+    const { first, second } = value[groupLabel] ?? { first: [], second: [] };
+    const inFirst = first.includes(key);
+    const inSecond = second.includes(key);
+
+    // 2차 코스가 없으면 1·2차를 나눌 이유가 없다 — 그냥 켜고 끈다
+    if (!hasSecond) {
+      if (inFirst) {
+        onChange({ ...value, [groupLabel]: { first: first.filter((k) => k !== key), second: [] } });
+        return;
+      }
+      if (first.length >= MAX_PER_COURSE) { showCap(groupLabel); return; }
+      onChange({ ...value, [groupLabel]: { first: [...first, key], second: [] } });
+      return;
     }
-    onChange({ ...value, [groupLabel]: { first, second } });
+
+    // 2차가 있으면 칩마다 독립적으로 미선택 → 1차 → 1·2차 → 해제. 다른 칩을 밀어내지 않는다.
+    if (!inFirst && !inSecond) {
+      if (first.length >= MAX_PER_COURSE) { showCap(groupLabel); return; }
+      onChange({ ...value, [groupLabel]: { first: [...first, key], second } });
+    } else if (inFirst && !inSecond) {
+      if (second.length >= MAX_PER_COURSE) { showCap(groupLabel); return; }
+      onChange({ ...value, [groupLabel]: { first, second: [...second, key] } });
+    } else {
+      onChange({
+        ...value,
+        [groupLabel]: { first: first.filter((k) => k !== key), second: second.filter((k) => k !== key) },
+      });
+    }
   }
 
 
@@ -176,7 +212,7 @@ export default function VibeSelect({ value, onChange, purpose, budget = null, on
         </div>
       )}
       {showMood && GROUPS.map((group, groupIdx) => {
-        const g = value[group.label] ?? { first: null, second: null };
+        const g = value[group.label] ?? { first: [], second: [] };
         return (
           <div key={group.label}>
             <div className="flex items-center justify-between mb-2">
@@ -197,8 +233,8 @@ export default function VibeSelect({ value, onChange, purpose, budget = null, on
             {/* 취향 칩 — 컴팩트 알약을 3열 그리드로 정렬(12칩=4×3 딱 맞아 정갈, 높이 40px로 가볍게). */}
             <div className="grid grid-cols-3 gap-2">
               {orderByPurpose(group.options, purpose).map((opt) => {
-                const isFirst = g.first === opt.key;
-                const isSecond = g.second === opt.key;
+                const isFirst = g.first.includes(opt.key);
+                const isSecond = g.second.includes(opt.key);
                 const isBoth = isFirst && isSecond;
                 return (
                   <button
@@ -227,6 +263,7 @@ export default function VibeSelect({ value, onChange, purpose, budget = null, on
                 );
               })}
             </div>
+            {capMsg && <p className="mt-1.5 text-[11px] font-bold text-orange-500">{capMsg}</p>}
           </div>
         );
       })}
