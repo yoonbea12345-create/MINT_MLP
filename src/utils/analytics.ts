@@ -14,7 +14,7 @@ type EventType = 'landing_view' | 'cta_click' | 'reservation_attempt' | 'session
   // 선택 신호(ground truth) — 노출된 후보 중 실제로 어떤 순위를 클릭했나
   | 'place_click_rank1' | 'place_click_second' | 'place_click_candidate' | 'place_click_third'
   // 결과 화면 품질 상호작용
-  | 'candidates_expand' | 'cert_badge_open' | 'local_hero_badge_open'
+  | 'candidates_expand' | 'cert_badge_open'
   // PWA 설치 결과(클릭≠설치)
   | 'pwa_install_accepted' | 'pwa_install_dismissed'
   // 입력 단계 이탈 퍼널 (step N → N+1 진행) & 지역검색 실패

@@ -12,7 +12,6 @@ import VisitCertModal from './VisitCertModal';
 import TreasurerPlanSheet from './TreasurerPlanSheet';
 import { getPlanFrame, planPriceLabel, isPreregistered } from '../utils/plan';
 import { getDeviceId } from '../utils/points';
-import LocalHeroBadge, { LocalHeroSheet } from './LocalHeroBadge';
 
 // 선택 신호(ground truth) — 노출된 후보 중 실제로 어떤 순위를 눌러 지도를 열었나.
 // recommend.ts가 이미 기록 중인 노출 순위(finalRank)와 대비하면 랭킹 튜닝 학습셋이 된다.
@@ -211,7 +210,6 @@ function FitScoreBar({ score, className = '' }: { score?: number; className?: st
 function PlaceCard({ place, extraResults = [], gradient, shadowColor, wishRank = 'first' }: CardProps) {
   const [moreVisible, setMoreVisible] = useState(false);
   const [openCertId, setOpenCertId] = useState<string | null>(null);
-  const [openLocalHero, setOpenLocalHero] = useState(false);
   const openStatus = parseOpenStatus(place.openingHours);
   const cong = congestionInfo(place.congestionLevel);
   const url = kakaoUrl(place);
@@ -269,12 +267,6 @@ function PlaceCard({ place, extraResults = [], gradient, shadowColor, wishRank =
             <WishlistButton place={place} rank={wishRank} source="result" tone="onDark" />
           </div>
         </div>
-
-        {/* 현지인 리워드 배지 — MOCK, src/data/localHero.ts 참고 */}
-        <LocalHeroBadge
-          place={place}
-          onOpen={() => { trackEvent('local_hero_badge_open', { placeName: place.placeName, address: place.address }); setOpenLocalHero(true); }}
-        />
 
         {/* 장소명 */}
         <h2 className="text-xl font-black leading-tight mb-1">{place.placeName}</h2>
@@ -379,7 +371,6 @@ function PlaceCard({ place, extraResults = [], gradient, shadowColor, wishRank =
       )}
     </div>
     {openCert && <CertSheet source={openCert} onClose={() => setOpenCertId(null)} />}
-    {openLocalHero && <LocalHeroSheet place={place} onClose={() => setOpenLocalHero(false)} />}
     </>
   );
 }
