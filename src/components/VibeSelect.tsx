@@ -22,6 +22,8 @@ export function migrateVibeState(raw: unknown): VibeState {
   return result;
 }
 
+// 서버 전송 라벨 매핑 — 그리드에서 내린 키(atm_hip 등)도 절대 지우지 않는다.
+// 옛 세션 복원값과 그룹 집계가 과거 멤버의 제출값을 그대로 읽어와 이 맵을 참조한다.
 export const VIBE_KEY_TO_LABEL: Record<string, string> = {
   atm_loud:     '시끌벅적',
   atm_quiet:    '조용하게',
@@ -49,22 +51,20 @@ export const VIBE_KEY_TO_LABEL: Record<string, string> = {
   pref_station: '역세권',
 };
 
+// 그리드는 14개만 노출한다. 뜻이 겹치던 힙한·로맨틱한·레트로·이국적인은
+// 지운 게 아니라 아래 RECOMMENDED_KEYWORDS로 내려, 탭 한 번으로 여전히 고를 수 있다.
 const GROUPS = [
   {
     label: '분위기',
     options: [
-      { key: 'atm_loud',     label: '시끌벅적', emoji: '🎵' },
-      { key: 'atm_quiet',    label: '조용하게',  emoji: '🌿' },
-      { key: 'atm_cozy',     label: '아늑한',    emoji: '🕯️' },
-      { key: 'atm_trendy',   label: '트렌디한',  emoji: '✨' },
-      { key: 'atm_mood',     label: '감성적인',  emoji: '🌸' },
-      { key: 'atm_hip',      label: '힙한',      emoji: '😎' },
-      { key: 'atm_romantic', label: '로맨틱한',  emoji: '💕' },
-      { key: 'atm_modern',   label: '모던한',    emoji: '🏙️' },
-      { key: 'atm_retro',    label: '레트로',    emoji: '📼' },
-      { key: 'atm_lively',   label: '활기찬',    emoji: '🎉' },
-      { key: 'atm_exotic',   label: '이국적인',  emoji: '🌴' },
-      { key: 'atm_clean',    label: '깔끔한',    emoji: '🤍' },
+      { key: 'atm_loud',   label: '시끌벅적', emoji: '🎵' },
+      { key: 'atm_quiet',  label: '조용하게', emoji: '🌿' },
+      { key: 'atm_cozy',   label: '아늑한',   emoji: '🕯️' },
+      { key: 'atm_trendy', label: '트렌디한', emoji: '✨' },
+      { key: 'atm_mood',   label: '감성적인', emoji: '🌸' },
+      { key: 'atm_modern', label: '모던한',   emoji: '🏙️' },
+      { key: 'atm_lively', label: '활기찬',   emoji: '🎉' },
+      { key: 'atm_clean',  label: '깔끔한',   emoji: '🤍' },
     ],
   },
   {
@@ -76,34 +76,97 @@ const GROUPS = [
       { key: 'pref_insta',    label: '인스타감성',  emoji: '📸' },
       { key: 'pref_spacious', label: '넓은 공간',   emoji: '🏠' },
       { key: 'pref_quick',    label: '웨이팅 없음', emoji: '⚡' },
-      { key: 'pref_parking',  label: '주차 가능',   emoji: '🚗' },
-      { key: 'pref_room',     label: '룸 있는 곳',  emoji: '🚪' },
-      { key: 'pref_reserve',  label: '예약 가능',   emoji: '📅' },
-      { key: 'pref_late',     label: '늦게까지',    emoji: '🌙' },
-      { key: 'pref_pet',      label: '반려동물',    emoji: '🐶' },
-      { key: 'pref_station',  label: '역세권',      emoji: '🚇' },
     ],
   },
 ];
 
+// '취향'에서 떼어낸 시설형 조건 — 주차 가능을 '2차 분위기'로 고른다는 건 말이 안 된다.
+// 코스 구분 없는 전역 필터라 별도 체크리스트로 접어둔다.
+const CONDITION_OPTIONS = [
+  { key: 'pref_parking', label: '주차 가능',  emoji: '🚗' },
+  { key: 'pref_room',    label: '룸 있는 곳', emoji: '🚪' },
+  { key: 'pref_reserve', label: '예약 가능',  emoji: '📅' },
+  { key: 'pref_late',    label: '늦게까지',   emoji: '🌙' },
+  { key: 'pref_pet',     label: '반려동물',   emoji: '🐶' },
+  { key: 'pref_station', label: '역세권',     emoji: '🚇' },
+];
+
 // 목적(코스)별로 관련 칩을 앞으로 정렬 — "AI가 선택지까지 준비해준다"는 체감. 선택 자체는 자유(단순 노출 순서).
 const PURPOSE_CHIP_BOOST: Record<string, string[]> = {
-  '밥':   ['pref_known', 'pref_room', 'atm_clean', 'pref_parking', 'pref_reserve'],
-  '술':   ['atm_loud', 'atm_lively', 'pref_late', 'atm_hip', 'pref_station'],
-  '카페': ['atm_cozy', 'atm_mood', 'pref_view', 'pref_insta', 'atm_clean'],
+  '밥':   ['pref_known', 'atm_clean'],
+  '술':   ['atm_loud', 'atm_lively'],
+  '카페': ['atm_cozy', 'atm_mood', 'pref_view', 'pref_insta'],
 };
-function orderByPurpose<T extends { key: string }>(options: T[], purpose?: { first: string | null; second?: string | null }): T[] {
+
+// 조건 체크리스트는 값 도메인이 달라 부스트 맵을 따로 둔다 — 합치면 조용히 정렬이 사라진다.
+const CONDITION_PURPOSE_BOOST: Record<string, string[]> = {
+  '밥':   ['pref_room', 'pref_parking', 'pref_reserve'],
+  '술':   ['pref_late', 'pref_station'],
+  '카페': ['pref_reserve'],
+};
+
+type PurposeCtx = { first: string | null; second?: string | null };
+
+function orderByBoost<T extends { key: string }>(options: T[], purpose: PurposeCtx | undefined, boostMap: Record<string, string[]>): T[] {
   const courses = [purpose?.first, purpose?.second].filter((c): c is string => !!c);
-  const boost = new Set(courses.flatMap((c) => PURPOSE_CHIP_BOOST[c] ?? []));
+  const boost = new Set(courses.flatMap((c) => boostMap[c] ?? []));
   if (boost.size === 0) return options;
   // 안정 정렬 — 부스트된 칩만 앞으로, 그 외는 원래 순서 유지
   return [...options].sort((a, b) => (boost.has(b.key) ? 1 : 0) - (boost.has(a.key) ? 1 : 0));
 }
+const orderByPurpose = <T extends { key: string }>(options: T[], purpose?: PurposeCtx) =>
+  orderByBoost(options, purpose, PURPOSE_CHIP_BOOST);
+const orderConditionsByPurpose = <T extends { key: string }>(options: T[], purpose?: PurposeCtx) =>
+  orderByBoost(options, purpose, CONDITION_PURPOSE_BOOST);
 
-// 값은 서버(recommend.ts)·집계(groupAggregate BUDGET_ORDER)와 반드시 일치시켜야 검색 프리픽스/예산 반영이 작동한다
+interface VibePreset {
+  id: string;
+  emoji: string;
+  title: string;
+  desc: string;
+  mood: string[];       // '분위기' — 지금 보고 있는 코스에 채운다
+  pref: string[];       // '취향' — 상동
+  conditions: string[]; // 조건 — 코스 구분이 없어 항상 함께 적용된다
+}
+
+// 그리드에서 내린 칩은 절대 참조하지 않는다 — 선택은 됐는데 화면에 없어서 해제 못 하는 칩이 생긴다.
+const VIBE_PRESETS: VibePreset[] = [
+  { id: 'cozy_quiet',    emoji: '🕯️', title: '조용하고 아늑하게',    desc: '차분히 대화하기 좋은 곳',
+    mood: ['atm_quiet', 'atm_cozy'],    pref: ['pref_known', 'pref_spacious'], conditions: ['pref_reserve'] },
+  { id: 'lively_party',  emoji: '🎉', title: '신나게 왁자지껄',      desc: '텐션 올리는 활기찬 자리',
+    mood: ['atm_loud', 'atm_lively'],   pref: ['pref_new'],                    conditions: ['pref_late', 'pref_room'] },
+  { id: 'trendy_hip',    emoji: '✨', title: '요즘 뜨는 트렌디한 곳', desc: '감각적이고 힙한 분위기',
+    mood: ['atm_trendy'],               pref: ['pref_insta', 'pref_new'],      conditions: ['pref_station'] },
+  { id: 'romantic_mood', emoji: '💕', title: '분위기 있는 데이트',    desc: '로맨틱하고 감성적인 순간',
+    mood: ['atm_mood'],                 pref: ['pref_view'],                   conditions: ['pref_reserve'] },
+  { id: 'clean_modern',  emoji: '🏙️', title: '깔끔하고 모던하게',    desc: '깨끗하고 세련된, 무난히 좋은 곳',
+    mood: ['atm_modern', 'atm_clean'],  pref: ['pref_known'],                  conditions: ['pref_parking'] },
+  { id: 'easy_casual',   emoji: '⚡', title: '가볍고 편하게',        desc: '웨이팅 없이 부담 없는 자리',
+    mood: ['atm_quiet', 'atm_clean'],   pref: ['pref_quick'],                  conditions: ['pref_parking', 'pref_pet'] },
+];
+
+// 그리드에서 내린 분위기 4개 + 예시 문구로만 떠돌던 해시태그들을 "탭하면 태그"로 승격.
+// 모바일에서 키보드가 최대 마찰이라, 타이핑을 탭으로 바꾸는 게 목적이다.
+// vibe key 체계와 무관하다 — 라벨 문자열이 그대로 keywords에 들어간다(직접 친 것과 같은 취급).
+const RECOMMENDED_KEYWORDS = ['힙한', '로맨틱한', '레트로', '이국적인', '노포', '오마카세', '콜키지', '창가자리', '루프탑'];
+
+const KEYWORD_CHIP_BOOST: Record<string, string[]> = {
+  '밥':   ['노포', '오마카세', '창가자리'],
+  '술':   ['루프탑', '콜키지', '힙한', '레트로'],
+  '카페': ['루프탑', '창가자리', '이국적인'],
+};
+
+function orderKeywordsByPurpose(labels: string[], purpose?: PurposeCtx): string[] {
+  const courses = [purpose?.first, purpose?.second].filter((c): c is string => !!c);
+  const boost = new Set(courses.flatMap((c) => KEYWORD_CHIP_BOOST[c] ?? []));
+  if (boost.size === 0) return labels;
+  return [...labels].sort((a, b) => (boost.has(b) ? 1 : 0) - (boost.has(a) ? 1 : 0));
+}
+
 // 코스당 소프트 상한 — 무제한이면 AI 프롬프트에 넘길 라벨이 산만해진다
 const MAX_PER_COURSE = 6;
 
+// 값은 서버(recommend.ts)·집계(groupAggregate BUDGET_ORDER)와 반드시 일치시켜야 검색 프리픽스/예산 반영이 작동한다
 const BUDGET_OPTIONS = [
   { value: '~2만원',  label: '~2만원',  emoji: '💵', sub: '가성비' },
   { value: '2~4만원', label: '2~4만원', emoji: '🍽️', sub: '적당히' },
@@ -113,28 +176,46 @@ const BUDGET_OPTIONS = [
 interface Props {
   value: VibeState;
   onChange: (v: VibeState) => void;
-  purpose?: { first: string | null; second?: string | null };
+  purpose?: PurposeCtx;
   budget?: string | null;
   onBudgetChange?: (b: string | null) => void;
-  keywords?: string[];              // 1차 키워드
+  keywords?: string[];              // 통합 키워드 — 1차/2차 분리 폐지
   onKeywordsChange?: (k: string[]) => void;
-  keywordsSecond?: string[];        // 2차 키워드 (2차 코스가 있을 때만)
-  onKeywordsSecondChange?: (k: string[]) => void;
-  vibeCustom?: Record<string, string>;
-  onVibeCustomChange?: (label: string, text: string) => void;
+  conditions?: string[];            // 시설형 조건(코스 무관 전역)
+  onConditionsChange?: (c: string[]) => void;
   excludeFoods?: string[];
   onExcludeFoodsChange?: (f: string[]) => void;
-  // 'all'(기본)=전체 한 화면 / 'mood'=분위기·취향 카드만 / 'extras'=못먹는음식·편의시설만
+  // 'all'(기본)=전체 한 화면 / 'mood'=프리셋·분위기·취향·조건만 / 'extras'=예산·키워드·못먹는음식만
   // 그룹 참여(MemberInput)에서 취향을 2개 스텝으로 나눠 4단계로 맞추기 위한 스위치
   section?: 'all' | 'mood' | 'extras';
 }
 
-export default function VibeSelect({ value, onChange, purpose, budget = null, onBudgetChange, keywords = [], onKeywordsChange, keywordsSecond = [], onKeywordsSecondChange, excludeFoods = [], onExcludeFoodsChange, section = 'all' }: Props) {
+export default function VibeSelect({
+  value, onChange, purpose,
+  budget = null, onBudgetChange,
+  keywords = [], onKeywordsChange,
+  conditions = [], onConditionsChange,
+  excludeFoods = [], onExcludeFoodsChange,
+  section = 'all',
+}: Props) {
   const showMood = section === 'all' || section === 'mood';
   const showExtras = section === 'all' || section === 'extras';
+  const hasSecond = !!(purpose?.second && purpose.second !== '없음');
+
   const [excludeInput, setExcludeInput] = useState('');
+  const [activePreset, setActivePreset] = useState<string | null>(null);
+  const [manualOpen, setManualOpen] = useState(() => {
+    const hasAny = (g?: GroupVibeState) => !!g && (g.first.length > 0 || g.second.length > 0);
+    return hasAny(value['분위기']) || hasAny(value['취향']);
+  });
+  const [conditionsOpen, setConditionsOpen] = useState(() => conditions.length > 0);
+  const [courseTab, setCourseTab] = useState<'first' | 'second'>('first');
   const [capMsg, setCapMsg] = useState<string | null>(null);
-  const capTimerRef = useRef<number | null>(null);
+  const capTimerRef = useRef<number | undefined>(undefined);
+
+  // 2차 코스가 사라지면 탭 상태와 무관하게 1차로 본다. effect로 되돌리면 한 렌더 동안
+  // 보이지도 않는 2차 슬롯에 선택이 쌓일 수 있어, 상태를 맞추지 않고 파생시킨다.
+  const activeCourse: 'first' | 'second' = hasSecond ? courseTab : 'first';
 
   function removeExcludeFood(label: string) {
     if (!onExcludeFoodsChange) return;
@@ -154,6 +235,10 @@ export default function VibeSelect({ value, onChange, purpose, budget = null, on
     setExcludeInput('');
   }
 
+  function setCourseArray(g: GroupVibeState, course: 'first' | 'second', next: string[]): GroupVibeState {
+    return course === 'first' ? { ...g, first: next } : { ...g, second: next };
+  }
+
   // 상한을 넘겨 누르면 짧게 알려준다 — 조용히 씹히면 사용자는 앱이 고장난 줄 안다
   function showCap(groupLabel: string) {
     setCapMsg(`${groupLabel}는 한 코스에 최대 ${MAX_PER_COURSE}개까지 고를 수 있어요`);
@@ -161,112 +246,199 @@ export default function VibeSelect({ value, onChange, purpose, budget = null, on
     capTimerRef.current = window.setTimeout(() => setCapMsg(null), 1800);
   }
 
+  // 어느 코스를 편집 중인지는 세그먼트가 정한다 — 칩은 단순히 켜고 끈다.
   function toggle(groupLabel: string, key: string) {
-    const { first, second } = value[groupLabel] ?? { first: [], second: [] };
-    const inFirst = first.includes(key);
-    const inSecond = second.includes(key);
-
-    // 2차 코스가 없으면 1·2차를 나눌 이유가 없다 — 그냥 켜고 끈다
-    if (!hasSecond) {
-      if (inFirst) {
-        onChange({ ...value, [groupLabel]: { first: first.filter((k) => k !== key), second: [] } });
-        return;
-      }
-      if (first.length >= MAX_PER_COURSE) { showCap(groupLabel); return; }
-      onChange({ ...value, [groupLabel]: { first: [...first, key], second: [] } });
+    setActivePreset(null); // 수동으로 손대면 프리셋 하이라이트만 푼다(칩 선택은 유지)
+    const g = value[groupLabel] ?? { first: [], second: [] };
+    const arr = g[activeCourse];
+    if (arr.includes(key)) {
+      onChange({ ...value, [groupLabel]: setCourseArray(g, activeCourse, arr.filter((k) => k !== key)) });
       return;
     }
-
-    // 2차가 있으면 칩마다 독립적으로 미선택 → 1차 → 1·2차 → 해제. 다른 칩을 밀어내지 않는다.
-    if (!inFirst && !inSecond) {
-      if (first.length >= MAX_PER_COURSE) { showCap(groupLabel); return; }
-      onChange({ ...value, [groupLabel]: { first: [...first, key], second } });
-    } else if (inFirst && !inSecond) {
-      if (second.length >= MAX_PER_COURSE) { showCap(groupLabel); return; }
-      onChange({ ...value, [groupLabel]: { first, second: [...second, key] } });
-    } else {
-      onChange({
-        ...value,
-        [groupLabel]: { first: first.filter((k) => k !== key), second: second.filter((k) => k !== key) },
-      });
-    }
+    if (arr.length >= MAX_PER_COURSE) { showCap(groupLabel); return; }
+    onChange({ ...value, [groupLabel]: setCourseArray(g, activeCourse, [...arr, key]) });
   }
 
+  // 조건은 코스 구분 없는 전역 다중선택 — 풀이 6개뿐이라 상한을 두지 않는다
+  function toggleCondition(key: string) {
+    if (!onConditionsChange) return;
+    setActivePreset(null);
+    onConditionsChange(conditions.includes(key) ? conditions.filter((k) => k !== key) : [...conditions, key]);
+  }
 
-  const hasSecond = purpose?.second && purpose.second !== '없음';
+  function applyPreset(preset: VibePreset) {
+    const moodG = value['분위기'] ?? { first: [], second: [] };
+    const prefG = value['취향'] ?? { first: [], second: [] };
+    if (activePreset === preset.id) {
+      // 같은 프리셋 재탭 = 해제. 여기 도달했다는 건 아직 수동으로 안 건드렸다는 뜻이라 비워도 안전하다.
+      onChange({
+        ...value,
+        분위기: setCourseArray(moodG, activeCourse, []),
+        취향: setCourseArray(prefG, activeCourse, []),
+      });
+      onConditionsChange?.([]);
+      setActivePreset(null);
+      return;
+    }
+    // 프리셋끼리는 합치지 않고 갈아치운다 — 조용하게+시끌벅적 같은 모순 조합을 막는다
+    onChange({
+      ...value,
+      분위기: setCourseArray(moodG, activeCourse, [...preset.mood]),
+      취향: setCourseArray(prefG, activeCourse, [...preset.pref]),
+    });
+    onConditionsChange?.([...preset.conditions]);
+    setActivePreset(preset.id);
+    setManualOpen(true);
+    if (preset.conditions.length > 0) setConditionsOpen(true);
+  }
 
   // 편식 필터는 음식이 나오는 모임에서만 — 카페만 가는 모임에선 숨김
   const isFoodPurpose = (p?: string | null) => !!p && p !== '없음' && p !== '카페';
   const showExcludeFoods =
     !!onExcludeFoodsChange && (!purpose?.first || isFoodPurpose(purpose.first) || isFoodPurpose(purpose.second));
 
+  const otherCourse: 'first' | 'second' = activeCourse === 'first' ? 'second' : 'first';
+
   return (
     <div className="px-4 pt-3 pb-6 flex flex-col gap-5">
-      {/* 1차/2차 토글 안내 — 처음 쓰는 사람이 배지 의미를 알 수 있게 */}
-      {showMood && hasSecond && (
-        <div className="bg-[#E8F8F5] border border-[#3CDBC0]/30 rounded-xl px-3 py-2 flex items-center gap-2">
-          <span className="text-base">💡</span>
-          <p className="text-[11px] text-[#2AB5A0] leading-snug">
-            탭할 때마다 <span className="font-black">1차 → 1·2차 → 해제</span> · 1차·2차에 <span className="font-black">같은 분위기</span>도 돼요
-          </p>
-        </div>
-      )}
-      {showMood && GROUPS.map((group, groupIdx) => {
-        const g = value[group.label] ?? { first: [], second: [] };
-        return (
-          <div key={group.label}>
-            <div className="flex items-center justify-between mb-2">
-              <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest">{group.label}</p>
-              {groupIdx === 0 && (
-                <div className="flex items-center gap-1.5">
-                  <span className="text-[10px] font-black bg-[#1E9E8C] text-white px-2 py-0.5 rounded-full">
-                    🍀 {purpose?.first ? `1차: ${purpose.first}` : '1차'}
+      {showMood && (
+        <div>
+          <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-2">✨ 무드 프리셋</p>
+          <div className="grid grid-cols-2 gap-2.5 mb-3">
+            {VIBE_PRESETS.map((preset) => {
+              const on = activePreset === preset.id;
+              return (
+                <button
+                  key={preset.id}
+                  onClick={() => applyPreset(preset)}
+                  aria-pressed={on}
+                  className={`flex flex-col items-start gap-0.5 rounded-2xl border-2 p-3 text-left transition-all duration-200 active:scale-[0.97] ${
+                    on ? 'border-[#3CDBC0] bg-[#E8F8F5] shadow-sm shadow-[#3CDBC0]/20' : 'border-gray-200 bg-white hover:border-[#3CDBC0]/50'
+                  }`}
+                >
+                  <span className="flex items-center gap-1.5">
+                    <span className="text-base leading-none">{preset.emoji}</span>
+                    <span className={`text-sm font-black break-keep ${on ? 'text-[#2AB5A0]' : 'text-gray-800'}`}>{preset.title}</span>
                   </span>
-                  {hasSecond && (
-                    <span className="text-[10px] font-black bg-orange-400 text-white px-2 py-0.5 rounded-full">
-                      🔥 2차: {purpose!.second}
-                    </span>
+                  <span className={`text-[11px] leading-snug break-keep ${on ? 'text-[#2AB5A0]/70' : 'text-gray-400'}`}>{preset.desc}</span>
+                </button>
+              );
+            })}
+          </div>
+
+          <button
+            onClick={() => setManualOpen((o) => !o)}
+            className="w-full flex items-center justify-center gap-1.5 py-2.5 text-xs font-bold text-gray-400 hover:text-[#2AB5A0] transition-colors"
+          >
+            <span>{manualOpen ? '접기' : '직접 골라볼까요?'}</span>
+            <span className={`inline-block transition-transform duration-200 ${manualOpen ? 'rotate-180' : ''}`}>▾</span>
+          </button>
+
+          {manualOpen && (
+            <div className="flex flex-col gap-5 mt-3">
+              {/* 1차/2차를 칩에서 떼어내 세그먼트로 — 칩 하나가 4상태였을 땐 배너로 설명해야 했다 */}
+              {hasSecond && (
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    onClick={() => setCourseTab('first')}
+                    aria-pressed={activeCourse === 'first'}
+                    className={`h-10 rounded-xl text-xs font-black transition-all active:scale-[0.97] ${
+                      activeCourse === 'first' ? 'bg-[#1E9E8C] text-white shadow-sm' : 'bg-white border-2 border-gray-200 text-gray-500'
+                    }`}
+                  >
+                    🍀 1차{purpose?.first ? ` · ${purpose.first}` : ''}
+                  </button>
+                  <button
+                    onClick={() => setCourseTab('second')}
+                    aria-pressed={activeCourse === 'second'}
+                    className={`h-10 rounded-xl text-xs font-black transition-all active:scale-[0.97] ${
+                      activeCourse === 'second' ? 'bg-orange-400 text-white shadow-sm' : 'bg-white border-2 border-gray-200 text-gray-500'
+                    }`}
+                  >
+                    🔥 2차{purpose?.second ? ` · ${purpose.second}` : ''}
+                  </button>
+                </div>
+              )}
+
+              {GROUPS.map((group) => {
+                const g = value[group.label] ?? { first: [], second: [] };
+                return (
+                  <div key={group.label}>
+                    <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-2">{group.label}</p>
+                    <div className="grid grid-cols-3 gap-2">
+                      {orderByPurpose(group.options, purpose).map((opt) => {
+                        const inActive = g[activeCourse].includes(opt.key);
+                        const inOther = hasSecond && g[otherCourse].includes(opt.key);
+                        return (
+                          <button
+                            key={opt.key}
+                            onClick={() => toggle(group.label, opt.key)}
+                            aria-pressed={inActive}
+                            aria-label={`${opt.label}${inActive ? ' (선택됨)' : ''}${inOther ? (otherCourse === 'first' ? ' (1차에도 선택됨)' : ' (2차에도 선택됨)') : ''}`}
+                            className={`relative flex h-10 items-center justify-center gap-1 rounded-full border-2 px-1 text-xs font-bold whitespace-nowrap transition-all duration-200 active:scale-95 ${
+                              inActive
+                                ? activeCourse === 'first'
+                                  ? 'border-[#3CDBC0] bg-[#E8F8F5] text-[#2AB5A0] shadow-sm shadow-[#3CDBC0]/20'
+                                  : 'border-orange-400 bg-orange-50 text-orange-500 shadow-sm shadow-orange-200/50'
+                                : 'border-gray-200 bg-white text-gray-700 hover:border-[#3CDBC0]/50'
+                            }`}
+                          >
+                            {/* 다른 코스에 이미 골라둔 칩 — 탭을 옮기지 않아도 보이게 */}
+                            {inOther && (
+                              <span className={`absolute -top-1 -right-1 h-2.5 w-2.5 rounded-full ring-2 ring-white ${
+                                activeCourse === 'first' ? 'bg-orange-400' : 'bg-[#3CDBC0]'
+                              }`} />
+                            )}
+                            <span className="text-sm leading-none">{opt.emoji}</span>
+                            <span>{opt.label}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                    {capMsg?.startsWith(group.label) && (
+                      <p className="text-[11px] text-orange-500 font-bold mt-1.5">{capMsg}</p>
+                    )}
+                  </div>
+                );
+              })}
+
+              {onConditionsChange && (
+                <div>
+                  <button
+                    onClick={() => setConditionsOpen((o) => !o)}
+                    className="w-full flex items-center justify-between py-1 text-xs font-bold text-gray-400 hover:text-[#2AB5A0] transition-colors"
+                  >
+                    <span>조건 추가{conditions.length > 0 ? ` (${conditions.length})` : ''}</span>
+                    <span className={`inline-block transition-transform duration-200 ${conditionsOpen ? 'rotate-180' : ''}`}>▾</span>
+                  </button>
+                  {conditionsOpen && (
+                    <div className="grid grid-cols-3 gap-2 mt-2">
+                      {orderConditionsByPurpose(CONDITION_OPTIONS, purpose).map((opt) => {
+                        const active = conditions.includes(opt.key);
+                        return (
+                          <button
+                            key={opt.key}
+                            onClick={() => toggleCondition(opt.key)}
+                            aria-pressed={active}
+                            className={`flex h-10 items-center justify-center gap-1 rounded-full border-2 px-1 text-xs font-bold whitespace-nowrap transition-all duration-200 active:scale-95 ${
+                              active
+                                ? 'border-[#3CDBC0] bg-[#E8F8F5] text-[#2AB5A0] shadow-sm shadow-[#3CDBC0]/20'
+                                : 'border-gray-200 bg-white text-gray-700 hover:border-[#3CDBC0]/50'
+                            }`}
+                          >
+                            <span className="text-sm leading-none">{opt.emoji}</span>
+                            <span>{opt.label}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
                   )}
                 </div>
               )}
             </div>
-            {/* 취향 칩 — 컴팩트 알약을 3열 그리드로 정렬(12칩=4×3 딱 맞아 정갈, 높이 40px로 가볍게). */}
-            <div className="grid grid-cols-3 gap-2">
-              {orderByPurpose(group.options, purpose).map((opt) => {
-                const isFirst = g.first.includes(opt.key);
-                const isSecond = g.second.includes(opt.key);
-                const isBoth = isFirst && isSecond;
-                return (
-                  <button
-                    key={opt.key}
-                    onClick={() => toggle(group.label, opt.key)}
-                    aria-pressed={isFirst || isSecond}
-                    aria-label={`${opt.label}${isBoth ? ' (1·2차 선택됨)' : isFirst ? ' (1차 선택됨)' : isSecond ? ' (2차 선택됨)' : ''}`}
-                    className={`relative flex h-10 items-center justify-center gap-1 rounded-full border-2 px-1 text-xs font-bold whitespace-nowrap transition-all duration-200 active:scale-95 ${
-                      isFirst
-                        ? 'border-[#3CDBC0] bg-[#E8F8F5] text-[#2AB5A0] shadow-sm shadow-[#3CDBC0]/20'
-                        : isSecond
-                        ? 'border-orange-400 bg-orange-50 text-orange-500 shadow-sm shadow-orange-200/50'
-                        : 'border-gray-200 bg-white text-gray-700 hover:border-[#3CDBC0]/50'
-                    }`}
-                  >
-                    {isBoth ? (
-                      <span className="absolute -top-1.5 -right-1.5 text-[9px] font-black bg-gradient-to-r from-[#1E9E8C] to-orange-400 text-white px-1.5 py-0.5 rounded-full leading-none z-10 shadow-sm">1·2차</span>
-                    ) : isFirst ? (
-                      <span className="absolute -top-1.5 -right-1.5 text-[9px] font-black bg-[#1E9E8C] text-white px-1.5 py-0.5 rounded-full leading-none z-10 shadow-sm">1차</span>
-                    ) : isSecond ? (
-                      <span className="absolute -top-1.5 -right-1.5 text-[9px] font-black bg-orange-400 text-white px-1.5 py-0.5 rounded-full leading-none z-10 shadow-sm">2차</span>
-                    ) : null}
-                    <span className="text-sm leading-none">{opt.emoji}</span>
-                    <span>{opt.label}</span>
-                  </button>
-                );
-              })}
-            </div>
-            {capMsg && <p className="mt-1.5 text-[11px] font-bold text-orange-500">{capMsg}</p>}
-          </div>
-        );
-      })}
+          )}
+        </div>
+      )}
 
       {/* 예산 — 1인 기준. 서버가 검색 키워드에 '가성비/고급' 프리픽스 + AI 예산 제약으로 반영 */}
       {showExtras && onBudgetChange && (
@@ -299,32 +471,33 @@ export default function VibeSelect({ value, onChange, purpose, budget = null, on
         </div>
       )}
 
-      {/* 키워드 — 자유 입력 강조 섹션. 2차 코스가 있으면 1차·2차로 나눠 입력 */}
+      {/* 키워드 — 추천 칩을 앞에 둬서 타이핑 없이 끝낼 수 있게. 자유 입력은 탈출구로 아래에 남긴다 */}
       {showExtras && onKeywordsChange && (
         <div className="rounded-2xl border border-gray-200 bg-gray-50/60 p-4">
-          <p className="text-sm font-bold text-gray-700 mb-1 break-keep">🔎 칩에 없는 조건은 직접 추가</p>
-          <p className="text-xs text-gray-500 mb-3 leading-relaxed break-keep">
-            위 칩으로 부족하면 세부 조건을 자유롭게<br />
-            ex.) #노포 #오마카세 #콜키지 #창가자리 #루프탑
-          </p>
+          <p className="text-sm font-bold text-gray-700 mb-1 break-keep">🔎 더 필요한 조건 추가</p>
+          <p className="text-xs text-gray-500 mb-3 leading-relaxed break-keep">추천 칩을 탭하거나, 없으면 직접 입력하세요</p>
+          <div className="flex flex-wrap gap-1.5 mb-3">
+            {orderKeywordsByPurpose(RECOMMENDED_KEYWORDS, purpose).map((kw) => {
+              const active = keywords.includes(kw);
+              return (
+                <button
+                  key={kw}
+                  onClick={() => onKeywordsChange(active ? keywords.filter((k) => k !== kw) : [...keywords, kw])}
+                  aria-pressed={active}
+                  className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all active:scale-95 border ${
+                    active ? 'bg-[#E8F8F5] border-[#3CDBC0] text-[#2AB5A0]' : 'bg-white border-gray-200 text-gray-600 hover:border-[#3CDBC0]/50'
+                  }`}
+                >
+                  {active ? '✓ ' : '+ '}{kw}
+                </button>
+              );
+            })}
+          </div>
           <KeywordTagInput
-            badge={hasSecond ? `1차${purpose?.first ? ` · ${purpose.first}` : ''}` : undefined}
-            color="mint"
             keywords={keywords}
             onChange={onKeywordsChange}
             placeholder="키워드 입력 후 Enter (여러 개)"
           />
-          {hasSecond && onKeywordsSecondChange && (
-            <div className="mt-3">
-              <KeywordTagInput
-                badge={`2차${purpose?.second ? ` · ${purpose.second}` : ''}`}
-                color="orange"
-                keywords={keywordsSecond}
-                onChange={onKeywordsSecondChange}
-                placeholder="2차 키워드 입력 후 Enter"
-              />
-            </div>
-          )}
         </div>
       )}
 
@@ -382,22 +555,17 @@ export default function VibeSelect({ value, onChange, purpose, budget = null, on
   );
 }
 
-// 키워드 태그 입력 — Enter/완료로 #태그 커밋, 여러 개. 코스별(1차 민트 / 2차 오렌지)로 재사용.
+// 키워드 태그 입력 — Enter/완료로 #태그 커밋, 여러 개. 1차/2차 분리가 사라져 색상 분기도 없앴다.
 function KeywordTagInput({
-  badge,
-  color,
   keywords,
   onChange,
   placeholder,
 }: {
-  badge?: string;
-  color: 'mint' | 'orange';
   keywords: string[];
   onChange: (k: string[]) => void;
   placeholder: string;
 }) {
   const [text, setText] = useState('');
-  const isMint = color === 'mint';
 
   function commit() {
     const t = text.trim().slice(0, 20);
@@ -409,11 +577,6 @@ function KeywordTagInput({
 
   return (
     <div>
-      {badge && (
-        <span className={`inline-block text-[10px] font-black px-2 py-0.5 rounded-full mb-1.5 ${
-          isMint ? 'bg-[#1E9E8C] text-white' : 'bg-orange-400 text-white'
-        }`}>{badge}</span>
-      )}
       <div className="flex gap-2">
         <input
           type="text"
@@ -423,15 +586,11 @@ function KeywordTagInput({
           onBlur={commit}
           placeholder={placeholder}
           maxLength={20}
-          className={`flex-1 min-w-0 border-2 rounded-xl px-4 py-2.5 text-sm text-gray-700 placeholder-gray-400 focus:outline-none bg-white transition-colors ${
-            isMint ? 'border-[#3CDBC0]/50 focus:border-[#3CDBC0]' : 'border-orange-300 focus:border-orange-400'
-          }`}
+          className="flex-1 min-w-0 border-2 rounded-xl px-4 py-2.5 text-sm text-gray-700 placeholder-gray-400 focus:outline-none bg-white transition-colors border-[#3CDBC0]/50 focus:border-[#3CDBC0]"
         />
         <button
           onClick={commit}
-          className={`flex-shrink-0 px-4 rounded-xl text-white text-sm font-bold transition-all active:scale-95 ${
-            isMint ? 'bg-[#3CDBC0] hover:bg-[#2AB5A0]' : 'bg-orange-400 hover:bg-orange-500'
-          }`}
+          className="flex-shrink-0 px-4 rounded-xl text-white text-sm font-bold transition-all active:scale-95 bg-[#3CDBC0] hover:bg-[#2AB5A0]"
         >
           추가
         </button>
@@ -442,9 +601,7 @@ function KeywordTagInput({
             <button
               key={k}
               onClick={() => onChange(keywords.filter((x) => x !== k))}
-              className={`flex items-center gap-1 px-3 py-1.5 rounded-full bg-white border text-xs font-bold transition-all active:scale-95 ${
-                isMint ? 'border-[#3CDBC0]/50 text-[#2AB5A0]' : 'border-orange-300 text-orange-500'
-              }`}
+              className="flex items-center gap-1 px-3 py-1.5 rounded-full bg-white border text-xs font-bold transition-all active:scale-95 border-[#3CDBC0]/50 text-[#2AB5A0]"
             >
               <span>#{k}</span>
               <span className="opacity-60">×</span>

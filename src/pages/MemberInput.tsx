@@ -5,7 +5,9 @@ import type { KakaoPlace } from '../services/kakaoMap';
 import VibeSelect, { VIBE_KEY_TO_LABEL } from '../components/VibeSelect';
 import type { VibeState } from '../components/VibeSelect';
 import StepProgress from '../components/StepProgress';
-import { EXCLUDE_FOOD_PREFIX, SECOND_KEYWORD_PREFIX, SECOND_VIBE_PREFIX } from '../utils/groupAggregate';
+// SECOND_KEYWORD_PREFIX는 더 이상 생성하지 않는다(1차/2차 키워드 입력 통합).
+// 파싱 쪽(groupAggregate)은 그대로 둔다 — 배포 시점에 구버전 링크로 제출 중인 게스트가 있을 수 있다.
+import { EXCLUDE_FOOD_PREFIX, SECOND_VIBE_PREFIX } from '../utils/groupAggregate';
 import { decodeHostContext } from '../utils/groupLink';
 import type { HostContext } from '../utils/groupLink';
 import { trackEvent } from '../utils/analytics';
@@ -104,7 +106,7 @@ export default function MemberInput() {
   const [vibe, setVibe] = useState<VibeState>({});
   const [budget, setBudget] = useState<string | null>(null);
   const [keywords, setKeywords] = useState<string[]>([]);
-  const [keywordsSecond, setKeywordsSecond] = useState<string[]>([]);
+  const [conditions, setConditions] = useState<string[]>([]);
   const [excludeFoods, setExcludeFoods] = useState<string[]>([]);
 
   // 참석 확정(가요/못가요) — 링크에 실려온 마감시각(rsvp_by) 기준 카운트다운·마감 판정
@@ -208,8 +210,8 @@ export default function MemberInput() {
       const allFirstKeys = Object.values(vibe).flatMap((g) => g.first);
       const secondVibeKeys = Object.values(vibe).flatMap((g) => g.second);
       const primaryAtm = vibe['분위기']?.first[0] ?? allFirstKeys[0] ?? null;
-      const extraVibeLabels = allFirstKeys
-        .filter((k) => k !== primaryAtm)
+      // 조건도 여기 실어 보낸다 — 코스 구분이 없어 2차 접두사를 붙이지 않는다
+      const extraVibeLabels = [...allFirstKeys.filter((k) => k !== primaryAtm), ...conditions]
         .map((k) => VIBE_KEY_TO_LABEL[k] ?? k);
 
       const res = await fetch('/api/session-join', {
@@ -233,7 +235,6 @@ export default function MemberInput() {
               ...extraVibeLabels,
               ...secondVibeKeys.map((k) => `${SECOND_VIBE_PREFIX}${k}`),
               ...keywords,
-              ...keywordsSecond.map((k) => `${SECOND_KEYWORD_PREFIX}${k}`),
               ...excludeFoods.map((f) => `${EXCLUDE_FOOD_PREFIX}${f}`),
             ];
             return all.length > 0 ? Array.from(new Set(all)) : null;
@@ -274,9 +275,10 @@ export default function MemberInput() {
   }
 
   // 내가 고른 취향 요약 (완료 화면용)
-  const myVibeLabels = Object.values(vibe)
-    .flatMap((g) => [...g.first, ...g.second])
-    .map((k) => VIBE_KEY_TO_LABEL[k] ?? k);
+  const myVibeLabels = [
+    ...Object.values(vibe).flatMap((g) => [...g.first, ...g.second]),
+    ...conditions,
+  ].map((k) => VIBE_KEY_TO_LABEL[k] ?? k);
 
   if (phase === 'done') {
     const total = expectedCount ?? members.length;
@@ -485,6 +487,8 @@ export default function MemberInput() {
             value={vibe}
             onChange={setVibe}
             purpose={{ first: hostCtx?.purposeFirst ?? null, second: hostCtx?.purposeSecond ?? null }}
+            conditions={conditions}
+            onConditionsChange={setConditions}
             section="mood"
           />
         )}
@@ -535,8 +539,6 @@ export default function MemberInput() {
               onBudgetChange={setBudget}
               keywords={keywords}
               onKeywordsChange={setKeywords}
-              keywordsSecond={keywordsSecond}
-              onKeywordsSecondChange={setKeywordsSecond}
               excludeFoods={excludeFoods}
               onExcludeFoodsChange={setExcludeFoods}
               section="extras"

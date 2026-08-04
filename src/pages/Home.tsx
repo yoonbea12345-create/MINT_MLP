@@ -257,7 +257,8 @@ export default function Home({ onChromeChange }: { onChromeChange?: (showTabBar:
   const [result, setResult] = useState<PlaceRecommendation[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [keywords, setKeywords] = useState<string[]>([]);
-  const [keywordsSecond, setKeywordsSecond] = useState<string[]>([]);
+  // 시설형 조건(주차·룸·예약…) — 코스 구분이 없어 vibe와 분리해 들고 있다
+  const [conditions, setConditions] = useState<string[]>([]);
   const [excludeFoods, setExcludeFoods] = useState<string[]>([]);
   const [vibeCustom, setVibeCustom] = useState<Record<string, string>>({});
   const [showRetryModal, setShowRetryModal] = useState(false);
@@ -330,6 +331,7 @@ export default function Home({ onChromeChange }: { onChromeChange?: (showTabBar:
         resultWeather?: WeatherSummary;
         vibe?: VibeState;
         keywords?: string[];
+        conditions?: string[];
         excludeFoods?: string[];
       } | null;
       if (!saved || !Array.isArray(saved.result) || saved.result.length === 0) return;
@@ -344,6 +346,7 @@ export default function Home({ onChromeChange }: { onChromeChange?: (showTabBar:
       if (saved.resultWeather) setResultWeather(saved.resultWeather);
       if (saved.vibe) setVibe(migrateVibeState(saved.vibe));            // 개인화 배너 복원용
       if (Array.isArray(saved.keywords)) setKeywords(saved.keywords);
+      if (Array.isArray(saved.conditions)) setConditions(saved.conditions);
       if (Array.isArray(saved.excludeFoods)) setExcludeFoods(saved.excludeFoods);
       setView('result');
     } catch { /* 손상된 캐시는 무시 */ }
@@ -371,6 +374,7 @@ export default function Home({ onChromeChange }: { onChromeChange?: (showTabBar:
       if (d.purpose) setPurpose(d.purpose);
       if (d.vibe) setVibe(migrateVibeState(d.vibe));
       if (Array.isArray(d.keywords)) setKeywords(d.keywords);
+      if (Array.isArray(d.conditions)) setConditions(d.conditions);
       if (Array.isArray(d.excludeFoods)) setExcludeFoods(d.excludeFoods);
       if (d.vibeCustom) setVibeCustom(d.vibeCustom);
       if (d.meetingLocation) setMeetingLocation(d.meetingLocation);
@@ -437,18 +441,18 @@ export default function Home({ onChromeChange }: { onChromeChange?: (showTabBar:
     try {
       localStorage.setItem(INPUT_DRAFT_KEY, JSON.stringify({
         savedAt: Date.now(),
-        appMode, step, groupSize, expectedCount, purpose, vibe, keywords, excludeFoods, vibeCustom,
+        appMode, step, groupSize, expectedCount, purpose, vibe, keywords, conditions, excludeFoods, vibeCustom,
         meetingLocation, budget, customOccasion, locations,
       }));
     } catch { /* 저장 실패는 치명적이지 않음 */ }
-  }, [view, appMode, sessionId, step, groupSize, expectedCount, purpose, vibe, keywords, excludeFoods, vibeCustom, meetingLocation, budget, customOccasion, locations]);
+  }, [view, appMode, sessionId, step, groupSize, expectedCount, purpose, vibe, keywords, conditions, excludeFoods, vibeCustom, meetingLocation, budget, customOccasion, locations]);
 
   // 결과 화면 상태가 확정될 때마다 스냅샷 저장 (setState 커밋 이후라 stale closure 없음)
   // + 같은 스냅샷을 localStorage 히스토리에도 적재 — 랜딩 "지난 추천"에서 그대로 복원
   useEffect(() => {
     if (view !== 'result' || !result || result.length === 0) return;
     const snapshot = {
-      result, resultThird, resultThirdLabel, purpose, midpointData, treasurer, meetingLocation, resultTravelTimes, resultWeather, vibe, keywords, excludeFoods,
+      result, resultThird, resultThirdLabel, purpose, midpointData, treasurer, meetingLocation, resultTravelTimes, resultWeather, vibe, keywords, conditions, excludeFoods,
     };
     saveResultSnapshot(snapshot);
     const hasSecondCourse = !!(purpose?.second && purpose.second !== '없음');
@@ -754,7 +758,7 @@ export default function Home({ onChromeChange }: { onChromeChange?: (showTabBar:
     setVibe({});
     setBudget(null);
     setKeywords([]);
-    setKeywordsSecond([]);
+    setConditions([]);
     setExcludeFoods([]);
     setVibeCustom({});
     setMeetingLocation(null);
@@ -773,9 +777,8 @@ export default function Home({ onChromeChange }: { onChromeChange?: (showTabBar:
     setLocations(groupLocations);
     setVibe(aggregateVibe(groupMembers));
     // 편식은 전원 합집합 — 한 명이라도 못 먹으면 그 음식은 제외. 키워드는 1차/2차 분리 집계.
-    const { keywords: memberKeywords, keywordsSecond: memberKeywords2, excludeFoods: memberExcludes } = splitMemberKeywords(groupMembers);
+    const { keywords: memberKeywords, excludeFoods: memberExcludes } = splitMemberKeywords(groupMembers);
     setKeywords(memberKeywords);
-    setKeywordsSecond(memberKeywords2);
     setExcludeFoods(memberExcludes);
     setBudget(aggregateBudget(groupMembers));
   }
@@ -924,6 +927,8 @@ export default function Home({ onChromeChange }: { onChromeChange?: (showTabBar:
         g.first.forEach((k) => vibeFirst.push(VIBE_KEY_TO_LABEL[k] ?? k));
         g.second.forEach((k) => vibeSecond.push(VIBE_KEY_TO_LABEL[k] ?? k));
       });
+      // 조건은 코스 구분이 없어 1차에 합쳐 보낸다 — API 계약(vibe.first/second 배열)은 그대로다
+      conditions.forEach((k) => vibeFirst.push(VIBE_KEY_TO_LABEL[k] ?? k));
 
       const input: UserInput = {
         // 서버 검증 통과를 위해 이름 없는 항목 제외 (지역 직접 선택 시 빈 배열)
@@ -952,11 +957,6 @@ export default function Home({ onChromeChange }: { onChromeChange?: (showTabBar:
             .filter(Boolean)
             .slice(0, 10);
           return allKw.length > 0 ? { keywords: allKw } : {};
-        })()),
-        ...((() => {
-          // 2차 키워드 — 2차 코스가 있을 때만
-          const kw2 = keywordsSecond.map((k) => k.trim().slice(0, 30)).filter(Boolean).slice(0, 10);
-          return kw2.length > 0 ? { keywordsSecond: kw2 } : {};
         })()),
       };
 
@@ -1389,7 +1389,7 @@ export default function Home({ onChromeChange }: { onChromeChange?: (showTabBar:
             showTravelTime={meetingLocation?.type === 'auto'}
             midpointAreaName={midpointData?.areaName}
             purpose={purpose?.first ? { first: purpose.first, second: purpose.second ?? null } : undefined}
-            vibeLabels={Object.values(vibe).flatMap((g) => [...g.first, ...g.second]).map((k) => VIBE_KEY_TO_LABEL[k] ?? k)}
+            vibeLabels={[...Object.values(vibe).flatMap((g) => [...g.first, ...g.second]), ...conditions].map((k) => VIBE_KEY_TO_LABEL[k] ?? k)}
             keywords={keywords}
             genreLabels={[purpose?.firstGenre, purpose?.secondGenre].filter((g): g is string => !!g)}
             excludeFoods={excludeFoods}
@@ -1515,7 +1515,7 @@ export default function Home({ onChromeChange }: { onChromeChange?: (showTabBar:
             <p className="text-xs text-gray-400 mt-1">링크를 공유하고 각자 입력을 기다려요</p>
           )}
           {step === 3 && !isGroup && (
-            <p className="text-xs text-gray-400 mt-1">최소 1개 이상 선택 · 많이 고를수록 추천이 정확해져요</p>
+            <p className="text-xs text-gray-400 mt-1">프리셋으로 빠르게 고르거나, 직접 취향대로 골라보세요</p>
           )}
           {step === 3 && isGroup && (
             <p className="text-xs text-gray-400 mt-1">모두의 취향이 모였어요 · 추천을 받아보세요</p>
@@ -1827,8 +1827,8 @@ export default function Home({ onChromeChange }: { onChromeChange?: (showTabBar:
               onBudgetChange={setBudget}
               keywords={keywords}
               onKeywordsChange={setKeywords}
-              keywordsSecond={keywordsSecond}
-              onKeywordsSecondChange={setKeywordsSecond}
+              conditions={conditions}
+              onConditionsChange={setConditions}
               excludeFoods={excludeFoods}
               onExcludeFoodsChange={setExcludeFoods}
             />
@@ -1854,7 +1854,7 @@ export default function Home({ onChromeChange }: { onChromeChange?: (showTabBar:
 
               {/* 모인 취향 */}
               {(() => {
-                const vibeLabels = Object.values(vibe).flatMap((g) => [...g.first, ...g.second]).map((k) => VIBE_KEY_TO_LABEL[k] ?? k);
+                const vibeLabels = [...Object.values(vibe).flatMap((g) => [...g.first, ...g.second]), ...conditions].map((k) => VIBE_KEY_TO_LABEL[k] ?? k);
                 if (vibeLabels.length === 0 && !budget && keywords.length === 0 && excludeFoods.length === 0) return null;
                 return (
                   <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
