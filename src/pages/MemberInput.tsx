@@ -55,15 +55,6 @@ function courseText(ctx: HostContext | null): string {
   const second = ctx.secondGenre ? `${ctx.purposeSecond}(${ctx.secondGenre})` : ctx.purposeSecond!;
   return `${first} → ${second}`;
 }
-// 남은 시간(ms) → "5시간 12분" / "42분" 형태
-function formatRemaining(ms: number): string {
-  const totalMin = Math.max(0, Math.floor(ms / 60000));
-  const h = Math.floor(totalMin / 60);
-  const m = totalMin % 60;
-  if (h >= 1) return `${h}시간 ${m}분`;
-  return `${m}분`;
-}
-
 function regionText(ctx: HostContext | null): string {
   if (!ctx) return '';
   return ctx.regionType === 'auto' ? '중간지점 자동 계산' : (ctx.regionName || '호스트 지정 지역');
@@ -109,16 +100,9 @@ export default function MemberInput() {
   const [conditions, setConditions] = useState<string[]>([]);
   const [excludeFoods, setExcludeFoods] = useState<string[]>([]);
 
-  // 참석 확정(가요/못가요) — 링크에 실려온 마감시각(rsvp_by) 기준 카운트다운·마감 판정
+  // 참석 여부는 따로 묻지 않는다 — 링크를 열고 조건까지 넣어 제출했다면 그게 곧 참석이다.
+  // 링크에 실려온 마감시각(rsvp_by)은 "마감 전에 냈는지" 지표로만 남긴다.
   const rsvpBy = (() => { const v = Number(params.get('rsvp_by')); return Number.isFinite(v) && v > 0 ? v : null; })();
-  const [rsvp, setRsvp] = useState<'going' | 'notgoing' | null>(null);
-  const [now, setNow] = useState(() => Date.now());
-  useEffect(() => {
-    if (!rsvpBy) return;
-    const t = setInterval(() => setNow(Date.now()), 30000);
-    return () => clearInterval(t);
-  }, [rsvpBy]);
-  const rsvpClosed = rsvpBy != null && now > rsvpBy;
 
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -246,8 +230,8 @@ export default function MemberInput() {
         throw new Error(data.error || '제출에 실패했어요. 다시 시도해주세요.');
       }
       sessionStorage.setItem(`mint_joined_${sessionId}`, '1');
-      // 참석 응답 기록 — events(그룹 실사용 조사 지표) + localStorage(재진입 시 복원)
-      const rsvpValue = rsvp ?? 'undecided';
+      // 제출 자체가 참석 확정 — events(그룹 실사용 조사 지표) + localStorage(재진입 시 복원)
+      const rsvpValue = 'going';
       trackEvent('rsvp_submit', {
         device_id: getDeviceId(),
         group_key: sessionId,
@@ -494,56 +478,18 @@ export default function MemberInput() {
         )}
 
         {phase === 'step2' && (
-          <>
-            {/* 참석 확정 — 가요/못가요 (총무의 참석 수합 노동을 대신) */}
-            <div className="px-5 pt-3">
-              <div className="bg-white rounded-2xl border border-gray-100 p-4">
-                <div className="flex items-center justify-between mb-2.5">
-                  <p className="text-sm font-black text-gray-800">이 모임, 참석하시나요?</p>
-                  {rsvpBy != null && (
-                    <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${rsvpClosed ? 'bg-gray-100 text-gray-400' : 'bg-[#E8F8F5] text-[#2AB5A0]'}`}>
-                      {rsvpClosed ? '응답 마감' : `마감까지 ${formatRemaining(rsvpBy - now)}`}
-                    </span>
-                  )}
-                </div>
-                <div className="grid grid-cols-2 gap-2">
-                  {([
-                    { key: 'going', emoji: '💚', label: '가요' },
-                    { key: 'notgoing', emoji: '🙏', label: '못가요' },
-                  ] as const).map(({ key, emoji, label }) => (
-                    <button
-                      key={key}
-                      onClick={() => !rsvpClosed && setRsvp(key)}
-                      disabled={rsvpClosed}
-                      className={`py-3 rounded-xl font-black text-sm flex items-center justify-center gap-1.5 transition-all active:scale-95 ${
-                        rsvp === key
-                          ? 'bg-[#3CDBC0] text-white shadow-sm'
-                          : rsvpClosed
-                            ? 'bg-gray-50 text-gray-300 cursor-not-allowed'
-                            : 'bg-white border-2 border-gray-200 text-gray-500 hover:border-[#3CDBC0]'
-                      }`}
-                    >
-                      <span className="text-base leading-none">{emoji}</span>{label}
-                    </button>
-                  ))}
-                </div>
-                {rsvpClosed && <p className="text-[11px] text-gray-400 mt-2">마감됐어요 — 참석 여부는 총무에게 직접 알려주세요.</p>}
-              </div>
-            </div>
-
-            <VibeSelect
-              value={vibe}
-              onChange={setVibe}
-              purpose={{ first: hostCtx?.purposeFirst ?? null, second: hostCtx?.purposeSecond ?? null }}
-              budget={budget}
-              onBudgetChange={setBudget}
-              keywords={keywords}
-              onKeywordsChange={setKeywords}
-              excludeFoods={excludeFoods}
-              onExcludeFoodsChange={setExcludeFoods}
-              section="extras"
-            />
-          </>
+          <VibeSelect
+            value={vibe}
+            onChange={setVibe}
+            purpose={{ first: hostCtx?.purposeFirst ?? null, second: hostCtx?.purposeSecond ?? null }}
+            budget={budget}
+            onBudgetChange={setBudget}
+            keywords={keywords}
+            onKeywordsChange={setKeywords}
+            excludeFoods={excludeFoods}
+            onExcludeFoodsChange={setExcludeFoods}
+            section="extras"
+          />
         )}
       </div>
 
