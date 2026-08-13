@@ -21,7 +21,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
     let raw = '';
     try { raw = JSON.stringify(result); } catch { /* noop */ }
-    if (!raw || raw.length > 10_000) return res.status(400).json({ error: '결과 데이터가 너무 커요.' });
+    // 24KB — v:2 요약은 3개 장소 × (긴 네이버 썸네일 URL + 해시태그)가 실려 10KB를 넘을 수 있다.
+    if (!raw || raw.length > 24_000) return res.status(400).json({ error: '결과 데이터가 너무 커요.' });
 
     const gate = await checkRateLimit(supabase, 'session-result', clientIp(req), 10, 2000);
     if (!gate.allowed) return res.status(429).json({ error: '잠시 후 다시 시도해주세요.' });

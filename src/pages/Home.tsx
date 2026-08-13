@@ -483,13 +483,21 @@ export default function Home({ onChromeChange }: { onChromeChange?: (showTabBar:
   useEffect(() => {
     if (view !== 'result' || !isGroup || !sessionId || !result || result.length === 0) return;
     const hasSecondCourse = !!(purpose?.second && purpose.second !== '없음');
+    // v:2 — 게스트 화면을 호스트와 동등하게 만들기 위해 신뢰 요소(사진·적합도·영업·해시태그·혼잡도)를 함께 실어 보낸다.
+    // 이미지 URL이 길어 페이로드가 커지므로 session-get 상한(24KB)에 맞춰 vibeTags는 3개로 제한.
     const slim = (p: PlaceRecommendation) => ({
       placeName: p.placeName, category: p.category, description: p.description,
       priceRange: p.priceRange, address: p.address, area: p.area,
       lat: p.lat ?? null, lng: p.lng ?? null, kakaoPlaceUrl: p.kakaoPlaceUrl ?? null,
+      imageUrl: p.imageUrl ?? null,
+      vibeTags: Array.isArray(p.vibeTags) ? p.vibeTags.slice(0, 3) : [],
+      fitScore: p.fitScore ?? null,
+      openingHours: p.openingHours ?? null,
+      walkingToNext: p.walkingToNext ?? null,
+      congestionLevel: p.congestionLevel ?? null,
     });
     const summary = {
-      v: 1,
+      v: 2,
       first: slim(result[0]),
       second: hasSecondCourse && result[1] ? slim(result[1]) : null,
       third: resultThird ? slim(resultThird) : null,
@@ -497,16 +505,29 @@ export default function Home({ onChromeChange }: { onChromeChange?: (showTabBar:
       purposeFirst: purpose?.first ?? null,
       purposeSecond: hasSecondCourse ? purpose?.second ?? null : null,
       areaName: midpointData?.areaName ?? null,
+      // 총무 발표·날씨 — 호스트 결과에 있는 '재미/맥락' 요소를 게스트도 그대로 받는다(작은 필드).
+      treasurer: treasurer ?? null,
+      weather: resultWeather
+        ? { description: resultWeather.description, temp: resultWeather.temp, isRainy: resultWeather.isRainy }
+        : null,
     };
-    const raw = JSON.stringify(summary);
+    // 서버 상한(24KB) 초과 시 이미지 URL부터 버리고 재직렬화 — 리치 화면 일부를 잃더라도
+    // 결과 전송 자체가 실패(게스트가 아무것도 못 봄)하는 최악을 막는다. 이미지 없이도 v:2 나머지는 유지.
+    let payload = summary;
+    let raw = JSON.stringify(summary);
+    if (raw.length > 23_000) {
+      const drop = (p: typeof summary.first | null) => (p ? { ...p, imageUrl: null } : p);
+      payload = { ...summary, first: drop(summary.first)!, second: drop(summary.second), third: drop(summary.third) };
+      raw = JSON.stringify(payload);
+    }
     if (lastSessionResultRef.current === raw) return;
     lastSessionResultRef.current = raw;
     fetch('/api/session-get', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id: sessionId, result: summary }),
+      body: JSON.stringify({ id: sessionId, result: payload }),
     }).catch(() => { /* 실패 무해 */ });
-  }, [view, isGroup, sessionId, result, resultThird, resultThirdLabel, purpose, midpointData]);
+  }, [view, isGroup, sessionId, result, resultThird, resultThirdLabel, purpose, midpointData, treasurer, resultWeather]);
 
 
   useEffect(() => {

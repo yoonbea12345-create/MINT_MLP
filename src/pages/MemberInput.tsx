@@ -12,6 +12,11 @@ import { decodeHostContext } from '../utils/groupLink';
 import type { HostContext } from '../utils/groupLink';
 import { trackEvent } from '../utils/analytics';
 import { getDeviceId } from '../utils/points';
+import MiniMap from '../components/MiniMap';
+import type { MapPin } from '../components/MiniMap';
+import WishlistButton from '../components/WishlistButton';
+import VisitCertModal from '../components/VisitCertModal';
+import { GpsPin, hideOnError, parseOpenStatus, congestionInfo, FitScoreBar, kakaoUrl } from '../components/placeCardBits';
 
 type Phase = 'step0' | 'step1' | 'step2' | 'done';
 
@@ -275,7 +280,14 @@ export default function MemberInput() {
     })();
     // 게스트: 호스트가 추천을 완료했으면 결과 뷰로 전환(호스트는 자기 결과를 앱에서 봄)
     if (!isHostDevice && groupResult) {
-      return <GroupResultView result={groupResult} />;
+      return (
+        <GroupResultView
+          result={groupResult}
+          myChips={[...myVibeLabels, ...keywords]}
+          myBudget={budget}
+          myExcludeFoods={excludeFoods}
+        />
+      );
     }
     return (
       <div className="min-h-[100dvh] flex flex-col items-center bg-[#F5FBF8] px-6 pt-12 pb-10">
@@ -562,80 +574,284 @@ export default function MemberInput() {
   );
 }
 
-// 그룹 게스트가 수신하는 결과(호스트가 세션에 저장한 요약)
+// 그룹 게스트가 수신하는 결과(호스트가 세션에 저장한 v:2 요약).
+// v:2에서 신뢰 요소(사진·적합도·영업·해시태그·혼잡도)가 추가됐다 — 구버전(v:1) 링크는 해당 필드가 없어 옵셔널.
 interface GroupResultPlace {
   placeName: string; category?: string; description?: string; priceRange?: string;
   address?: string; area?: string; lat?: number | null; lng?: number | null; kakaoPlaceUrl?: string | null;
+  imageUrl?: string | null; vibeTags?: string[]; fitScore?: number | null;
+  openingHours?: string | null; walkingToNext?: number | null; congestionLevel?: string | null;
 }
 interface GroupResult {
   first: GroupResultPlace; second?: GroupResultPlace | null; third?: GroupResultPlace | null;
   thirdLabel?: string | null; purposeFirst?: string | null; purposeSecond?: string | null; areaName?: string | null;
+  treasurer?: string | null;
+  weather?: { description: string; temp: number; isRainy: boolean } | null;
 }
 
-function groupMapLink(p: GroupResultPlace): string {
-  return p.kakaoPlaceUrl
-    || (p.lat && p.lng
-      ? `https://map.kakao.com/link/to/${encodeURIComponent(p.placeName)},${p.lat},${p.lng}`
-      : `https://map.kakao.com/link/search/${encodeURIComponent(p.placeName)}`);
-}
-
-// 게스트 결과 화면 — 호스트가 다 같이 고른 취향으로 뽑은 결과. 신규 유입 진입점("나도 추천받기") 포함.
-function GroupResultView({ result }: { result: GroupResult }) {
+// 게스트 결과 화면 — 호스트가 다 같이 고른 취향으로 뽑은 결과를 '호스트와 동등하게' 보여준다.
+// 다만 결과를 바꾸는 조작(재추천·조절·예약)은 호스트 전용이라 뺀다 — 한 명이 다시 돌리면 전원이 어긋나므로.
+// 대신 게스트에게만 의미 있는 것(내 취향 반영·찜·방문인증·총무)은 그대로 얹는다.
+function GroupResultView({
+  result, myChips, myBudget, myExcludeFoods,
+}: {
+  result: GroupResult;
+  myChips: string[];
+  myBudget: string | null;
+  myExcludeFoods: string[];
+}) {
+  const [visitPlace, setVisitPlace] = useState<GroupResultPlace | null>(null);
   const f = result.first;
+  const hasSecond = !!result.second;
+  const chips = Array.from(new Set([...myChips, ...(myBudget ? [myBudget] : [])])).slice(0, 5);
+
+  // 코스 지도 핀 — 1·2·3차 (좌표 있는 것만)
+  const pins: MapPin[] = [];
+  if (f.lat != null && f.lng != null && f.lat !== 0) pins.push({ lat: f.lat, lng: f.lng, name: f.placeName, kind: 'first' });
+  if (result.second?.lat && result.second.lng && result.second.lat !== 0) pins.push({ lat: result.second.lat, lng: result.second.lng, name: result.second.placeName, kind: 'second' });
+  if (result.third?.lat && result.third.lng && result.third.lat !== 0) pins.push({ lat: result.third.lat, lng: result.third.lng, name: result.third.placeName, kind: 'third' });
+
   return (
     <div className="min-h-[100dvh] bg-[#F5FBF8] px-5 pt-10 pb-12">
-      <div className="max-w-md mx-auto">
-        <div className="text-center mb-5">
+      <div className="max-w-md mx-auto flex flex-col gap-2">
+        <div className="text-center mb-2">
           <div className="text-3xl mb-1">🎉</div>
           <h1 className="text-xl font-black text-gray-800">모임 장소가 정해졌어요!</h1>
-          <p className="text-sm text-gray-500 mt-1">다 같이 고른 취향으로 골랐어요</p>
+          <p className="text-sm text-gray-500 mt-1">
+            {result.areaName ? `${result.areaName} · ` : ''}다 같이 고른 취향으로 골랐어요
+          </p>
         </div>
 
-        <a
-          href={groupMapLink(f)}
-          target="_blank"
-          rel="noreferrer"
-          className="block result-gradient rounded-3xl overflow-hidden text-white shadow-xl shadow-[#3CDBC0]/30 mb-3 active:scale-[0.99] transition-transform"
-        >
-          <div className="p-5">
-            <span className="text-xs font-semibold opacity-80 bg-white/20 px-2.5 py-1 rounded-full">
-              {result.purposeFirst ? `1차 · ${result.purposeFirst}` : f.category}
-            </span>
-            <h2 className="text-2xl font-black mt-3 mb-1 leading-tight">{f.placeName}</h2>
-            {f.description && (
-              <p className="text-sm font-semibold opacity-95 mb-2 leading-snug bg-white/15 rounded-xl px-3 py-2">💬 {f.description}</p>
+        {/* 내가 낸 취향이 반영됐다는 체감 — 호스트 결과의 개인화 배너를 게스트 '자기' 취향으로 */}
+        {(chips.length > 0 || myExcludeFoods.length > 0) && (
+          <div className="bg-[#E8F8F5] border border-[#3CDBC0]/30 rounded-2xl px-4 py-3 flex flex-col gap-1">
+            {chips.length > 0 && (
+              <p className="text-xs text-[#2AB5A0] leading-relaxed">
+                <span className="font-black">{chips.map((c) => `#${c}`).join(' ')}</span>
+                <span className="text-[#2AB5A0]/80"> — 네가 고른 취향도 반영됐어요</span>
+              </p>
             )}
-            <div className="flex items-start gap-2 text-sm opacity-90"><span className="opacity-70 shrink-0">📍</span><span>{f.address || f.area}</span></div>
+            {myExcludeFoods.length > 0 && (
+              <p className="text-xs text-[#2AB5A0] leading-relaxed">
+                <span className="font-black">🚫 {myExcludeFoods.join(', ')}</span>
+                <span className="text-[#2AB5A0]/80"> 못 먹는 건 빼고 골랐어요</span>
+              </p>
+            )}
           </div>
-        </a>
+        )}
 
-        {result.second && <GuestCourseCard place={result.second} label={`2차${result.purposeSecond ? ` · ${result.purposeSecond}` : ''}`} accent="#1A7A6E" />}
-        {result.third && <GuestCourseCard place={result.third} label={`3차 · ${result.thirdLabel ?? '이어서'}`} accent="#0F4E46" />}
+        {/* 날씨 한 줄 (있을 때만) */}
+        {result.weather && (
+          <div className="bg-white rounded-2xl border border-gray-100 px-4 py-2.5 shadow-sm flex items-center gap-2 text-xs text-gray-600">
+            <span>{result.weather.isRainy ? '🌧️' : '⛅'}</span>
+            <span className="font-bold">{result.weather.temp}°</span>
+            <span className="text-gray-400">{result.weather.description}</span>
+          </div>
+        )}
 
-        <a
-          href="/app"
-          className="block w-full mt-4 py-4 rounded-2xl bg-[#3CDBC0] text-white font-black text-base text-center shadow-lg shadow-[#3CDBC0]/30 active:scale-95 transition-transform"
+        {/* 1차 라벨 */}
+        <div className="flex items-center justify-between mt-1">
+          {hasSecond ? (
+            <span className="text-xs font-black bg-[#3CDBC0] text-white px-3 py-1 rounded-full">
+              1차 추천{result.purposeFirst ? ` ${result.purposeFirst}` : ''}
+            </span>
+          ) : <span />}
+          <p className="text-[10px] text-gray-400 text-right">카드 터치 시 카카오맵에서 확인</p>
+        </div>
+
+        {/* 1차 카드 — 호스트와 동일한 신뢰 요소 */}
+        <GuestPlaceCard
+          place={f}
+          gradient="linear-gradient(135deg, #3CDBC0 0%, #2AB5A0 100%)"
+          shadowColor="shadow-[#3CDBC0]/25"
+          wishRank="first"
+        />
+
+        {/* 코스 지도 — 1·2·3차 한 장에 */}
+        {pins.length > 0 && f.lat != null && f.lng != null && f.lat !== 0 && (
+          <MiniMap lat={f.lat} lng={f.lng} placeName={f.placeName} pins={pins} />
+        )}
+
+        {/* 2차 */}
+        {result.second && (
+          <>
+            <div className="relative flex items-center py-1">
+              <span className="text-xs font-black bg-[#1A7A6E] text-white px-3 py-1 rounded-full">
+                2차 추천{result.purposeSecond ? ` ${result.purposeSecond}` : ''}
+              </span>
+              <div className="absolute left-1/2 -translate-x-1/2 flex items-center gap-1 text-xs text-gray-400 font-medium pointer-events-none">
+                <span className="text-[#3CDBC0] text-base leading-none">↓</span>
+                <span>도보 약 {f.walkingToNext ? `${f.walkingToNext}분` : '10~15분'}</span>
+              </div>
+            </div>
+            <GuestPlaceCard
+              place={result.second}
+              gradient="linear-gradient(135deg, #1A7A6E 0%, #155E54 100%)"
+              shadowColor="shadow-[#1A7A6E]/25"
+              wishRank="second"
+            />
+          </>
+        )}
+
+        {/* 3차 '이어서 갈 곳' — 덤 성격이라 흰 카드+좌측 보더로 경량화(호스트와 동일 위계) */}
+        {result.third && (
+          <>
+            <div className="relative flex items-center py-1">
+              <span className="text-xs font-black bg-[#0F4E46] text-white px-3 py-1 rounded-full">
+                3차 · {result.thirdLabel ?? '이어서 가기'}
+              </span>
+              <div className="absolute left-1/2 -translate-x-1/2 flex items-center gap-1 text-xs text-gray-400 font-medium pointer-events-none">
+                <span className="text-[#3CDBC0] text-base leading-none">↓</span>
+                <span>도보 약 {(hasSecond ? result.second?.walkingToNext : f.walkingToNext) ? `${hasSecond ? result.second?.walkingToNext : f.walkingToNext}분` : '5~10분'}</span>
+              </div>
+            </div>
+            <a
+              href={kakaoUrl(result.third)}
+              target="_blank"
+              rel="noreferrer"
+              className="block rounded-2xl bg-white border border-gray-200 border-l-4 border-l-[#0F4E46] p-3.5 shadow-sm active:scale-[0.99] transition-transform"
+            >
+              <div className="flex items-start gap-3">
+                {result.third.imageUrl && (
+                  <img src={result.third.imageUrl} alt={result.third.placeName} className="w-16 h-16 rounded-xl object-cover flex-shrink-0" loading="lazy" onError={hideOnError} />
+                )}
+                <div className="min-w-0 flex-1">
+                  <span className="inline-block text-[11px] font-bold text-[#0F4E46] bg-[#0F4E46]/10 px-2 py-0.5 rounded-full mb-1">{result.third.category}</span>
+                  <p className="text-base font-black text-gray-800 leading-tight">{result.third.placeName}</p>
+                  {result.third.description && (
+                    <p className="text-xs text-gray-500 leading-snug mt-0.5 break-keep">{result.third.description}</p>
+                  )}
+                  <div className="flex items-center gap-1.5 text-xs text-gray-500 mt-1.5">
+                    <GpsPin className="text-gray-400 shrink-0" />
+                    <span className="truncate">{result.third.address || result.third.area}</span>
+                  </div>
+                </div>
+              </div>
+            </a>
+          </>
+        )}
+
+        {/* 총무 발표 — 단톡방 스크린샷 감. 호스트 폰에서만 뜨던 재미 요소를 게스트도 */}
+        {result.treasurer && (
+          <div className="mt-1 rounded-2xl bg-gradient-to-r from-amber-50 to-yellow-50 border-2 border-amber-200 px-4 py-3 flex items-center gap-3">
+            <span className="text-2xl shrink-0">🎲</span>
+            <p className="text-sm font-black text-amber-800 leading-snug">
+              {result.treasurer}에서 출발하는 분이 오늘의 총무 당첨!
+            </p>
+          </div>
+        )}
+
+        {/* 방문 인증 → 500P (추천→실제 방문 전환 씨앗) — 실제 방문자의 다수는 게스트다 */}
+        <button
+          onClick={() => { trackEvent('visit_cert_open', { device_id: getDeviceId(), place_key: `${f.placeName}|${f.address ?? ''}`, source: 'shared' }); setVisitPlace(f); }}
+          className="w-full py-3 rounded-2xl bg-[#E8F8F5] border-2 border-[#3CDBC0]/40 text-[#2AB5A0] font-black text-sm flex items-center justify-center gap-2 active:scale-95 transition-all"
         >
-          🌿 나도 30초 만에 추천받기
+          <span className="text-lg">📍</span>
+          <span>여기 방문 인증하고 500P 받기</span>
+        </button>
+
+        {/* 신규 유입 CTA — 결과로 신뢰를 준 뒤 마지막에. "다음엔 내가 모임 만들기" 프레이밍 */}
+        <a
+          href="/app?ref=grp"
+          className="block w-full mt-2 py-4 rounded-2xl bg-[#3CDBC0] text-white font-black text-base text-center shadow-lg shadow-[#3CDBC0]/30 active:scale-95 transition-transform"
+        >
+          🌿 다음엔 내가 모임 만들어보기 →
         </a>
       </div>
+
+      {/* 방문 인증 모달 — 게스트 surface는 'shared' */}
+      {visitPlace && (
+        <VisitCertModal
+          place={visitPlace}
+          source="shared"
+          onClose={() => setVisitPlace(null)}
+          onCertified={() => setVisitPlace(null)}
+        />
+      )}
     </div>
   );
 }
 
-function GuestCourseCard({ place, label, accent }: { place: GroupResultPlace; label: string; accent: string }) {
+// 게스트용 리치 장소 카드 — 호스트 PlaceCard와 같은 신뢰 요소(사진·카테고리·이유·적합도·해시태그·영업)를 담는다.
+// 카드 탭 = 카카오맵 이동. 찜은 카드 위에 얹되 stopPropagation으로 지도 이동과 분리(호스트와 동일 패턴).
+function GuestPlaceCard({
+  place, gradient, shadowColor, wishRank,
+}: {
+  place: GroupResultPlace;
+  gradient: string;
+  shadowColor: string;
+  wishRank: 'first' | 'second';
+}) {
+  const openStatus = parseOpenStatus(place.openingHours ?? undefined);
+  const cong = congestionInfo(place.congestionLevel ?? undefined);
+  const open = () => window.open(kakaoUrl(place), '_blank');
   return (
-    <a
-      href={groupMapLink(place)}
-      target="_blank"
-      rel="noreferrer"
-      className="block bg-white rounded-2xl border border-gray-200 border-l-4 p-4 mb-3 shadow-sm active:scale-[0.99] transition-transform"
-      style={{ borderLeftColor: accent }}
+    <div
+      role="link"
+      tabIndex={0}
+      aria-label={`${place.placeName} 카카오맵에서 열기`}
+      className={`rounded-2xl text-white overflow-hidden cursor-pointer active:scale-[0.99] transition-transform shadow-xl outline-none ${shadowColor}`}
+      style={{ background: gradient }}
+      onClick={open}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(); } }}
     >
-      <span className="inline-block text-[11px] font-bold px-2 py-0.5 rounded-full mb-1" style={{ color: accent, background: `${accent}1a` }}>{label}</span>
-      <p className="text-base font-black text-gray-800 leading-tight">{place.placeName}</p>
-      {place.description && <p className="text-xs text-gray-500 leading-snug mt-0.5">{place.description}</p>}
-      <div className="flex items-center gap-1.5 text-xs text-gray-500 mt-1.5"><span>📍</span><span className="truncate">{place.address || place.area}</span></div>
-    </a>
+      {place.imageUrl && (
+        <img src={place.imageUrl} alt={place.placeName} className="w-full h-36 object-cover" loading="lazy" onError={hideOnError} />
+      )}
+      <div className="py-3 px-4">
+        <div className="flex items-center justify-between gap-2 mb-1.5">
+          <span className="text-xs font-black bg-white/30 text-white px-3 py-0.5 rounded-full border border-white/30 truncate">
+            {place.category}
+          </span>
+          <div className="flex items-center gap-2 shrink-0">
+            {place.congestionLevel && (
+              <div className="flex items-center gap-1">
+                <span className={`${cong.dot} text-xs leading-none`}>●</span>
+                <span className="text-xs text-white/80">{cong.label}</span>
+              </div>
+            )}
+            <WishlistButton place={place} rank={wishRank} source="shared" tone="onDark" />
+          </div>
+        </div>
+
+        <h2 className="text-xl font-black leading-tight mb-1">{place.placeName}</h2>
+
+        {place.description && (
+          <p className="text-sm text-white/90 leading-snug mb-2 font-medium">{place.description}</p>
+        )}
+
+        <FitScoreBar score={place.fitScore ?? undefined} className="mb-2" />
+
+        {place.vibeTags && place.vibeTags.length > 0 && (
+          <div className="flex flex-wrap gap-1 mb-2">
+            {place.vibeTags.slice(0, 3).map((tag) => (
+              <span key={tag} className="text-xs text-white/80 bg-white/15 px-2 py-0.5 rounded-full">#{tag}</span>
+            ))}
+          </div>
+        )}
+
+        <div className="flex flex-col gap-0.5">
+          <div className="flex items-center gap-1.5 text-xs text-white/80">
+            <GpsPin className="opacity-80 shrink-0" />
+            <span className="leading-tight">{place.address || place.area}</span>
+          </div>
+          <div className="flex items-center gap-3 text-xs text-white/80 flex-wrap">
+            {place.priceRange && (
+              <span className="flex items-center gap-1"><span>💰</span><span>{place.priceRange}</span></span>
+            )}
+            {place.openingHours && (
+              <span className="flex items-center gap-1">
+                <span>🕐</span><span>{place.openingHours}</span>
+                {openStatus && (
+                  <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${openStatus.isOpen ? 'bg-green-400 text-white' : 'bg-red-400/80 text-white'}`}>
+                    {openStatus.label}
+                  </span>
+                )}
+              </span>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }
