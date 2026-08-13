@@ -40,7 +40,9 @@ type EventType = 'landing_view' | 'cta_click' | 'reservation_attempt' | 'session
   | 'meetings_empty_cta_click'
   | 'discover_gem_map_open'
   // G. 카카오 로그인 복귀 — 보던 추천 이어보기 제안(수락/새로 시작)
-  | 'resume_prompt_shown' | 'resume_prompt_accept' | 'resume_prompt_discard';
+  | 'resume_prompt_shown' | 'resume_prompt_accept' | 'resume_prompt_discard'
+  // H. 그룹 게스트 결과 화면 개인 유틸 — 길찾기·캘린더 저장(실제 이동 전환 관측)
+  | 'guest_directions_click' | 'guest_calendar_add';
 
 const PAUSE_KEY = 'mint_tracking_paused';
 

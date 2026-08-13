@@ -17,6 +17,8 @@ import type { MapPin } from '../components/MiniMap';
 import WishlistButton from '../components/WishlistButton';
 import VisitCertModal from '../components/VisitCertModal';
 import { GpsPin, hideOnError, parseOpenStatus, congestionInfo, FitScoreBar, kakaoUrl } from '../components/placeCardBits';
+import { computeTravelTimes } from '../services/travelTime';
+import type { TravelTimeData } from '../services/travelTime';
 
 type Phase = 'step0' | 'step1' | 'step2' | 'done';
 
@@ -116,19 +118,28 @@ export default function MemberInput() {
   const [expectedCount, setExpectedCount] = useState<number | null>(null);
   const [members, setMembers] = useState<{ member_name: string }[]>([]);
   const [groupResult, setGroupResult] = useState<GroupResult | null>(null); // 호스트가 추천을 받으면 폴링으로 수신
+  // 게스트 본인 컨텍스트(출발지·취향) — 제출 시 localStorage에 심어 새로고침(결과 도착 시점) 후에도 살린다.
+  // 개인 이동시간·길찾기·"내 취향 반영" 배너의 원천.
+  const [guestCtx, setGuestCtx] = useState<GuestCtx | null>(null);
+  const [placeChangedToast, setPlaceChangedToast] = useState(false); // 호스트가 장소를 바꾸면 알림
 
   const wrapperRef = useRef<HTMLDivElement | null>(null);
   const locInputRef = useRef<HTMLInputElement | null>(null);
   const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const prevResultNameRef = useRef<string | null>(null); // 폴링 중 1차 상호 변경 감지용
 
-  // 이미 제출했으면 done으로
+  // 이미 제출했으면 done으로. 제출 시 저장한 게스트 컨텍스트도 복원(새로고침 대비).
   useEffect(() => {
-    if (sessionId && sessionStorage.getItem(`mint_joined_${sessionId}`)) {
-      setPhase('done');
-    }
+    if (!sessionId) return;
+    if (sessionStorage.getItem(`mint_joined_${sessionId}`)) setPhase('done');
+    try {
+      const raw = localStorage.getItem(`mint_guest_ctx_${sessionId}`);
+      if (raw) setGuestCtx(JSON.parse(raw) as GuestCtx);
+    } catch { /* ignore */ }
   }, [sessionId]);
 
-  // done 화면 폴링
+  // done 화면 폴링 — 결과 도착 전 3초, 도착 후 10초(불필요한 폴링 낭비 완화).
+  const hasResult = !!groupResult;
   useEffect(() => {
     if (phase !== 'done' || !sessionId) return;
     let active = true;
@@ -143,16 +154,25 @@ export default function MemberInput() {
         setExpectedCount(data.expected_count ?? null);
         setMembers(Array.isArray(data.members) ? data.members : []);
         // 호스트가 추천을 완료하면 결과가 실려온다 — 게스트 화면을 결과 뷰로 전환(협업 루프 완결)
-        if (data.result_json?.first?.placeName) setGroupResult(data.result_json as GroupResult);
+        const incoming = data.result_json?.first?.placeName as string | undefined;
+        if (incoming) {
+          // 이미 결과를 보던 중 호스트가 재추천으로 장소를 바꾸면 조용한 교체 대신 알림 토스트
+          if (prevResultNameRef.current && prevResultNameRef.current !== incoming) {
+            setPlaceChangedToast(true);
+            setTimeout(() => setPlaceChangedToast(false), 5000);
+          }
+          prevResultNameRef.current = incoming;
+          setGroupResult(data.result_json as GroupResult);
+        }
       } catch { /* ignore */ }
     }
 
     poll();
-    const interval = setInterval(poll, 3000);
+    const interval = setInterval(poll, hasResult ? 10000 : 3000);
     const onVisible = () => { if (!document.hidden) poll(); };
     document.addEventListener('visibilitychange', onVisible);
     return () => { active = false; clearInterval(interval); document.removeEventListener('visibilitychange', onVisible); };
-  }, [phase, sessionId]);
+  }, [phase, sessionId, hasResult]);
 
   function handleLocChange(value: string) {
     setLocValue(value);
@@ -245,6 +265,21 @@ export default function MemberInput() {
         submitted_before_deadline: rsvpBy == null ? null : Date.now() <= rsvpBy,
       });
       try { localStorage.setItem(`mint_rsvp_${sessionId}`, rsvpValue); } catch { /* ignore */ }
+      // 게스트 본인 컨텍스트 저장 — 결과 도착 시점의 새로고침에도 개인 이동시간·취향 배너가 살아남게.
+      const myChips = [
+        ...Object.values(vibe).flatMap((g) => [...g.first, ...g.second]),
+        ...conditions,
+      ].map((k) => VIBE_KEY_TO_LABEL[k] ?? k);
+      const ctx: GuestCtx = {
+        locName: showLocation ? locValue || null : null,
+        locLat: showLocation ? locLat : null,
+        locLng: showLocation ? locLng : null,
+        chips: myChips,
+        budget,
+        excludeFoods,
+      };
+      try { localStorage.setItem(`mint_guest_ctx_${sessionId}`, JSON.stringify(ctx)); } catch { /* ignore */ }
+      setGuestCtx(ctx);
       setPhase('done');
     } catch (e) {
       setError((e as Error).message);
@@ -280,14 +315,15 @@ export default function MemberInput() {
     })();
     // 게스트: 호스트가 추천을 완료했으면 결과 뷰로 전환(호스트는 자기 결과를 앱에서 봄)
     if (!isHostDevice && groupResult) {
-      return (
-        <GroupResultView
-          result={groupResult}
-          myChips={[...myVibeLabels, ...keywords]}
-          myBudget={budget}
-          myExcludeFoods={excludeFoods}
-        />
-      );
+      const ctx: GuestCtx = guestCtx ?? {
+        locName: showLocation ? locValue || null : null,
+        locLat: showLocation ? locLat : null,
+        locLng: showLocation ? locLng : null,
+        chips: [...myVibeLabels, ...keywords],
+        budget,
+        excludeFoods,
+      };
+      return <GroupResultView result={groupResult} guest={ctx} placeChanged={placeChangedToast} />;
     }
     return (
       <div className="min-h-[100dvh] flex flex-col items-center bg-[#F5FBF8] px-6 pt-12 pb-10">
@@ -589,21 +625,56 @@ interface GroupResult {
   weather?: { description: string; temp: number; isRainy: boolean } | null;
 }
 
+// 게스트 본인 컨텍스트 — 제출 시 저장(localStorage), 결과 화면의 개인화(이동시간·취향 배너·길찾기) 원천.
+interface GuestCtx {
+  locName: string | null;
+  locLat: number | null;
+  locLng: number | null;
+  chips: string[];
+  budget: string | null;
+  excludeFoods: string[];
+}
+
+// 오늘 날짜 all-day 일정(.ics) 다운로드 — 모임 시각은 데이터에 없어 시간 없는 종일 일정으로.
+function downloadMeetingIcs(placeName: string, address: string) {
+  const now = new Date();
+  const pad = (n: number) => String(n).padStart(2, '0');
+  const day = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}`;
+  const esc = (s: string) => s.replace(/([,;\\])/g, '\\$1').replace(/\n/g, '\\n');
+  const ics = [
+    'BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//MINT//KO', 'CALSCALE:GREGORIAN',
+    'BEGIN:VEVENT', `UID:${Date.now()}@mint`, `DTSTAMP:${day}T000000Z`,
+    `DTSTART;VALUE=DATE:${day}`, `DTEND;VALUE=DATE:${day}`,
+    `SUMMARY:${esc(`🍀 MINT 모임 · ${placeName}`)}`,
+    `LOCATION:${esc(address)}`, `DESCRIPTION:${esc('MINT에서 다같이 정한 모임 장소예요.')}`,
+    'END:VEVENT', 'END:VCALENDAR',
+  ].join('\r\n');
+  const url = `data:text/calendar;charset=utf-8,${encodeURIComponent(ics)}`;
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'mint-모임.ics';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+}
+
 // 게스트 결과 화면 — 호스트가 다 같이 고른 취향으로 뽑은 결과를 '호스트와 동등하게' 보여준다.
 // 다만 결과를 바꾸는 조작(재추천·조절·예약)은 호스트 전용이라 뺀다 — 한 명이 다시 돌리면 전원이 어긋나므로.
 // 대신 게스트에게만 의미 있는 것(내 취향 반영·찜·방문인증·총무)은 그대로 얹는다.
 function GroupResultView({
-  result, myChips, myBudget, myExcludeFoods,
+  result, guest, placeChanged,
 }: {
   result: GroupResult;
-  myChips: string[];
-  myBudget: string | null;
-  myExcludeFoods: string[];
+  guest: GuestCtx;
+  placeChanged: boolean;
 }) {
   const [visitPlace, setVisitPlace] = useState<GroupResultPlace | null>(null);
+  const [myTravel, setMyTravel] = useState<TravelTimeData | null>(null);
+  const [transportMode, setTransportMode] = useState<'transit' | 'driving'>('transit');
   const f = result.first;
   const hasSecond = !!result.second;
-  const chips = Array.from(new Set([...myChips, ...(myBudget ? [myBudget] : [])])).slice(0, 5);
+  const chips = Array.from(new Set([...guest.chips, ...(guest.budget ? [guest.budget] : [])])).slice(0, 5);
+  const hasMyLoc = guest.locLat != null && guest.locLng != null;
 
   // 코스 지도 핀 — 1·2·3차 (좌표 있는 것만)
   const pins: MapPin[] = [];
@@ -611,8 +682,34 @@ function GroupResultView({
   if (result.second?.lat && result.second.lng && result.second.lat !== 0) pins.push({ lat: result.second.lat, lng: result.second.lng, name: result.second.placeName, kind: 'second' });
   if (result.third?.lat && result.third.lng && result.third.lat !== 0) pins.push({ lat: result.third.lat, lng: result.third.lng, name: result.third.placeName, kind: 'third' });
 
+  // 내 출발지 → 1차/2차 개인 이동시간 — 호스트가 못 주는 '나만의' 값(게스트 기기에서 계산).
+  // 임의 지역 모드(출발지 미입력)면 계산하지 않는다.
+  useEffect(() => {
+    if (!hasMyLoc || f.lat == null || f.lng == null || f.lat === 0) { setMyTravel(null); return; }
+    let alive = true;
+    const origins = [{ label: guest.locName || '내 출발지', lat: guest.locLat!, lng: guest.locLng! }];
+    const dest: { first: { lat: number; lng: number }; second?: { lat: number; lng: number } } = { first: { lat: f.lat, lng: f.lng } };
+    if (result.second?.lat && result.second.lng && result.second.lat !== 0) dest.second = { lat: result.second.lat, lng: result.second.lng };
+    computeTravelTimes(origins, dest).then((t) => { if (alive) setMyTravel(t); }).catch(() => { /* 폴백 없이 조용히 */ });
+    return () => { alive = false; };
+  }, [hasMyLoc, guest.locName, guest.locLat, guest.locLng, f.lat, f.lng, result.second]);
+
+  // 1차 길찾기 딥링크 — kakao "to"는 현재 위치에서 목적지까지 경로. 좌표 있으면 정확 매칭.
+  const directionsUrl = f.lat && f.lng && f.lat !== 0
+    ? `https://map.kakao.com/link/to/${encodeURIComponent(f.placeName)},${f.lat},${f.lng}`
+    : `https://map.kakao.com/link/search/${encodeURIComponent(f.placeName)}`;
+
+  const firstTransit = myTravel?.first[transportMode]?.[0];
+  const secondTransit = myTravel?.second?.[transportMode]?.[0];
+
   return (
     <div className="min-h-[100dvh] bg-[#F5FBF8] px-5 pt-10 pb-12">
+      {/* 호스트가 장소를 바꾸면 알림 — 조용한 교체 대신 명시 */}
+      {placeChanged && (
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-gray-900 text-white text-sm font-bold px-4 py-2.5 rounded-full shadow-lg animate-fade-in-up">
+          🔄 호스트가 장소를 바꿨어요 · 새 결과예요
+        </div>
+      )}
       <div className="max-w-md mx-auto flex flex-col gap-2">
         <div className="text-center mb-2">
           <div className="text-3xl mb-1">🎉</div>
@@ -623,7 +720,7 @@ function GroupResultView({
         </div>
 
         {/* 내가 낸 취향이 반영됐다는 체감 — 호스트 결과의 개인화 배너를 게스트 '자기' 취향으로 */}
-        {(chips.length > 0 || myExcludeFoods.length > 0) && (
+        {(chips.length > 0 || guest.excludeFoods.length > 0) && (
           <div className="bg-[#E8F8F5] border border-[#3CDBC0]/30 rounded-2xl px-4 py-3 flex flex-col gap-1">
             {chips.length > 0 && (
               <p className="text-xs text-[#2AB5A0] leading-relaxed">
@@ -631,11 +728,47 @@ function GroupResultView({
                 <span className="text-[#2AB5A0]/80"> — 네가 고른 취향도 반영됐어요</span>
               </p>
             )}
-            {myExcludeFoods.length > 0 && (
+            {guest.excludeFoods.length > 0 && (
               <p className="text-xs text-[#2AB5A0] leading-relaxed">
-                <span className="font-black">🚫 {myExcludeFoods.join(', ')}</span>
+                <span className="font-black">🚫 {guest.excludeFoods.join(', ')}</span>
                 <span className="text-[#2AB5A0]/80"> 못 먹는 건 빼고 골랐어요</span>
               </p>
+            )}
+          </div>
+        )}
+
+        {/* 내 출발지 기준 개인 이동시간 — 게스트만의 값 */}
+        {hasMyLoc && firstTransit && (
+          <div className="bg-white rounded-2xl border border-gray-100 p-3 shadow-sm">
+            <div className="flex items-center justify-between mb-1.5">
+              <span className="flex items-center gap-1 text-xs font-black text-[#2AB5A0]">
+                <GpsPin className="text-[#3CDBC0]" />
+                <span className="truncate max-w-[150px]">{guest.locName || '내 출발지'}에서</span>
+              </span>
+              <button
+                onClick={() => setTransportMode((m) => (m === 'transit' ? 'driving' : 'transit'))}
+                className="flex items-center gap-0.5 text-xs text-gray-400 active:text-gray-600 transition-colors"
+              >
+                <span>{transportMode === 'transit' ? '대중교통 예상' : '자차 이동'}</span>
+                <span className="text-[10px]">▽</span>
+              </button>
+            </div>
+            <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs">
+              <div className="flex items-center gap-1">
+                <span className="text-gray-500">1차 {f.placeName}</span>
+                <span className="text-gray-400">→ 약</span>
+                <span className="font-black text-[#3CDBC0]">{firstTransit.formatted}</span>
+              </div>
+              {secondTransit && result.second && (
+                <div className="flex items-center gap-1">
+                  <span className="text-gray-500">2차 {result.second.placeName}</span>
+                  <span className="text-gray-400">→ 약</span>
+                  <span className="font-black text-[#1A7A6E]">{secondTransit.formatted}</span>
+                </div>
+              )}
+            </div>
+            {firstTransit.source === 'estimate' && (
+              <p className="text-[10px] text-gray-300 mt-1.5">* 직선거리 기반 예상치예요</p>
             )}
           </div>
         )}
@@ -740,6 +873,25 @@ function GroupResultView({
             </p>
           </div>
         )}
+
+        {/* 길찾기 + 캘린더 — 게스트가 바로 움직일 수 있게(호스트 화면엔 없는 개인 유틸) */}
+        <div className="flex gap-2">
+          <a
+            href={directionsUrl}
+            target="_blank"
+            rel="noreferrer"
+            onClick={() => trackEvent('guest_directions_click', { device_id: getDeviceId(), place_key: `${f.placeName}|${f.address ?? ''}` })}
+            className="flex-1 py-2.5 rounded-2xl bg-white border border-gray-200 text-gray-600 font-bold text-sm flex items-center justify-center gap-1.5 hover:border-[#3CDBC0] hover:text-[#2AB5A0] transition-all active:scale-95"
+          >
+            <span className="text-base">🧭</span><span>길찾기</span>
+          </a>
+          <button
+            onClick={() => { trackEvent('guest_calendar_add', { device_id: getDeviceId() }); downloadMeetingIcs(f.placeName, f.address || f.area || ''); }}
+            className="flex-1 py-2.5 rounded-2xl bg-white border border-gray-200 text-gray-600 font-bold text-sm flex items-center justify-center gap-1.5 hover:border-[#3CDBC0] hover:text-[#2AB5A0] transition-all active:scale-95"
+          >
+            <span className="text-base">📅</span><span>캘린더 저장</span>
+          </button>
+        </div>
 
         {/* 방문 인증 → 500P (추천→실제 방문 전환 씨앗) — 실제 방문자의 다수는 게스트다 */}
         <button
