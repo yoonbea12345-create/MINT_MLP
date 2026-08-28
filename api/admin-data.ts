@@ -30,6 +30,42 @@ interface CouponAgg {
   removes: number;
 }
 
+// 유입 소스별 퍼널 한 줄 — trackEvent가 모든 이벤트 payload에 실어 보낸 `_attr`로만 만든다.
+// 조인이 없으므로 events 단일 순회 안에서 그대로 접힌다(쿼리 추가 0).
+interface SourceRow {
+  source: string;
+  campaign: string;
+  content: string;
+  entries: number;              // entry_view — 소스별 유입수(분모)
+  landingViews: number;
+  ctaClicks: number;
+  sessions: number;
+  recommendRequests: number;    // 핵심 전환 1
+  recommendShown: number;
+  groupSessionCreates: number;  // 핵심 전환 2 — 바이럴 씨앗
+  feedbackSubmits: number;      // 핵심 전환 3
+  reservationAttempts: number;  // 핵심 전환 4
+}
+
+type SourceMetric = Exclude<keyof SourceRow, 'source' | 'campaign' | 'content'>;
+
+// 소스별로 세는 이벤트만 추린다. 나머지 이벤트는 전체 카운트로만 보면 충분하고,
+// 소스별 행을 60칸짜리로 만들면 어드민에서 읽히지 않는다.
+const SOURCE_METRIC_OF: Record<string, SourceMetric> = {
+  entry_view: 'entries',
+  landing_view: 'landingViews',
+  cta_click: 'ctaClicks',
+  session_duration: 'sessions',
+  recommend_request: 'recommendRequests',
+  recommend_shown: 'recommendShown',
+  group_session_create: 'groupSessionCreates',
+  feedback_submit: 'feedbackSubmits',
+  reservation_attempt: 'reservationAttempts',
+};
+
+// utm은 URL로 들어오는 값이라 누구든 아무 문자열이나 넣을 수 있다. 맵이 무한히 커지지 않도록 상한.
+const SOURCE_KEY_CAP = 200;
+
 const STAY_CAP_SECONDS = 1800; // 탭 방치 아웃라이어가 평균을 왜곡하지 않도록 상한 캡
 
 // payload는 JSONB(객체)지만, 문자열로 저장된 행/컬럼 부재도 안전하게 읽는다.
@@ -162,24 +198,66 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           couponAgg.set(id, created);
           return created;
         };
+        // 피드백 시트 품질 신호 — "쓰다 말고 닫았나"와 "왜 전송이 실패했나"만 분해한다.
+        let feedbackClosesWithText = 0;
+        const feedbackSendFailReasons: Record<string, number> = {};
+        // 유입 소스별 퍼널
+        const bySource = new Map<string, SourceRow>();
 
         for (const e of events) {
           counts[e.type] = (counts[e.type] ?? 0) + 1;
           if (e.type === 'session_duration' && e.duration_seconds != null) {
             stays.push(Math.min(e.duration_seconds, STAY_CAP_SECONDS));
           }
+          // payload는 어트리뷰션 때문에 이제 거의 모든 행에 있다 — 순회당 한 번만 읽는다.
+          const p = asPayload(e.payload);
+
+          // ── 유입 소스 집계 ──
+          // `_attr`이 없는 과거 행은 어느 소스에도 세지 않는다(direct로 추정해 넣으면 지표가 오염된다).
+          // e.type은 DB 컬럼이라 'constructor' 같은 값이 들어와도 프로토타입 체인을 타지 않게 막는다.
+          const metric = Object.prototype.hasOwnProperty.call(SOURCE_METRIC_OF, e.type)
+            ? SOURCE_METRIC_OF[e.type]
+            : undefined;
+          if (metric && p._attr) {
+            const attr = asPayload(p._attr);
+            const source = pstr(attr.source).slice(0, 100);
+            if (source) {
+              const campaign = pstr(attr.campaign).slice(0, 100);
+              const content = pstr(attr.content).slice(0, 100);
+              const key = `${source}\u001f${campaign}\u001f${content}`;
+              let row = bySource.get(key);
+              if (!row && bySource.size < SOURCE_KEY_CAP) {
+                row = {
+                  source, campaign, content,
+                  entries: 0, landingViews: 0, ctaClicks: 0, sessions: 0,
+                  recommendRequests: 0, recommendShown: 0,
+                  groupSessionCreates: 0, feedbackSubmits: 0, reservationAttempts: 0,
+                };
+                bySource.set(key, row);
+              }
+              if (row) row[metric] += 1;
+            }
+          }
+
           switch (e.type) {
             case 'tab_click':
-              bump(tabCounts, pstr(asPayload(e.payload).tab));
+              bump(tabCounts, pstr(p.tab));
               break;
             case 'shop_filter_click':
-              bump(shopFilterCounts, pstr(asPayload(e.payload).category));
+              bump(shopFilterCounts, pstr(p.category));
               break;
             case 'rsvp_submit':
-              bump(rsvpCounts, pstr(asPayload(e.payload).rsvp));
+              bump(rsvpCounts, pstr(p.rsvp));
+              break;
+            case 'feedback_close':
+              // 한 글자라도 쓰다가 닫은 건 "할 말은 있었는데 시트가 불편했다"는 신호다
+              if (p.had_text === true) feedbackClosesWithText += 1;
+              break;
+            case 'feedback_send_fail':
+              // server(API 장애)와 network(오프라인)는 우리가 할 일이 완전히 다르다
+              bump(feedbackSendFailReasons, pstr(p.reason));
               break;
             case 'coupon_notify_add': {
-              const p = asPayload(e.payload);
               const id = pstr(p.coupon_id);
               if (!id) break;
               const row = couponRow(id);
@@ -192,7 +270,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
               break;
             }
             case 'coupon_notify_remove': {
-              const id = pstr(asPayload(e.payload).coupon_id);
+              const id = pstr(p.coupon_id);
               if (id) couponRow(id).removes += 1;
               break;
             }
@@ -201,6 +279,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           }
         }
         const c = (t: string) => counts[t] ?? 0;
+
+        // 유입 많은 순 상위 20개만 보낸다 — 그 아래는 판단에 쓸 표본이 안 된다.
+        const sourceRows = [...bySource.values()]
+          .sort((a, b) => b.entries - a.entries || b.recommendRequests - a.recommendRequests);
+        const attribution = {
+          rows: sourceRows.slice(0, 20),
+          otherCount: Math.max(0, sourceRows.length - 20),
+        };
 
         // 쿠폰 순 신청(add-remove) Top 10 — 순 수요가 남은 것만, 내림차순
         const couponNotifyTop = [...couponAgg.values()]
@@ -321,6 +407,30 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           rsvpNotGoing: rsvpCounts.notgoing ?? 0,
           rsvpUndecided: rsvpCounts.undecided ?? 0,
           rsvpSubmitTotal: c('rsvp_submit'),
+          // ── 상시 유저 피드백 퍼널(어제 만든 기능의 생사 확인) ──
+          feedbackOpens: c('feedback_open'),
+          feedbackSubmits: c('feedback_submit'),
+          feedbackCloses: c('feedback_close'),
+          feedbackClosesWithText,
+          // ⚠️ 아웃박스가 재시도할 때마다 발화한다 — "실패 이벤트 수"이지 "유실 건수"가 아니다.
+          feedbackSendFails: c('feedback_send_fail'),
+          feedbackSendFailReasons: {
+            server: feedbackSendFailReasons.server ?? 0,
+            network: feedbackSendFailReasons.network ?? 0,
+          },
+          // ── 쿠폰 상세에서의 의도 — 진짜 문(예약) vs 가짜 문(구매) ──
+          couponReserveClicks: c('coupon_reserve_click'),
+          couponPurchaseClicks: c('coupon_purchase_click'),
+          // ── 카카오 로그인 복귀 후 이어보기 제안 ──
+          resumePromptShown: c('resume_prompt_shown'),
+          resumePromptAccepts: c('resume_prompt_accept'),
+          resumePromptDiscards: c('resume_prompt_discard'),
+          // ── 그룹 게스트 결과 화면의 개인 유틸(실제 이동 전환 관측) ──
+          guestDirectionsClicks: c('guest_directions_click'),
+          guestCalendarAdds: c('guest_calendar_add'),
+          // ── 유입 소스 ──
+          entryViews: c('entry_view'),
+          attribution,
         };
 
         return res.status(200).json({ analytics, reservations, userFeedback });

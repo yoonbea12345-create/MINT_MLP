@@ -19,6 +19,22 @@ interface CouponNotifyRow {
   net: number;
 }
 
+// 유입 소스별 퍼널 한 줄 — 이벤트 payload에 실려온 `_attr`을 서버가 소스(캠페인/소재)별로 접은 것
+interface AttributionRow {
+  source: string;
+  campaign: string;
+  content: string;
+  entries: number;
+  landingViews: number;
+  ctaClicks: number;
+  sessions: number;
+  recommendRequests: number;
+  recommendShown: number;
+  groupSessionCreates: number;
+  feedbackSubmits: number;
+  reservationAttempts: number;
+}
+
 // 상시 유저 피드백 한 건 — 원문은 user_feedback 테이블에만 있고 여기로만 흘러온다
 interface UserFeedbackRow {
   id: string;
@@ -108,6 +124,25 @@ interface AdminAnalytics {
   rsvpNotGoing: number;
   rsvpUndecided: number;
   rsvpSubmitTotal: number;
+  // 상시 유저 피드백 퍼널
+  feedbackOpens: number;
+  feedbackSubmits: number;
+  feedbackCloses: number;
+  feedbackClosesWithText: number;
+  feedbackSendFails: number;
+  feedbackSendFailReasons: Record<string, number>;
+  // 쿠폰 상세 의도(진짜 문 vs 가짜 문)
+  couponReserveClicks: number;
+  couponPurchaseClicks: number;
+  // 복귀·게스트 동선
+  resumePromptShown: number;
+  resumePromptAccepts: number;
+  resumePromptDiscards: number;
+  guestDirectionsClicks: number;
+  guestCalendarAdds: number;
+  // 유입 소스
+  entryViews: number;
+  attribution: { rows: AttributionRow[]; otherCount: number };
 }
 
 const EMPTY_ANALYTICS: AdminAnalytics = {
@@ -130,6 +165,12 @@ const EMPTY_ANALYTICS: AdminAnalytics = {
   wishlistAdds: 0, wishlistRemoves: 0, wishlistOpens: 0, discoverGemMapOpens: 0,
   visitCertOpens: 0, visitCertDones: 0, visitCertFails: 0, pointsStoreTeaserClicks: 0,
   rsvpGoing: 0, rsvpNotGoing: 0, rsvpUndecided: 0, rsvpSubmitTotal: 0,
+  feedbackOpens: 0, feedbackSubmits: 0, feedbackCloses: 0, feedbackClosesWithText: 0,
+  feedbackSendFails: 0, feedbackSendFailReasons: {},
+  couponReserveClicks: 0, couponPurchaseClicks: 0,
+  resumePromptShown: 0, resumePromptAccepts: 0, resumePromptDiscards: 0,
+  guestDirectionsClicks: 0, guestCalendarAdds: 0,
+  entryViews: 0, attribution: { rows: [], otherCount: 0 },
 };
 
 // 탭·필터 key → 화면 라벨 (서버가 모르는 key를 보내도 key 그대로 렌더된다)
@@ -305,6 +346,9 @@ export default function Admin() {
   const shopFilterTotal = shopFilterEntries.reduce((sum, [, v]) => sum + v, 0);
   const couponTop = a.couponNotifyTop ?? [];
   const rsvpTotal = a.rsvpGoing + a.rsvpNotGoing + a.rsvpUndecided;
+  const attrRows = a.attribution?.rows ?? [];
+  const attrOtherCount = a.attribution?.otherCount ?? 0;
+  const sendFail = a.feedbackSendFailReasons ?? {};
   const feedbackCounts = FEEDBACK_CATEGORIES.map((cat) => ({
     ...cat,
     count: feedback.filter((f) => (f.category ?? '') === cat.key).length,
@@ -456,6 +500,28 @@ export default function Admin() {
       ['참석·못가요', a.rsvpNotGoing],
       ['참석·미정', a.rsvpUndecided],
       ['참석 응답 합계', a.rsvpSubmitTotal],
+      ['피드백 열림', a.feedbackOpens],
+      ['피드백 제출', a.feedbackSubmits],
+      ['피드백 닫음', a.feedbackCloses],
+      ['피드백 쓰다 말고 닫음', a.feedbackClosesWithText],
+      ['피드백 전송실패(이벤트)', a.feedbackSendFails],
+      ['피드백 전송실패·server', sendFail.server ?? 0],
+      ['피드백 전송실패·network', sendFail.network ?? 0],
+      ['쿠폰 예약하기 클릭', a.couponReserveClicks],
+      ['쿠폰 구매 클릭', a.couponPurchaseClicks],
+      ['이어보기 제안 노출', a.resumePromptShown],
+      ['이어보기 선택', a.resumePromptAccepts],
+      ['새로 시작 선택', a.resumePromptDiscards],
+      ['게스트 길찾기 클릭', a.guestDirectionsClicks],
+      ['게스트 캘린더 저장', a.guestCalendarAdds],
+      ['유입(entry_view)', a.entryViews],
+      [],
+      ['유입 소스별 퍼널 (상위 20)'],
+      ['소스', '캠페인', '소재', '유입', '랜딩', 'CTA', '세션', '추천요청', '추천노출', '그룹생성', '피드백', '예약시도'],
+      ...attrRows.map((row) => [
+        row.source, row.campaign, row.content, row.entries, row.landingViews, row.ctaClicks, row.sessions,
+        row.recommendRequests, row.recommendShown, row.groupSessionCreates, row.feedbackSubmits, row.reservationAttempts,
+      ]),
       [],
       ['쿠폰 알림신청 Top 10'],
       ['순위', '쿠폰ID', '매장', '지역', '혜택유형', '등급', '순신청', '신청', '취소'],
@@ -584,6 +650,54 @@ export default function Admin() {
           </div>
           <p className="text-[11px] text-gray-400 mt-2 px-1">
             * 예약 시도는 이벤트, 예약 완료는 reservations 테이블 실건수 — 소스가 달라 초기화 대상도 달라요.
+          </p>
+        </section>
+
+        {/* ── 유입 소스 — 퍼널 바로 아래. "어느 소재가 돈값을 하나"는 전환율 다음으로 먼저 볼 숫자다 ── */}
+        <section className="mb-6">
+          <h2 className="text-sm font-black text-gray-600 mb-3">
+            📣 유입 소스 <span className="text-gray-300 font-normal">(광고 소재 판단)</span>
+          </h2>
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
+            {attrRows.length === 0 ? (
+              <div className="text-center py-3">
+                <p className="text-xs text-gray-400">아직 어트리뷰션 데이터가 없어요.</p>
+                <p className="text-[11px] text-gray-300 mt-1">
+                  광고 URL에 utm_source·utm_campaign·utm_content=소재명을 붙였는지 확인하세요.
+                </p>
+              </div>
+            ) : (
+              <div className="flex flex-col gap-1.5">
+                {attrRows.map((row) => (
+                  <div
+                    key={`${row.source}|${row.campaign}|${row.content}`}
+                    className="flex items-start gap-2 text-xs py-1.5 border-b border-gray-50 last:border-0"
+                  >
+                    <span className="flex-1 min-w-0">
+                      <span className="block font-bold text-gray-700 truncate">{row.source}</span>
+                      <span className="block text-[11px] text-gray-400 truncate">
+                        {[row.campaign, row.content].filter(Boolean).join(' · ') || '캠페인·소재 미지정'}
+                      </span>
+                      <span className="block text-[11px] text-gray-300 truncate">
+                        랜딩 {row.landingViews} · CTA {row.ctaClicks} · 세션 {row.sessions} · 그룹 {row.groupSessionCreates} · 피드백 {row.feedbackSubmits} · 예약시도 {row.reservationAttempts}
+                      </span>
+                    </span>
+                    <span className="text-right shrink-0">
+                      <span className="block font-black text-[#36CFA0]">유입 {row.entries}</span>
+                      <span className="block text-[11px] text-gray-400">
+                        추천요청 {row.recommendRequests} ({pct(row.recommendRequests, row.entries)}%)
+                      </span>
+                      <span className="block text-[11px] text-gray-300">노출 {row.recommendShown}</span>
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+          <p className="text-[11px] text-gray-400 mt-2 px-1">
+            * 유입은 문서 로드당 1회(entry_view) 기준이라 랜딩을 거치지 않고 /app·/join으로 직행한 광고도 잡혀요.
+            예약 "완료"는 reservations 테이블이라 소스를 알 수 없어 예약 시도로 대신 봐요.
+            {attrOtherCount > 0 && ` 상위 20개 외 ${attrOtherCount}개 소스는 생략했어요.`}
           </p>
         </section>
 
@@ -718,6 +832,9 @@ export default function Admin() {
           <div className="grid grid-cols-2 gap-3 mb-3">
             <StatCard label="쿠폰 탭" value={a.shopCouponClicks} unit="회" sub={`페이지 이동 ${a.shopPageChanges}회`} />
             <StatCard label="순 알림신청" value={a.couponNotifyAdds - a.couponNotifyRemoves} unit="건" sub={`신청 ${a.couponNotifyAdds} · 취소 ${a.couponNotifyRemoves}`} highlight />
+            {/* 쿠폰 상세를 연 사람이 어느 문을 두드렸나 — 예약은 진짜 문, 구매는 아직 가짜 문이다 */}
+            <StatCard label="예약하기 클릭 (진짜 문)" value={a.couponReserveClicks} unit="회" sub={`쿠폰 탭 대비 ${pct(a.couponReserveClicks, a.shopCouponClicks)}%`} />
+            <StatCard label="구매 클릭 (가짜 문)" value={a.couponPurchaseClicks} unit="회" sub={`쿠폰 탭 대비 ${pct(a.couponPurchaseClicks, a.shopCouponClicks)}%`} />
           </div>
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 mb-3">
             <p className="text-xs font-black text-gray-500 mb-2">필터 사용 <span className="text-gray-300 font-normal">(어떤 혜택을 찾나)</span></p>
@@ -813,11 +930,43 @@ export default function Admin() {
           </div>
         </section>
 
+        {/* ── 복귀·게스트 동선 ── */}
+        {/* 🔎 검색·설치·그룹 카드에 끼우지 않는다 — 거긴 이미 6칸이라 11칸이 되면 아무도 못 읽는다 */}
+        <section className="mb-8">
+          <h2 className="text-sm font-black text-gray-600 mb-3">
+            🧷 복귀·게스트 동선 <span className="text-gray-300 font-normal">(로그인 왕복 후 이탈 방지)</span>
+          </h2>
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
+            <MiniStat label="이어보기 제안 노출" value={a.resumePromptShown} />
+            <MiniStat label="이어보기 선택" value={a.resumePromptAccepts} />
+            <MiniStat label="새로 시작 선택" value={a.resumePromptDiscards} />
+            <MiniStat label="게스트 길찾기" value={a.guestDirectionsClicks} />
+            <MiniStat label="게스트 캘린더 저장" value={a.guestCalendarAdds} />
+          </div>
+          <p className="text-[11px] text-gray-400 mt-2 px-1">
+            * 이어보기 수락률 {pct(a.resumePromptAccepts, a.resumePromptShown)}% — 카카오 로그인으로 앱을 떠났던 사람이 보던 추천으로 돌아온 비율이에요.
+          </p>
+        </section>
+
         {/* ── 상시 유저 피드백 ── */}
         <section className="mb-8">
           <h2 className="text-sm font-black text-gray-600 mb-3">
             💬 유저 피드백 <span className="text-[#2AB5A0]">{feedback.length}건</span>
           </h2>
+          {/* 퍼널을 원문 목록과 한 섹션에 둔다 — 목적이 "어제 만든 피드백 기능이 살아 있나"의 확인이라
+              원문이 0건일 때 열림/제출 숫자가 바로 옆에 있어야 원인을 가릴 수 있다. */}
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 mb-3 flex flex-col gap-2">
+            <FunnelStep label="시트 열림" value={a.feedbackOpens} rate={null} />
+            <FunnelStep label="제출" value={a.feedbackSubmits} rate={pct(a.feedbackSubmits, a.feedbackOpens)} last />
+            <div className="text-[11px] text-gray-400 pt-2 border-t border-gray-50">
+              쓰다 말고 닫음 {a.feedbackClosesWithText}건 (닫음 {a.feedbackCloses}건 중) ·
+              전송 실패 server {sendFail.server ?? 0} / network {sendFail.network ?? 0}
+            </div>
+            <p className="text-[11px] text-gray-300">
+              * 전송 실패는 아웃박스가 <b>재시도할 때마다</b> 찍혀요 — "실패 이벤트 수"지 "유실 건수"가 아니에요.
+              아래 원문 실건수와 대조해서 읽으세요.
+            </p>
+          </div>
           {feedback.length === 0 ? (
             <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
               <p className="text-xs text-gray-400 text-center py-3">

@@ -5,6 +5,7 @@
 // ⚠️ 아직 실행 안 됐어도 안전: 새 컬럼 insert가 실패하면 자동으로 {type}만 재삽입(폴백)해 수집이 끊기지 않는다.
 
 import { supabase } from './supabase';
+import { getAttr } from './attribution';
 
 type EventType = 'landing_view' | 'cta_click' | 'reservation_attempt' | 'session_duration' | 'kakao_share' | 'kakao_share_fallback' | 'pwa_install_click' | 'landing_demo_place_click'
   | 'retry_fresh' | 'retry_adjust' | 'reject_expensive' | 'reject_far' | 'reject_vibe'
@@ -44,7 +45,10 @@ type EventType = 'landing_view' | 'cta_click' | 'reservation_attempt' | 'session
   // H. 그룹 게스트 결과 화면 개인 유틸 — 길찾기·캘린더 저장(실제 이동 전환 관측)
   | 'guest_directions_click' | 'guest_calendar_add'
   // I. 상시 유저 피드백(우하단 FAB) — 원문은 user_feedback 테이블에만 남기고 여기엔 카운트만 싣는다
-  | 'feedback_open' | 'feedback_submit' | 'feedback_close' | 'feedback_send_fail';
+  | 'feedback_open' | 'feedback_submit' | 'feedback_close' | 'feedback_send_fail'
+  // J. 문서 로드당 1회 — 소스별 유입수의 분모. 광고가 /app·/join으로 직행하면 landing_view가
+  //    안 쏘여 "이 소재로 몇 명이 들어왔나"를 셀 방법이 아예 없다.
+  | 'entry_view';
 
 const PAUSE_KEY = 'mint_tracking_paused';
 
@@ -88,12 +92,24 @@ export function getSessionKey(): string | null {
 
 type EventPayload = Record<string, unknown>;
 
+// ── 어트리뷰션 탑재: 호출부가 아니라 여기 한 곳에서 붙인다 ──
+// session_key는 추천 플로우에서만 발급되므로 랜딩·탭·피드백·그룹 이벤트는 전용 이벤트와 조인할 수
+// 없다 — 광고 판단에 꼭 필요한 퍼널 앞단이 통째로 빠진다. 그래서 모든 행의 payload에 직접 싣는다.
+// 비용은 행당 100byte 남짓이고, 대신 어드민은 조인 없이 단일 순회로 소스별 퍼널을 그릴 수 있다.
+// `_attr`은 예약 키다 — 기존 payload 키는 전부 snake_case라 충돌하지 않는다.
+function withAttr(payload?: EventPayload): EventPayload | undefined {
+  const attr = getAttr();
+  if (!attr) return payload && Object.keys(payload).length > 0 ? payload : undefined;
+  return { ...payload, _attr: attr };
+}
+
 export function trackEvent(type: Exclude<EventType, 'session_duration'>, payload?: EventPayload): void {
   if (isTrackingPaused()) return;
   pushDataLayer(type);
   const row: Record<string, unknown> = { type };
   if (currentSessionKey) row.session_key = currentSessionKey;
-  if (payload && Object.keys(payload).length > 0) row.payload = payload;
+  const merged = withAttr(payload);
+  if (merged) row.payload = merged;
   supabase.from('events').insert(row).then(({ error }) => {
     // 마이그레이션 전(session_key/payload 컬럼 부재 등)이면 최소 필드로 폴백 — 수집 자체는 절대 끊기지 않게
     if (error) supabase.from('events').insert({ type }).then(() => {});
@@ -104,6 +120,9 @@ export function trackSessionDuration(seconds: number): void {
   if (isTrackingPaused()) return;
   const row: Record<string, unknown> = { type: 'session_duration', duration_seconds: seconds };
   if (currentSessionKey) row.session_key = currentSessionKey;
+  // 세션(앱 진입 프록시)도 소스별로 갈라 봐야 광고 유입의 체류를 판단할 수 있다.
+  const merged = withAttr();
+  if (merged) row.payload = merged;
   supabase.from('events').insert(row).then(({ error }) => {
     if (error) supabase.from('events').insert({ type: 'session_duration', duration_seconds: seconds }).then(() => {});
   });
