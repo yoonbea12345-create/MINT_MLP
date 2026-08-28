@@ -14,10 +14,7 @@
     "api/session-get.ts": {
       "maxDuration": 10
     },
-    "api/admin-refresh-license-cache.ts": {
-      "maxDuration": 60
-    },
-    "api/admin-warm-buzz-cache.ts": {
+    "api/admin-batch.ts": {
       "maxDuration": 60
     }
   },
@@ -29,7 +26,7 @@
   ],
   "crons": [
     {
-      "path": "/api/admin-warm-buzz-cache",
+      "path": "/api/admin-batch",
       "schedule": "0 18 * * *"
     }
   ]

@@ -133,15 +133,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         ]);
 
         // payload 컬럼 마이그레이션 전이면 select가 통째로 실패한다 — 그때만(평상시 0회) 구 스키마로 1회 재조회.
-        let eventsData = eventsRes.data;
+        let eventsData: EventRow[] | null = eventsRes.data;
         if (eventsRes.error) {
           let legacyQuery = supabase.from('events').select('type, duration_seconds, created_at');
           if (from) legacyQuery = legacyQuery.gte('created_at', from);
           if (to) legacyQuery = legacyQuery.lte('created_at', to);
-          eventsData = (await legacyQuery).data;
+          // 구스키마 행엔 payload가 없다 — null을 채워 EventRow 계약을 맞춘다.
+          // 타입 회피가 아니라 사실의 명시다. asPayload가 null을 빈 객체로 읽으므로
+          // type 카운트·체류시간 집계는 그대로 돌고, payload 기반 지표만 0이 된다.
+          const legacy = await legacyQuery;
+          eventsData = legacy.data === null ? null : legacy.data.map((r) => ({ ...r, payload: null }));
         }
 
-        const events = (eventsData ?? []) as EventRow[];
+        const events = eventsData ?? [];
 
         // 타입별 카운트 맵 (단일 순회) — 데이터가 쌓여도 순회 1회로 처리
         const counts: Record<string, number> = {};

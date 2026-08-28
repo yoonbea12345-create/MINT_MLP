@@ -143,7 +143,7 @@ ALTER TABLE place_buzz_cache ENABLE ROW LEVEL SECURITY;
 
 -- =============================================
 -- L0: 인허가 배치 캐시 (추천 재설계 Phase 2)
--- api/admin-refresh-license-cache.ts로 월 1회 수동 적재. 서버 전용 — anon 정책 없음.
+-- api/admin-batch.ts (action:"refresh-license")로 월 1회 수동 적재. 서버 전용 — anon 정책 없음.
 -- =============================================
 CREATE TABLE IF NOT EXISTS license_cache (
   id            BIGSERIAL PRIMARY KEY,
