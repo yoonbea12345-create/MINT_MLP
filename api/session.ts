@@ -223,11 +223,21 @@ async function handleJoin(req: VercelRequest, res: VercelResponse, supabase: Sup
 
     if (existingRowId != null) {
       // 이미 자리를 차지한 사람이므로 정원 검사도, 순번 검사도 건너뛴다.
-      let upd = await supabase.from('mint_session_members')
-        .update(fullData).eq('id', existingRowId);
+      //
+      // 좌표 NOT NULL 폴백을 여기에도 둔다. insert 경로에만 있었더니, 좌표 없이(임의 지역 모드)
+      // 재제출한 사람이 500을 맞고 갱신이 통째로 실패했다 — 프로덕션에서 그대로 재현됐다.
+      // (supabase/setup.sql의 DROP NOT NULL이 아직 실행되지 않은 DB에서만 나는 증상이다.)
+      const updateWithFallback = async (data: Record<string, unknown>) => {
+        const r = await supabase.from('mint_session_members').update(data).eq('id', existingRowId);
+        if (r.error?.code === '23502' && data.location_lat == null) {
+          return supabase.from('mint_session_members')
+            .update({ ...data, location_lat: 37.5665, location_lng: 126.978 }).eq('id', existingRowId);
+        }
+        return r;
+      };
+      let upd = await updateWithFallback(fullData);
       if (upd.error?.code === '42703') {
-        upd = await supabase.from('mint_session_members')
-          .update(baseData).eq('id', existingRowId);
+        upd = await updateWithFallback(baseData);
       }
       if (upd.error) {
         console.error('[session-join] resubmit update failed', upd.error);
