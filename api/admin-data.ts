@@ -33,6 +33,7 @@ interface CouponAgg {
 // 유입 소스별 퍼널 한 줄 — trackEvent가 모든 이벤트 payload에 실어 보낸 `_attr`로만 만든다.
 // 조인이 없으므로 events 단일 순회 안에서 그대로 접힌다(쿼리 추가 0).
 interface SourceRow {
+  key: string;                  // 서버가 만든 조합 키 — 어드민 React key로 그대로 쓴다(구분자 불일치 방지)
   source: string;
   campaign: string;
   content: string;
@@ -47,7 +48,7 @@ interface SourceRow {
   reservationAttempts: number;  // 핵심 전환 4
 }
 
-type SourceMetric = Exclude<keyof SourceRow, 'source' | 'campaign' | 'content'>;
+type SourceMetric = Exclude<keyof SourceRow, 'key' | 'source' | 'campaign' | 'content'>;
 
 // 소스별로 세는 이벤트만 추린다. 나머지 이벤트는 전체 카운트로만 보면 충분하고,
 // 소스별 행을 60칸짜리로 만들면 어드민에서 읽히지 않는다.
@@ -64,9 +65,28 @@ const SOURCE_METRIC_OF: Record<string, SourceMetric> = {
 };
 
 // utm은 URL로 들어오는 값이라 누구든 아무 문자열이나 넣을 수 있다. 맵이 무한히 커지지 않도록 상한.
-const SOURCE_KEY_CAP = 200;
+// 200은 너무 낮았다 — events는 anon insert가 열려 있어 쓰레기 utm 200개면 그 뒤에 들어온 진짜
+// 광고 소스가 통째로 0으로 뜬다. 1000으로 올리고, 그래도 넘친 이벤트는 세서 어드민에 보여준다.
+const SOURCE_KEY_CAP = 1000;
 
 const STAY_CAP_SECONDS = 1800; // 탭 방치 아웃라이어가 평균을 왜곡하지 않도록 상한 캡
+
+// PostgREST는 프로젝트 max_rows(신규 프로젝트 기본 1000)로 응답을 "말없이" 자른다. HTTP 200에
+// 숫자만 작게 나와 눈치챌 수도 없고, 클라이언트 .limit(50000)으로도 못 넘는 서버측 하드 캡이다.
+// 그래서 최신순 정렬 + range 페이지네이션으로 전량을 모은다.
+const EVENTS_PAGE = 1000;
+// 안전 상한 6만 행 — 여기 걸리면 "최근 6만건만 집계했다"를 어드민이 눈으로 알 수 있어야 한다.
+const EVENTS_MAX_PAGES = 60;
+
+// 프로토타입 오염 방어. bump는 payload에서 온 문자열을 그대로 키로 쓰는데, 'constructor'가 오면
+// map['constructor']는 Object 함수라 `?? 0`을 통과하고 함수+1이 문자열로 박힌다.
+// shopFilterClicks는 맵을 통째로 응답에 실어서 어드민 합산이 NaN이 되고 막대가 전부 NaN%가 된다.
+const UNSAFE_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
+
+// 프로토타입 체인을 타지 않는 빈 집계 맵 — 위 가드와 이중 방어다.
+function emptyCounts(): Record<string, number> {
+  return Object.create(null) as Record<string, number>;
+}
 
 // payload는 JSONB(객체)지만, 문자열로 저장된 행/컬럼 부재도 안전하게 읽는다.
 function asPayload(v: unknown): Record<string, unknown> {
@@ -91,7 +111,7 @@ function pstr(v: unknown): string {
 
 // 빈 키는 세지 않는다(payload 없는 과거 행이 '알 수 없음'으로 섞이지 않게)
 function bump(map: Record<string, number>, key: string): void {
-  if (!key) return;
+  if (!key || UNSAFE_KEYS.has(key)) return;
   map[key] = (map[key] ?? 0) + 1;
 }
 
@@ -147,49 +167,83 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const from = toIso(body.from);
         const to = toIso(body.to);
 
-        let eventsQuery = supabase.from('events').select('type, duration_seconds, created_at, payload');
         let reservationsQuery = supabase.from('reservations').select('*').order('created_at', { ascending: false });
         // 상시 유저 피드백 — 원문을 매일 읽는 화면이 있어야 "빠르게 반영하겠다"는 약속이 지켜진다.
         // 검색·상태관리는 만들지 않는다. 지금 규모에선 최신 200건 스크롤이면 충분하다.
         let feedbackQuery = supabase.from('user_feedback').select('*')
           .order('created_at', { ascending: false }).limit(200);
         if (from) {
-          eventsQuery = eventsQuery.gte('created_at', from);
           reservationsQuery = reservationsQuery.gte('created_at', from);
           feedbackQuery = feedbackQuery.gte('created_at', from);
         }
         if (to) {
-          eventsQuery = eventsQuery.lte('created_at', to);
           reservationsQuery = reservationsQuery.lte('created_at', to);
           feedbackQuery = feedbackQuery.lte('created_at', to);
         }
 
-        const [eventsRes, reservationsRes, feedbackRes] = await Promise.all([
-          eventsQuery, reservationsQuery, feedbackQuery,
+        // events는 한 방 select로 못 가져온다 — max_rows가 응답을 말없이 자르기 때문에,
+        // 이벤트가 1000건을 넘는 순간부터 어드민은 오늘 집행 중인 광고 유입을 영영 못 본다.
+        // 최신순으로 페이지를 돌며 전량을 모으고, 안전 상한에 걸리면 그 사실을 응답에 실어 보낸다.
+        //
+        // 아래는 페이지 한 장을 읽는다. withPayload=false는 payload 컬럼 마이그레이션 전 구 스키마
+        // 경로다 — select 문자열을 변수 하나로 합치면 supabase 타입 파서가 유니온 리터럴을 못 읽어
+        // 컴파일이 깨지므로 두 갈래를 리터럴 그대로 둔다.
+        // 기간 필터는 페이지마다 다시 건다(쿼리를 매번 새로 만들기 때문이다).
+        const loadEventsPage = async (
+          withPayload: boolean, offset: number,
+        ): Promise<{ data: unknown[] | null; failed: boolean }> => {
+          if (withPayload) {
+            let q = supabase.from('events').select('type, duration_seconds, created_at, payload');
+            if (from) q = q.gte('created_at', from);
+            if (to) q = q.lte('created_at', to);
+            const r = await q.order('created_at', { ascending: false })
+              .range(offset, offset + EVENTS_PAGE - 1);
+            return { data: r.data, failed: Boolean(r.error) };
+          }
+          let q = supabase.from('events').select('type, duration_seconds, created_at');
+          if (from) q = q.gte('created_at', from);
+          if (to) q = q.lte('created_at', to);
+          const r = await q.order('created_at', { ascending: false })
+            .range(offset, offset + EVENTS_PAGE - 1);
+          return { data: r.data, failed: Boolean(r.error) };
+        };
+
+        const collectEvents = async (withPayload: boolean): Promise<{
+          rows: EventRow[]; truncated: boolean; failed: boolean;
+        }> => {
+          const rows: EventRow[] = [];
+          for (let page = 0; page < EVENTS_MAX_PAGES; page += 1) {
+            const { data, failed } = await loadEventsPage(withPayload, page * EVENTS_PAGE);
+            if (failed) return { rows: [], truncated: false, failed: true };
+            const batch = (data ?? []) as EventRow[];
+            // 구스키마 행엔 payload가 없다 — null을 채워 EventRow 계약을 맞춘다.
+            // 타입 회피가 아니라 사실의 명시다. asPayload가 null을 빈 객체로 읽으므로
+            // type 카운트·체류시간 집계는 그대로 돌고, payload 기반 지표만 0이 된다.
+            for (const r of batch) rows.push(withPayload ? r : { ...r, payload: null });
+            // 페이지가 덜 찼으면 마지막 페이지다 — 여기서 끊어야 빈 쿼리를 한 번 더 쏘지 않는다.
+            if (batch.length < EVENTS_PAGE) return { rows, truncated: false, failed: false };
+          }
+          return { rows, truncated: true, failed: false };
+        };
+
+        const [eventsCollected, reservationsRes, feedbackRes] = await Promise.all([
+          collectEvents(true), reservationsQuery, feedbackQuery,
         ]);
 
-        // payload 컬럼 마이그레이션 전이면 select가 통째로 실패한다 — 그때만(평상시 0회) 구 스키마로 1회 재조회.
-        let eventsData: EventRow[] | null = eventsRes.data;
-        if (eventsRes.error) {
-          let legacyQuery = supabase.from('events').select('type, duration_seconds, created_at');
-          if (from) legacyQuery = legacyQuery.gte('created_at', from);
-          if (to) legacyQuery = legacyQuery.lte('created_at', to);
-          // 구스키마 행엔 payload가 없다 — null을 채워 EventRow 계약을 맞춘다.
-          // 타입 회피가 아니라 사실의 명시다. asPayload가 null을 빈 객체로 읽으므로
-          // type 카운트·체류시간 집계는 그대로 돌고, payload 기반 지표만 0이 된다.
-          const legacy = await legacyQuery;
-          eventsData = legacy.data === null ? null : legacy.data.map((r) => ({ ...r, payload: null }));
-        }
-
-        const events = eventsData ?? [];
+        // payload 컬럼 마이그레이션 전이면 select가 통째로 실패한다 — 그때만(평상시 0회) 구 스키마로 재조회.
+        // 재조회도 같은 페이지네이션을 탄다(한 방 select로 돌아가면 거기서 다시 1000행에 잘린다).
+        const eventsResult = eventsCollected.failed ? await collectEvents(false) : eventsCollected;
+        const events = eventsResult.rows;
+        const eventsScanned = events.length;
+        const eventsTruncated = eventsResult.truncated;
 
         // 타입별 카운트 맵 (단일 순회) — 데이터가 쌓여도 순회 1회로 처리
-        const counts: Record<string, number> = {};
+        const counts: Record<string, number> = emptyCounts();
         const stays: number[] = [];
         // payload 분해 집계(같은 순회 안에서 처리 — 추가 쿼리 없음)
-        const tabCounts: Record<string, number> = {};
-        const shopFilterCounts: Record<string, number> = {};
-        const rsvpCounts: Record<string, number> = {};
+        const tabCounts: Record<string, number> = emptyCounts();
+        const shopFilterCounts: Record<string, number> = emptyCounts();
+        const rsvpCounts: Record<string, number> = emptyCounts();
         const couponAgg = new Map<string, CouponAgg>();
         const couponRow = (id: string): CouponAgg => {
           const found = couponAgg.get(id);
@@ -200,9 +254,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         };
         // 피드백 시트 품질 신호 — "쓰다 말고 닫았나"와 "왜 전송이 실패했나"만 분해한다.
         let feedbackClosesWithText = 0;
-        const feedbackSendFailReasons: Record<string, number> = {};
+        const feedbackSendFailReasons: Record<string, number> = emptyCounts();
         // 유입 소스별 퍼널
         const bySource = new Map<string, SourceRow>();
+        // 상한 초과로 어느 행에도 못 들어간 이벤트 수 — 조용히 버리면 광고 소스가 0으로 보인다.
+        let droppedSourceEvents = 0;
 
         for (const e of events) {
           counts[e.type] = (counts[e.type] ?? 0) + 1;
@@ -228,7 +284,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
               let row = bySource.get(key);
               if (!row && bySource.size < SOURCE_KEY_CAP) {
                 row = {
-                  source, campaign, content,
+                  key, source, campaign, content,
                   entries: 0, landingViews: 0, ctaClicks: 0, sessions: 0,
                   recommendRequests: 0, recommendShown: 0,
                   groupSessionCreates: 0, feedbackSubmits: 0, reservationAttempts: 0,
@@ -236,6 +292,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 bySource.set(key, row);
               }
               if (row) row[metric] += 1;
+              else droppedSourceEvents += 1;
             }
           }
 
@@ -280,12 +337,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         }
         const c = (t: string) => counts[t] ?? 0;
 
-        // 유입 많은 순 상위 20개만 보낸다 — 그 아래는 판단에 쓸 표본이 안 된다.
+        // 활동 많은 순 상위 20개만 보낸다 — 그 아래는 판단에 쓸 표본이 안 된다.
+        // entries 1순위 정렬은 기간 필터를 걸면 성과 낸 소재를 지워버린다: 어제 유입돼 오늘 전환한
+        // 유저는 오늘 범위에서 entries가 0이라 최하위로 밀리고, 소스가 20개를 넘으면 잘려서 안 보인다.
+        // 그래서 퍼널 전 구간의 활동량 합으로 정렬한다.
+        const activity = (r: SourceRow): number =>
+          r.entries + r.landingViews + r.ctaClicks + r.sessions
+          + r.recommendRequests + r.recommendShown
+          + r.groupSessionCreates + r.feedbackSubmits + r.reservationAttempts;
         const sourceRows = [...bySource.values()]
-          .sort((a, b) => b.entries - a.entries || b.recommendRequests - a.recommendRequests);
+          .sort((a, b) => activity(b) - activity(a) || b.entries - a.entries);
         const attribution = {
           rows: sourceRows.slice(0, 20),
           otherCount: Math.max(0, sourceRows.length - 20),
+          droppedSourceEvents,
         };
 
         // 쿠폰 순 신청(add-remove) Top 10 — 순 수요가 남은 것만, 내림차순
@@ -431,6 +496,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           // ── 유입 소스 ──
           entryViews: c('entry_view'),
           attribution,
+          // ── 집계 범위 자체의 신뢰도 ──
+          // 이 두 값이 없으면 "숫자가 작다"와 "숫자가 잘렸다"를 구분할 방법이 없다.
+          eventsScanned,
+          eventsTruncated,
         };
 
         return res.status(200).json({ analytics, reservations, userFeedback });

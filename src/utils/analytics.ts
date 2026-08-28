@@ -46,8 +46,9 @@ type EventType = 'landing_view' | 'cta_click' | 'reservation_attempt' | 'session
   | 'guest_directions_click' | 'guest_calendar_add'
   // I. 상시 유저 피드백(우하단 FAB) — 원문은 user_feedback 테이블에만 남기고 여기엔 카운트만 싣는다
   | 'feedback_open' | 'feedback_submit' | 'feedback_close' | 'feedback_send_fail'
-  // J. 문서 로드당 1회 — 소스별 유입수의 분모. 광고가 /app·/join으로 직행하면 landing_view가
-  //    안 쏘여 "이 소재로 몇 명이 들어왔나"를 셀 방법이 아예 없다.
+  // J. 탭 세션당 1회(새 광고 클릭으로 터치가 갱신되면 재발화) — 소스별 유입수의 분모.
+  //    광고가 /app·/join으로 직행하면 landing_view가 안 쏘여
+  //    "이 소재로 몇 명이 들어왔나"를 셀 방법이 아예 없다.
   | 'entry_view';
 
 const PAUSE_KEY = 'mint_tracking_paused';
@@ -57,7 +58,7 @@ export function isTrackingPaused(): boolean {
 }
 
 export function setTrackingPaused(paused: boolean): void {
-  try { localStorage.setItem(PAUSE_KEY, paused ? 'true' : 'false'); } catch {}
+  try { localStorage.setItem(PAUSE_KEY, paused ? 'true' : 'false'); } catch { /* 저장소가 막힌 환경 — 추적 일시정지는 이번 세션에만 적용된다 */ }
 }
 
 declare global {

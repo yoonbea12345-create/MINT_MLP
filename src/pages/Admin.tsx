@@ -21,6 +21,7 @@ interface CouponNotifyRow {
 
 // 유입 소스별 퍼널 한 줄 — 이벤트 payload에 실려온 `_attr`을 서버가 소스(캠페인/소재)별로 접은 것
 interface AttributionRow {
+  key: string;   // 서버가 만든 조합 키 — 어드민이 다시 조합하면 utm에 구분자가 섞였을 때 키가 충돌한다
   source: string;
   campaign: string;
   content: string;
@@ -142,7 +143,10 @@ interface AdminAnalytics {
   guestCalendarAdds: number;
   // 유입 소스
   entryViews: number;
-  attribution: { rows: AttributionRow[]; otherCount: number };
+  attribution: { rows: AttributionRow[]; otherCount: number; droppedSourceEvents: number };
+  // 집계 범위 — 서버가 실제로 훑은 이벤트 행 수와, 안전 상한에 걸려 잘렸는지 여부
+  eventsScanned: number;
+  eventsTruncated: boolean;
 }
 
 const EMPTY_ANALYTICS: AdminAnalytics = {
@@ -170,7 +174,8 @@ const EMPTY_ANALYTICS: AdminAnalytics = {
   couponReserveClicks: 0, couponPurchaseClicks: 0,
   resumePromptShown: 0, resumePromptAccepts: 0, resumePromptDiscards: 0,
   guestDirectionsClicks: 0, guestCalendarAdds: 0,
-  entryViews: 0, attribution: { rows: [], otherCount: 0 },
+  entryViews: 0, attribution: { rows: [], otherCount: 0, droppedSourceEvents: 0 },
+  eventsScanned: 0, eventsTruncated: false,
 };
 
 // 탭·필터 key → 화면 라벨 (서버가 모르는 key를 보내도 key 그대로 렌더된다)
@@ -182,6 +187,9 @@ const SHOP_FILTER_LABELS: Record<string, string> = {
   all: '전체', side: '사이드', drink: '음료', discount: '할인',
   time: '시간대', group: '모임', first_visit: '첫 방문',
 };
+
+// api/admin-data.ts의 SOURCE_KEY_CAP과 같은 값 — 각주에서 "몇 개 상한인지"를 말해주기 위한 표시용이다.
+const SOURCE_ROW_CAP = 1000;
 
 type RangeKey = 'today' | '7d' | '30d' | 'all';
 const RANGE_LABELS: { key: RangeKey; label: string }[] = [
@@ -210,9 +218,17 @@ async function callAdmin(password: string, extra: Record<string, unknown> = {}) 
   return data;
 }
 
+// 분모가 0이면 비율은 존재하지 않는다 — '0.0'으로 찍으면 "성과가 0"으로 읽혀서
+// (기간 필터로 유입만 0이 된 소스처럼) 정반대 결론을 유도한다.
 function pct(numer: number, denom: number): string {
-  if (denom <= 0) return '0.0';
+  if (denom <= 0) return '—';
   return ((numer / denom) * 100).toFixed(1);
+}
+
+// 화면에 그대로 박는 표기용 — 비율이 없을 땐 '—%'가 되지 않게 %를 떼고 내보낸다.
+function pctLabel(numer: number, denom: number): string {
+  const v = pct(numer, denom);
+  return v === '—' ? v : `${v}%`;
 }
 
 function formatDuration(seconds: number): string {
@@ -348,6 +364,7 @@ export default function Admin() {
   const rsvpTotal = a.rsvpGoing + a.rsvpNotGoing + a.rsvpUndecided;
   const attrRows = a.attribution?.rows ?? [];
   const attrOtherCount = a.attribution?.otherCount ?? 0;
+  const attrDropped = a.attribution?.droppedSourceEvents ?? 0;
   const sendFail = a.feedbackSendFailReasons ?? {};
   const feedbackCounts = FEEDBACK_CATEGORIES.map((cat) => ({
     ...cat,
@@ -515,9 +532,14 @@ export default function Admin() {
       ['게스트 길찾기 클릭', a.guestDirectionsClicks],
       ['게스트 캘린더 저장', a.guestCalendarAdds],
       ['유입(entry_view)', a.entryViews],
+      // 집계 범위 자체를 CSV에도 남긴다 — 나중에 이 파일만 보고 숫자를 비교할 때 잘린 스냅샷인지 알아야 한다.
+      ['집계한 이벤트 행 수', a.eventsScanned],
+      ['집계 상한 도달(잘림)', a.eventsTruncated ? '예' : '아니오'],
+      ['소스 상한 초과로 버린 이벤트', attrDropped],
       [],
       ['유입 소스별 퍼널 (상위 20)'],
-      ['소스', '캠페인', '소재', '유입', '랜딩', 'CTA', '세션', '추천요청', '추천노출', '그룹생성', '피드백', '예약시도'],
+      // "세션"은 session_duration인데 결과 화면 도달 시에만 쏘인다 — 추천 노출보다 뒤 단계다.
+      ['소스', '캠페인', '소재', '유입', '랜딩', 'CTA', '결과도달', '추천요청(재시도 포함)', '추천노출', '그룹생성', '피드백', '예약시도'],
       ...attrRows.map((row) => [
         row.source, row.campaign, row.content, row.entries, row.landingViews, row.ctaClicks, row.sessions,
         row.recommendRequests, row.recommendShown, row.groupSessionCreates, row.feedbackSubmits, row.reservationAttempts,
@@ -605,6 +627,19 @@ export default function Admin() {
           </div>
         )}
 
+        {/* 집계 상한 경고 — 안 잘렸으면 조용히 사라진다.
+            잘렸는데 말이 없으면 "숫자가 작다"와 "숫자가 잘렸다"를 구분할 수 없어 예산 판단이 틀어진다. */}
+        {a.eventsTruncated && (
+          <div className="mb-4 bg-amber-50 border border-amber-200 rounded-2xl p-4">
+            <div className="text-sm font-bold text-amber-700 mb-1">⚠️ 이벤트 상한에 걸렸어요</div>
+            <div className="text-xs text-amber-600">
+              이벤트 {a.eventsScanned.toLocaleString()}건 상한에 걸려 최근 것만 집계했어요.
+              아래 숫자는 이 기간 전체가 아니라 최근 {a.eventsScanned.toLocaleString()}건 기준이에요 —
+              기간을 좁혀서 다시 보세요.
+            </div>
+          </div>
+        )}
+
         {/* 데이터 수집 일시정지 토글 */}
         <div className="mb-6">
           <button
@@ -643,10 +678,10 @@ export default function Admin() {
           </div>
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 flex flex-col gap-2">
             <FunnelStep label="랜딩 조회" value={a.landingViews} rate={null} />
-            <FunnelStep label="CTA 클릭" value={a.ctaClicks} rate={pct(a.ctaClicks, a.landingViews)} />
-            <FunnelStep label="앱 진입(세션)" value={a.sessions} rate={pct(a.sessions, a.ctaClicks)} />
-            <FunnelStep label="예약 시도" value={a.reservationAttempts} rate={pct(a.reservationAttempts, a.sessions)} />
-            <FunnelStep label="예약 완료" value={a.reservationCompleted} rate={pct(a.reservationCompleted, a.reservationAttempts)} last />
+            <FunnelStep label="CTA 클릭" value={a.ctaClicks} rate={pctLabel(a.ctaClicks, a.landingViews)} />
+            <FunnelStep label="앱 진입(세션)" value={a.sessions} rate={pctLabel(a.sessions, a.ctaClicks)} />
+            <FunnelStep label="예약 시도" value={a.reservationAttempts} rate={pctLabel(a.reservationAttempts, a.sessions)} />
+            <FunnelStep label="예약 완료" value={a.reservationCompleted} rate={pctLabel(a.reservationCompleted, a.reservationAttempts)} last />
           </div>
           <p className="text-[11px] text-gray-400 mt-2 px-1">
             * 예약 시도는 이벤트, 예약 완료는 reservations 테이블 실건수 — 소스가 달라 초기화 대상도 달라요.
@@ -670,7 +705,7 @@ export default function Admin() {
               <div className="flex flex-col gap-1.5">
                 {attrRows.map((row) => (
                   <div
-                    key={`${row.source}|${row.campaign}|${row.content}`}
+                    key={row.key}
                     className="flex items-start gap-2 text-xs py-1.5 border-b border-gray-50 last:border-0"
                   >
                     <span className="flex-1 min-w-0">
@@ -678,16 +713,21 @@ export default function Admin() {
                       <span className="block text-[11px] text-gray-400 truncate">
                         {[row.campaign, row.content].filter(Boolean).join(' · ') || '캠페인·소재 미지정'}
                       </span>
+                      {/* session_duration은 결과 화면 도달 시에만 쏘인다 — 추천 노출보다 뒤 단계라
+                          "세션"이라고 부르면 존재할 수 없는 이탈 구간처럼 읽힌다. 그래서 "결과도달". */}
                       <span className="block text-[11px] text-gray-300 truncate">
-                        랜딩 {row.landingViews} · CTA {row.ctaClicks} · 세션 {row.sessions} · 그룹 {row.groupSessionCreates} · 피드백 {row.feedbackSubmits} · 예약시도 {row.reservationAttempts}
+                        랜딩 {row.landingViews} · CTA {row.ctaClicks} · 결과도달 {row.sessions} · 그룹 {row.groupSessionCreates} · 피드백 {row.feedbackSubmits} · 예약시도 {row.reservationAttempts}
                       </span>
                     </span>
                     <span className="text-right shrink-0">
                       <span className="block font-black text-[#36CFA0]">유입 {row.entries}</span>
+                      {/* 비율의 분자는 recommend_shown이다. recommend_request는 재추천·조정마다 다시 쏘여서
+                          한 명이 "다시 추천"을 세 번 누르면 400%가 나오고, 재시도가 많다는 부정 신호가
+                          화면에선 성과처럼 보인다. 요청 수는 절대수로만 남긴다. */}
                       <span className="block text-[11px] text-gray-400">
-                        추천요청 {row.recommendRequests} ({pct(row.recommendRequests, row.entries)}%)
+                        추천노출 {row.recommendShown} ({pctLabel(row.recommendShown, row.entries)})
                       </span>
-                      <span className="block text-[11px] text-gray-300">노출 {row.recommendShown}</span>
+                      <span className="block text-[11px] text-gray-300">요청 {row.recommendRequests} (재시도 포함)</span>
                     </span>
                   </div>
                 ))}
@@ -695,16 +735,18 @@ export default function Admin() {
             )}
           </div>
           <p className="text-[11px] text-gray-400 mt-2 px-1">
-            * 유입은 문서 로드당 1회(entry_view) 기준이라 랜딩을 거치지 않고 /app·/join으로 직행한 광고도 잡혀요.
+            * 유입은 탭 세션당 1회(entry_view, 새 광고 클릭이면 다시 발화) 기준이라 랜딩을 거치지 않고
+            /app·/join으로 직행한 광고도 잡혀요.
             예약 "완료"는 reservations 테이블이라 소스를 알 수 없어 예약 시도로 대신 봐요.
             {attrOtherCount > 0 && ` 상위 20개 외 ${attrOtherCount}개 소스는 생략했어요.`}
+            {attrDropped > 0 && ` 소스 종류가 ${SOURCE_ROW_CAP}개 상한을 넘어 ${attrDropped}건의 이벤트는 어느 행에도 못 들어갔어요(utm 값이 오염됐을 수 있어요).`}
           </p>
         </section>
 
         {/* ── 핵심 지표 카드 ── */}
         <div className="grid grid-cols-2 gap-3 mb-6">
-          <StatCard label="전환율 (랜딩→CTA)" value={`${pct(a.ctaClicks, a.landingViews)}%`} highlight />
-          <StatCard label="예약 완료율 (시도→완료)" value={`${pct(a.reservationCompleted, a.reservationAttempts)}%`} highlight />
+          <StatCard label="전환율 (랜딩→CTA)" value={pctLabel(a.ctaClicks, a.landingViews)} highlight />
+          <StatCard label="예약 완료율 (시도→완료)" value={pctLabel(a.reservationCompleted, a.reservationAttempts)} highlight />
           <StatCard label="평균 체류시간" value={a.avgStaySeconds != null ? formatDuration(a.avgStaySeconds) : '—'} sub={a.medianStaySeconds != null ? `중앙값 ${formatDuration(a.medianStaySeconds)}` : '아직 기록 없음'} />
           <StatCard label="카카오 공유" value={a.kakaoShares} unit="회" sub={a.kakaoShareFallbacks > 0 ? `폴백 ${a.kakaoShareFallbacks}회` : undefined} />
         </div>
@@ -762,7 +804,7 @@ export default function Admin() {
           <h2 className="text-sm font-black text-gray-600 mb-3">🎯 추천 품질 <span className="text-gray-300 font-normal">(랭킹 튜닝 신호)</span></h2>
           <div className="grid grid-cols-2 gap-3 mb-3">
             <StatCard label="추천 노출" value={a.recommendShown} unit="회" sub={`요청 ${a.recommendRequests}회`} />
-            <StatCard label="추천 성공률" value={`${pct(a.recommendShown, a.recommendRequests)}%`} sub={a.recommendErrors > 0 ? `에러 ${a.recommendErrors}회` : '에러 없음'} highlight />
+            <StatCard label="추천 성공률" value={pctLabel(a.recommendShown, a.recommendRequests)} sub={a.recommendErrors > 0 ? `에러 ${a.recommendErrors}회` : '에러 없음'} highlight />
           </div>
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
             <p className="text-xs font-black text-gray-500 mb-2">선택 순위 분포 <span className="text-gray-300 font-normal">(어떤 순위를 눌렀나 = ground truth)</span></p>
@@ -788,8 +830,8 @@ export default function Admin() {
             <h2 className="text-sm font-black text-gray-600 mb-3">📝 입력 단계 진행</h2>
             <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 flex flex-col gap-2">
               <FunnelStep label="1단계 통과" value={a.stepNext0} rate={null} />
-              <FunnelStep label="2단계 통과" value={a.stepNext1} rate={pct(a.stepNext1, a.stepNext0)} />
-              <FunnelStep label="3단계 통과" value={a.stepNext2} rate={pct(a.stepNext2, a.stepNext1)} last />
+              <FunnelStep label="2단계 통과" value={a.stepNext1} rate={pctLabel(a.stepNext1, a.stepNext0)} />
+              <FunnelStep label="3단계 통과" value={a.stepNext2} rate={pctLabel(a.stepNext2, a.stepNext1)} last />
             </div>
           </section>
           <section>
@@ -833,8 +875,8 @@ export default function Admin() {
             <StatCard label="쿠폰 탭" value={a.shopCouponClicks} unit="회" sub={`페이지 이동 ${a.shopPageChanges}회`} />
             <StatCard label="순 알림신청" value={a.couponNotifyAdds - a.couponNotifyRemoves} unit="건" sub={`신청 ${a.couponNotifyAdds} · 취소 ${a.couponNotifyRemoves}`} highlight />
             {/* 쿠폰 상세를 연 사람이 어느 문을 두드렸나 — 예약은 진짜 문, 구매는 아직 가짜 문이다 */}
-            <StatCard label="예약하기 클릭 (진짜 문)" value={a.couponReserveClicks} unit="회" sub={`쿠폰 탭 대비 ${pct(a.couponReserveClicks, a.shopCouponClicks)}%`} />
-            <StatCard label="구매 클릭 (가짜 문)" value={a.couponPurchaseClicks} unit="회" sub={`쿠폰 탭 대비 ${pct(a.couponPurchaseClicks, a.shopCouponClicks)}%`} />
+            <StatCard label="예약하기 클릭 (진짜 문)" value={a.couponReserveClicks} unit="회" sub={`쿠폰 탭 대비 ${pctLabel(a.couponReserveClicks, a.shopCouponClicks)}`} />
+            <StatCard label="구매 클릭 (가짜 문)" value={a.couponPurchaseClicks} unit="회" sub={`쿠폰 탭 대비 ${pctLabel(a.couponPurchaseClicks, a.shopCouponClicks)}`} />
           </div>
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 mb-3">
             <p className="text-xs font-black text-gray-500 mb-2">필터 사용 <span className="text-gray-300 font-normal">(어떤 혜택을 찾나)</span></p>
@@ -880,11 +922,11 @@ export default function Admin() {
           <h2 className="text-sm font-black text-gray-600 mb-3">🙋 총무 플랜 퍼널 <span className="text-gray-300 font-normal">(가격 검증)</span></h2>
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 flex flex-col gap-2">
             <FunnelStep label="진입 클릭" value={a.planEntryClicks} rate={null} />
-            <FunnelStep label="상세 열람" value={a.planDetailViews} rate={pct(a.planDetailViews, a.planEntryClicks)} />
-            <FunnelStep label="사전 신청" value={a.planPreregisters} rate={pct(a.planPreregisters, a.planDetailViews)} last />
+            <FunnelStep label="상세 열람" value={a.planDetailViews} rate={pctLabel(a.planDetailViews, a.planEntryClicks)} />
+            <FunnelStep label="사전 신청" value={a.planPreregisters} rate={pctLabel(a.planPreregisters, a.planDetailViews)} last />
           </div>
           <p className="text-[11px] text-gray-400 mt-2 px-1">
-            * 상세만 보고 닫음(이탈) {a.planDetailCloses}건 — 열람 대비 {pct(a.planDetailCloses, a.planDetailViews)}%
+            * 상세만 보고 닫음(이탈) {a.planDetailCloses}건 — 열람 대비 {pctLabel(a.planDetailCloses, a.planDetailViews)}
           </p>
         </section>
 
@@ -905,9 +947,9 @@ export default function Admin() {
             <h2 className="text-sm font-black text-gray-600 mb-3">📍 방문 인증</h2>
             <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 flex flex-col gap-2">
               <FunnelStep label="인증 시작" value={a.visitCertOpens} rate={null} />
-              <FunnelStep label="인증 완료" value={a.visitCertDones} rate={pct(a.visitCertDones, a.visitCertOpens)} last />
+              <FunnelStep label="인증 완료" value={a.visitCertDones} rate={pctLabel(a.visitCertDones, a.visitCertOpens)} last />
               <div className="text-[11px] text-gray-400 pt-2 border-t border-gray-50">
-                전환율 {pct(a.visitCertDones, a.visitCertOpens)}% · 실패 {a.visitCertFails}건
+                전환율 {pctLabel(a.visitCertDones, a.visitCertOpens)} · 실패 {a.visitCertFails}건
               </div>
             </div>
           </section>
@@ -944,7 +986,7 @@ export default function Admin() {
             <MiniStat label="게스트 캘린더 저장" value={a.guestCalendarAdds} />
           </div>
           <p className="text-[11px] text-gray-400 mt-2 px-1">
-            * 이어보기 수락률 {pct(a.resumePromptAccepts, a.resumePromptShown)}% — 카카오 로그인으로 앱을 떠났던 사람이 보던 추천으로 돌아온 비율이에요.
+            * 이어보기 수락률 {pctLabel(a.resumePromptAccepts, a.resumePromptShown)} — 카카오 로그인으로 앱을 떠났던 사람이 보던 추천으로 돌아온 비율이에요.
           </p>
         </section>
 
@@ -957,7 +999,7 @@ export default function Admin() {
               원문이 0건일 때 열림/제출 숫자가 바로 옆에 있어야 원인을 가릴 수 있다. */}
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 mb-3 flex flex-col gap-2">
             <FunnelStep label="시트 열림" value={a.feedbackOpens} rate={null} />
-            <FunnelStep label="제출" value={a.feedbackSubmits} rate={pct(a.feedbackSubmits, a.feedbackOpens)} last />
+            <FunnelStep label="제출" value={a.feedbackSubmits} rate={pctLabel(a.feedbackSubmits, a.feedbackOpens)} last />
             <div className="text-[11px] text-gray-400 pt-2 border-t border-gray-50">
               쓰다 말고 닫음 {a.feedbackClosesWithText}건 (닫음 {a.feedbackCloses}건 중) ·
               전송 실패 server {sendFail.server ?? 0} / network {sendFail.network ?? 0}
@@ -1133,7 +1175,8 @@ function FunnelStep({ label, value, rate, last }: {
       <div className="flex items-center gap-3">
         <span className="text-lg font-black text-[#36CFA0]">{value}</span>
         {rate != null && (
-          <span className="text-xs text-gray-400 w-16 text-right">직전 {rate}%</span>
+          // rate는 pctLabel이 만든 완성 문자열이다(%까지 포함, 분모 0이면 '—').
+          <span className="text-xs text-gray-400 w-16 text-right">직전 {rate}</span>
         )}
       </div>
     </div>

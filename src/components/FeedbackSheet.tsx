@@ -3,7 +3,7 @@ import { getDeviceId } from '../utils/points';
 import { trackEvent } from '../utils/analytics';
 import {
   CATEGORY_OPTIONS, FEEDBACK_COUNTER_FROM, FEEDBACK_MAX_LEN, FEEDBACK_MIN_LEN,
-  flushOutbox, loadDraft, saveDraftDebounced, submitFeedback,
+  flushOutbox, loadDraft, saveDraftDebounced, submitFeedback, textLength,
   type FeedbackCategory,
 } from '../utils/feedback';
 
@@ -59,10 +59,14 @@ export default function FeedbackSheet({ tab, onClose }: Props) {
 
   const sheetRef = useRef<HTMLDivElement | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const doneButtonRef = useRef<HTMLButtonElement | null>(null);
   const { inset, visibleHeight } = useKeyboardInset();
 
   const trimmed = text.trim();
-  const canSend = trimmed.length >= FEEDBACK_MIN_LEN;
+  // 길이는 코드포인트로 센다 — 서버·DB(char_length)와 같은 단위여야 '👍' 하나짜리 피드백이
+  // 여기선 통과하고 DB에서만 터지는 일이 안 생긴다(JS의 .length는 '👍'를 2로 센다).
+  const textLen = textLength(text);
+  const canSend = textLength(trimmed) >= FEEDBACK_MIN_LEN;
 
   // 열릴 때: 쓰기 의도로 열었으니 곧장 textarea에 포커스 → 밀린 아웃박스도 이참에 흘려보낸다.
   // 닫힐 때: 포커스를 열어준 요소(FAB)로 돌려준다.
@@ -84,11 +88,18 @@ export default function FeedbackSheet({ tab, onClose }: Props) {
   }, [text, category, contact, sent]);
 
   // 제출 성공 화면은 한 박자만 머문다.
+  // onClose를 의존성에 두지 않고 ref로 읽는 이유: 부모가 인라인 화살표를 넘기면 리렌더마다
+  // 참조가 바뀌어 이 타이머가 매번 리셋된다 — 성공 화면이 영영 안 닫힐 수 있다.
+  const onCloseRef = useRef(onClose);
+  useEffect(() => { onCloseRef.current = onClose; }, [onClose]);
   useEffect(() => {
     if (!sent) return;
-    const timer = setTimeout(onClose, SUCCESS_AUTO_CLOSE_MS);
+    // 제출 버튼이 언마운트되며 포커스가 <body>로 날아가면, 시트 div에 걸린 keydown 핸들러를
+    // 이벤트가 통과하지 않아 ESC도 탭 트랩도 죽는다. 성공 화면의 확인 버튼으로 데려온다.
+    doneButtonRef.current?.focus();
+    const timer = setTimeout(() => onCloseRef.current(), SUCCESS_AUTO_CLOSE_MS);
     return () => clearTimeout(timer);
-  }, [sent, onClose]);
+  }, [sent]);
 
   // 닫기·백드롭 탭에 "나가시겠어요?"를 붙이지 않는다 — 초안이 저장되므로 잃을 게 없고,
   // 그 확인 모달이야말로 마찰이다. 제출까지 간 경우는 close 이벤트로 세지 않는다(퍼널 분모 오염 방지).
@@ -135,7 +146,13 @@ export default function FeedbackSheet({ tab, onClose }: Props) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/50" onClick={close}>
+    // 백드롭 닫기는 click이 아니라 pointerdown + 타깃 확인이다. click은 mousedown/mouseup의
+    // 공통 조상에서 나므로, textarea 안에서 드래그로 글자를 고르다 백드롭 위에서 손을 떼면
+    // 타깃이 백드롭이 되어 시트가 갑자기 닫혔다.
+    <div
+      className="fixed inset-0 z-50 bg-black/50"
+      onPointerDown={(e) => { if (e.target === e.currentTarget) close(); }}
+    >
       <div
         ref={sheetRef}
         role="dialog"
@@ -162,6 +179,7 @@ export default function FeedbackSheet({ tab, onClose }: Props) {
               다음 업데이트에 빠르게 반영할게요.
             </p>
             <button
+              ref={doneButtonRef}
               onClick={onClose}
               className="mt-5 w-full rounded-2xl bg-[#3CDBC0] py-3.5 font-black text-white transition-transform active:scale-[0.98]"
             >
@@ -180,15 +198,17 @@ export default function FeedbackSheet({ tab, onClose }: Props) {
                 <textarea
                   ref={textareaRef}
                   value={text}
-                  onChange={(e) => setText(e.target.value.slice(0, FEEDBACK_MAX_LEN))}
+                  // maxLength 속성과 .slice()는 둘 다 UTF-16 코드유닛을 세므로 500번째 자리에
+                  // 이모지가 걸리면 서로게이트 쌍을 반으로 자른다. 그렇게 잘린 문자열은 서버가
+                  // 400으로 거절하고, 클라는 400을 영구 실패로 보고 버린다 — 긴 글이 통째로 사라진다.
+                  onChange={(e) => setText([...e.target.value].slice(0, FEEDBACK_MAX_LEN).join(''))}
                   rows={3}
-                  maxLength={FEEDBACK_MAX_LEN}
                   placeholder="예: 추천이 좀 멀어요 / 이런 기능 있으면 좋겠어요"
                   className="w-full resize-none rounded-2xl border-2 border-gray-200 bg-white px-4 py-3 text-sm leading-relaxed outline-none focus:border-[#3CDBC0]"
                 />
-                {text.length >= FEEDBACK_COUNTER_FROM && (
+                {textLen >= FEEDBACK_COUNTER_FROM && (
                   <span className="absolute bottom-3 right-3 text-[11px] text-gray-400">
-                    {text.length}/{FEEDBACK_MAX_LEN}
+                    {textLen}/{FEEDBACK_MAX_LEN}
                   </span>
                 )}
               </div>

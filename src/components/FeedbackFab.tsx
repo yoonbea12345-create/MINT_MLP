@@ -50,12 +50,15 @@ export default function FeedbackFab({ hidden, onOpen }: Props) {
       if (!alive) return;
       alive = false;
       setHint(false);
-      try { localStorage.setItem(HINT_KEY, '1'); } catch { /* ignore */ }
       window.removeEventListener('pointerdown', dismiss);
     };
     const showTimer = setTimeout(() => {
       alive = true;
       setHint(true);
+      // "봤다"는 기록은 소멸이 아니라 노출 시점에 남긴다. 이 FAB은 탭바와 함께 조건부로
+      // 마운트돼서, 힌트가 떠 있는 동안 입력 스텝으로 들어가면 언마운트되며 dismiss가 안 불린다.
+      // 소멸 시점에 기록했더니 그때마다 키가 안 남아 툴팁이 계속 다시 떴다.
+      try { localStorage.setItem(HINT_KEY, '1'); } catch { /* ignore */ }
       window.addEventListener('pointerdown', dismiss);
     }, HINT_DELAY_MS);
     const hideTimer = setTimeout(dismiss, HINT_DELAY_MS + HINT_LIFE_MS);

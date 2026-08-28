@@ -25,8 +25,11 @@ const MAX_VALUE = 100;
 const MAX_REFERRER = 200;
 const MAX_CLICK_ID = 40;
 
-// 광고 성과의 분모를 오염시키는 크롤러/프리뷰 봇 패턴
-const BOT_UA = /bot|spider|crawl|headless|facebookexternal|preview/i;
+// 광고 성과의 분모를 오염시키는 크롤러/프리뷰 봇 패턴.
+// `bot`을 단어 경계로 묶는 이유: 맨 부분일치면 CUBOT(실존 안드로이드 브랜드) UA가 봇으로 걸려
+// 그 사람의 어트리뷰션도 entry_view도 통째로 사라진다 — 진짜 유입을 버리는 쪽이 훨씬 비싸다.
+// `bot/`는 Googlebot/2.1처럼 슬래시로 버전을 붙이는 진짜 크롤러를 잡고, yeti는 네이버 크롤러다.
+const BOT_UA = /\bbot\b|bot\/|\byeti\b|spider|crawl|headless|facebookexternal|preview/i;
 
 export interface AttributionRecord {
   source: string;          // 파생 소스 — 집계의 1차 키
@@ -52,7 +55,7 @@ export interface AttributionTag {
 // 모듈 캐시(undefined = 아직 안 읽음). trackEvent가 이벤트마다 localStorage를 파싱하지 않게 한다.
 let cache: AttributionRecord | null | undefined;
 
-// 문서 로드당 1회 발화 보장 — sessionStorage가 막힌 환경(사파리 프라이빗 등)의 최후 방어선
+// 탭 세션당 1회 발화 보장 — sessionStorage가 막힌 환경(사파리 프라이빗 등)의 최후 방어선
 let entryFired = false;
 
 function isBot(): boolean {
@@ -81,10 +84,17 @@ function sourceFromReferrer(referrer: string | undefined): string | null {
   }
   if (!host || host === window.location.hostname) return null;
   // 카카오/구글 로그인 왕복은 "우리가 보낸 사람이 돌아온 것"이지 새 유입이 아니다.
-  if (host.startsWith('kauth.') || host.startsWith('accounts.')) return null;
+  // supabase.co를 함께 막는 이유: 카카오 로그인이 supabase.auth.signInWithOAuth로 돌아서
+  // 마지막 홉 referrer가 <project>.supabase.co다. 저장값이 없는 상태(인앱→외부 브라우저 전환,
+  // TTL 만료, 데이터 삭제)에서 이게 유입 소스로 굳으면 그 사람의 이후 퍼널이 통째로 쓰레기 소스로 간다.
+  if (host.startsWith('kauth.') || host.startsWith('accounts.') || host.endsWith('.supabase.co')) return null;
   if (host.includes('instagram')) return 'instagram';
+  // Meta는 l./lm./m.facebook.com으로, 구글은 google.com/google.co.kr로 흩어져 들어온다.
+  // 호스트별로 행이 쪼개지면 표본이 갈라져 소재 비교 자체가 무의미해진다 — 한 소스로 접는다.
+  if (host.includes('facebook') || host.includes('fb.')) return 'instagram';
   if (host.includes('kakao')) return 'kakao';
   if (host.includes('naver')) return 'naver';
+  if (host.includes('google')) return 'google';
   return host.replace(/^www\./, '');
 }
 
@@ -99,6 +109,9 @@ function derive(): { record: AttributionRecord; explicit: boolean } {
   const fbclid = trim(params.get('fbclid'), MAX_CLICK_ID);
   const gclid = trim(params.get('gclid'), MAX_CLICK_ID);
   const referrer = trim(document.referrer, MAX_REFERRER);
+  // index.html이 카카오톡 인앱 브라우저를 감지하면 URL에 ?from=kakao를 붙여 외부 브라우저를 연다.
+  // 외부 브라우저엔 referrer가 아예 없어서, 이 신호를 안 읽으면 카카오 공유 유입이 전부 direct로 세진다.
+  const fromParam = trim(params.get('from'), MAX_VALUE);
 
   // 소스는 캡처 시점에 확정한다 — 어드민이 매번 referrer를 다시 추론하지 않게.
   // fbclid를 instagram으로 보는 이유: 인스타 인앱 브라우저는 referrer가 비거나 l.instagram.com으로만
@@ -108,6 +121,7 @@ function derive(): { record: AttributionRecord; explicit: boolean } {
     ?? (fbclid ? 'instagram' : undefined)
     ?? (gclid ? 'google_ads' : undefined)
     ?? sourceFromReferrer(referrer)
+    ?? (fromParam === 'kakao' ? 'kakao' : undefined)
     ?? 'direct';
 
   const record: AttributionRecord = { source: derived, capturedAt: Date.now() };
@@ -121,7 +135,11 @@ function derive(): { record: AttributionRecord; explicit: boolean } {
   const landing = trim(window.location.pathname, MAX_VALUE);
   if (landing) record.landing = landing;
 
-  return { record, explicit: Boolean(source || medium || campaign || content || term || fbclid || gclid) };
+  // explicit은 "저장된 소스를 덮어써도 되는가"의 방아쇠다 — 소스를 실제로 확정할 수 있는 신호만 인정한다.
+  // utm_campaign만 붙은 링크(Meta 광고 URL 설정에서 흔한 실수)로 재방문하면 derived는 'direct'인데
+  // 예전 판정은 explicit=true라, 원래 instagram이던 저장값을 direct로 덮어썼다 — 광고 공이 direct로 샌다.
+  // from=kakao도 여기 넣지 않는다: 소스는 알려주되 기존 광고 터치를 지우는 방아쇠가 되면 안 된다.
+  return { record, explicit: Boolean(source || fbclid || gclid) };
 }
 
 // 같은 광고 터치인가 — 새로고침으로 같은 URL이 다시 캡처돼도 capturedAt을 갱신하지 않기 위한 비교.
@@ -163,9 +181,11 @@ function save(rec: AttributionRecord): AttributionRecord {
   return rec;
 }
 
-// entry_view payload. 문서 로드당 1회만 만들어지고, 두 번째 호출부터는 null이다.
+// entry_view payload. 탭 세션당 1회다 — 저장 레코드의 capturedAt을 sessionStorage 스탬프로 쓰기 때문에
+// 같은 광고 터치가 유지되는 동안엔 새로고침·라우팅으로 다시 만들어지지 않고, 새 광고 클릭으로
+// 터치가 갱신되면 그때 딱 한 번 더 만들어진다(문서 로드당 1회가 아니다 — 그게 더 나은 분모다).
 // 광고가 /app이나 /join으로 직행하면 landing_view가 안 쏘여 소스별 "유입수" 분모가 통째로 빈다 —
-// 그래서 랜딩 여부와 무관하게 로드당 1회를 세는 이벤트가 따로 필요하다.
+// 그래서 랜딩 여부와 무관하게 탭 세션당 1회를 세는 이벤트가 따로 필요하다.
 export interface EntryViewPayload {
   path: string;
   referrer: string;

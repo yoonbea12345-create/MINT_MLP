@@ -10,7 +10,7 @@ import FeedbackFab from '../components/FeedbackFab';
 import FeedbackSheet from '../components/FeedbackSheet';
 import { clearRecommendSession, loadResultSummary, type ResultSummary } from '../utils/history';
 import { trackEvent } from '../utils/analytics';
-import { flushOutbox } from '../utils/feedback';
+import { bindOutboxExitFlush, flushOutbox } from '../utils/feedback';
 
 // /app 셸 — 홈 탭의 콘텐츠는 항상 추천 플로우(Home)다.
 // 탭바를 보여도 되는지는 각 탭이 onChromeChange로 보고한다(셸은 localStorage를 보지 않는다).
@@ -28,8 +28,11 @@ export default function AppShell() {
   const [feedbackOpen, setFeedbackOpen] = useState(false);
 
   // 지난번에 못 보낸 피드백을 앱 켤 때 한 번 조용히 재전송한다(서버가 멱등이라 중복 저장은 없다).
+  // 나갈 때(pagehide·백그라운드 전환)도 한 번 더 시도한다 — 광고로 들어온 사람은 대개 앱을
+  // 다시 켜지 않아서, 재전송 기회가 "앱 켜기"뿐이면 밀린 피드백이 영영 못 나간다.
   useEffect(() => {
     flushOutbox();
+    bindOutboxExitFlush();
   }, []);
 
   // 카카오 로그인은 페이지를 통째로 떠났다가 이 셸로 돌아온다. 보던 추천이 아직 살아 있으면
