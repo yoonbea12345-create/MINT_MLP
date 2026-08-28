@@ -12,7 +12,12 @@ export function clientIp(req: VercelRequest): string {
 /**
  * Supabase api_hits 테이블 기반 레이트리밋.
  * - perMinute: 같은 IP의 분당 허용 횟수
- * - perDay: 엔드포인트 전체의 일일 허용 횟수 (비용 서킷브레이커)
+ * - perDay: 일일 허용 횟수. 기본은 엔드포인트 전체 합계(비용 서킷브레이커)다.
+ * - perDayScope: 일일 카운트의 집계 단위.
+ *     'endpoint'(기본) — 기존 동작 그대로. recommend처럼 호출 1회가 곧 LLM 비용인
+ *       엔드포인트는 전체 합계로 막아야 지갑이 보호되므로 기본값을 바꾸지 않는다.
+ *     'ip' — 비용이 사실상 0인 내부 저장용 엔드포인트에 쓴다. 전체 합계로 재면
+ *       "남이 많이 써서 내가 막히는" 공유 상한이 되어, 트래픽이 늘수록 조용히 429가 난다.
  * 테이블/DB 장애 시에는 서비스 가용성을 위해 통과(fail-open).
  */
 export async function checkRateLimit(
@@ -21,17 +26,19 @@ export async function checkRateLimit(
   ip: string,
   perMinute: number,
   perDay: number,
+  perDayScope: 'endpoint' | 'ip' = 'endpoint',
 ): Promise<{ allowed: boolean; reason?: 'rate' | 'daily' }> {
   if (!supabase) return { allowed: true };
   try {
     await supabase.from('api_hits').insert({ ip, endpoint });
     const minuteAgo = new Date(Date.now() - 60_000).toISOString();
     const dayAgo = new Date(Date.now() - 86_400_000).toISOString();
+    const dayQuery = supabase.from('api_hits').select('*', { count: 'exact', head: true })
+      .eq('endpoint', endpoint).gte('ts', dayAgo);
     const [minuteRes, dayRes] = await Promise.all([
       supabase.from('api_hits').select('*', { count: 'exact', head: true })
         .eq('endpoint', endpoint).eq('ip', ip).gte('ts', minuteAgo),
-      supabase.from('api_hits').select('*', { count: 'exact', head: true })
-        .eq('endpoint', endpoint).gte('ts', dayAgo),
+      perDayScope === 'ip' ? dayQuery.eq('ip', ip) : dayQuery,
     ]);
     if ((minuteRes.count ?? 0) > perMinute) return { allowed: false, reason: 'rate' };
     if ((dayRes.count ?? 0) > perDay) return { allowed: false, reason: 'daily' };

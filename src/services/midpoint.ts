@@ -92,54 +92,19 @@ const ALL_AREAS = [...METRO_AREAS, ...NATIONAL_AREAS];
 // 서울 중심 기준점
 const SEOUL_CENTER: Coordinates = { lat: 37.5665, lng: 126.9780 };
 
-// 볼록 껍질(Convex Hull) — Graham Scan, CCW 순서
-function computeConvexHull(points: Coordinates[]): Coordinates[] {
-  if (points.length <= 2) return points;
-  const sorted = [...points].sort((a, b) => a.lng !== b.lng ? a.lng - b.lng : a.lat - b.lat);
-  const cross = (O: Coordinates, A: Coordinates, B: Coordinates) =>
-    (A.lng - O.lng) * (B.lat - O.lat) - (A.lat - O.lat) * (B.lng - O.lng);
-  const lower: Coordinates[] = [];
-  for (const p of sorted) {
-    while (lower.length >= 2 && cross(lower[lower.length - 2], lower[lower.length - 1], p) <= 0) lower.pop();
-    lower.push(p);
-  }
-  const upper: Coordinates[] = [];
-  for (let i = sorted.length - 1; i >= 0; i--) {
-    const p = sorted[i];
-    while (upper.length >= 2 && cross(upper[upper.length - 2], upper[upper.length - 1], p) <= 0) upper.pop();
-    upper.push(p);
-  }
-  lower.pop();
-  upper.pop();
-  return [...lower, ...upper];
-}
-
-// n각형 무게중심 (신발끈/Shoelace 공식) — 2명: 선분 중점, 3명: 삼각형 무게중심, n명: 다각형 무게중심
-function polygonCentroid(hull: Coordinates[]): Coordinates {
-  if (hull.length === 0) return SEOUL_CENTER;
-  if (hull.length === 1) return hull[0];
-  if (hull.length === 2) return { lat: (hull[0].lat + hull[1].lat) / 2, lng: (hull[0].lng + hull[1].lng) / 2 };
-  let area = 0, cx = 0, cy = 0;
-  const n = hull.length;
-  for (let i = 0; i < n; i++) {
-    const j = (i + 1) % n;
-    const cross = hull[i].lng * hull[j].lat - hull[j].lng * hull[i].lat;
-    area += cross;
-    cx += (hull[i].lng + hull[j].lng) * cross;
-    cy += (hull[i].lat + hull[j].lat) * cross;
-  }
-  area /= 2;
-  // 면적 0 (점들이 일직선) → 산술평균으로 폴백
-  if (Math.abs(area) < 1e-10) {
-    return { lat: hull.reduce((s, p) => s + p.lat, 0) / hull.length, lng: hull.reduce((s, p) => s + p.lng, 0) / hull.length };
-  }
-  return { lat: cy / (6 * area), lng: cx / (6 * area) };
-}
 
 /**
- * 2명: 두 거주지 선분의 직선 중점
- * n명: n개 거주지로 이루어진 n각형의 기하학적 무게중심 (Shoelace 공식)
- * 반환하는 midpoint는 항상 이론상 완벽한 거리 중간지점.
+ * 출발지들의 인원 산술평균을 중간지점으로 쓴다.
+ *
+ * 예전에는 볼록 껍질의 면적 무게중심(Shoelace)을 썼는데 두 가지가 틀렸다.
+ * 첫째, 볼록 껍질은 안쪽에 있는 사람을 통째로 버린다 — 강남역·역삼·삼성·잠실·일산 5명이면
+ * 껍질이 [일산, 강남역, 잠실]이라 역삼·삼성 두 명의 출발지는 계산에 한 글자도 안 들어간다.
+ * 그 두 사람은 조건을 냈는데 위치는 없는 셈이 된다.
+ * 둘째, 면적 무게중심은 사람 수를 세지 않는다. 3명이 강남, 1명이 홍대면 3:1인데 결과는 1:1이다.
+ * 위 5명 예시에서 총 이동거리가 60.8km → 50.0km로 줄어든다.
+ *
+ * n이 3 이하면 두 방식의 결과가 원래 같다(2점은 중점, 삼각형은 무게중심=꼭짓점 평균).
+ * 즉 이건 새로운 철학이 아니라, n이 4 이상일 때만 어긋나던 것을 원래 규칙에 맞춘 것이다.
  */
 export function findBalancedAreas(
   departures: Coordinates[],
@@ -148,9 +113,11 @@ export function findBalancedAreas(
   const fallback = { areas: ['명동', '홍대입구역', '강남역'], midpoint: SEOUL_CENTER, areaName: '서울 중심부' };
   if (departures.length === 0) return fallback;
 
-  // 볼록 껍질 → 다각형 무게중심
-  const hull = computeConvexHull(departures);
-  const midpoint = polygonCentroid(hull);
+  // 모든 출발지가 똑같이 한 표씩 — 안쪽에 있다는 이유로 빠지는 사람이 없어야 한다.
+  const midpoint = {
+    lat: departures.reduce((s, p) => s + p.lat, 0) / departures.length,
+    lng: departures.reduce((s, p) => s + p.lng, 0) / departures.length,
+  };
 
   // 출발지 간 최대 직선거리
   let maxPairDist = 0;
@@ -169,8 +136,12 @@ export function findBalancedAreas(
   const areas = nearest.slice(0, count).map((a) => a.name);
   const areaName = nearest[0]?.name ?? '알 수 없는 지역';
 
-  const compromiseMessage = maxPairDist > 150
-    ? `출발지 간 거리가 멀어 ${areaName}을(를) 중간 지점으로 보완했어요 📍`
+  // 임계값이 150km였을 땐 서울↔대전(140km)이 아무 말 없이 통과했다. 그러면 서울 사람 다섯에
+  // 지방 사람 하나가 섞였을 때 중간지점이 청주·대전으로 가는데도 화면엔 설명이 한 줄도 없다.
+  // 좌표 검증(위도 33~39·경도 124~132)이 남한 전역이라 실제로 입력 가능한 상황이다.
+  // 수도권 안이면 최대 페어 거리가 60km를 넘기 어려우므로, 넘었다면 "먼 사람이 섞였다"는 뜻이다.
+  const compromiseMessage = maxPairDist > 60
+    ? `출발지가 서로 ${Math.round(maxPairDist)}km 떨어져 있어요. 모두의 중간인 ${areaName} 근처로 찾았는데, 다들 멀다면 지역을 직접 골라주세요 📍`
     : undefined;
 
   return { areas, midpoint, areaName, compromiseMessage };

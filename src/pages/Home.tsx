@@ -107,6 +107,31 @@ const INPUT_DRAFT_TTL_MS = 6 * 60 * 60 * 1000; // 입력하다 만 초안은 6�
 
 const GROUP_SESSION_TTL_MS = 6 * 60 * 60 * 1000; // 그룹 대기 세션도 6시간까지만 복원
 
+// 좌표를 하나도 못 구했을 때의 최후 폴백(서울시청). 좌표가 1개라도 있으면 그 좌표를 써야 한다 —
+// findBalancedAreas는 1개도 정상 처리하는데, 예전 호출부가 2개 미만이면 버리고 이 값을 넣어
+// "좌표 있는 멤버 1명 + 임의지역 멤버" 그룹의 중간지점이 엉뚱하게 서울시청이 됐다.
+const SEOUL_CENTER: Coordinates = { lat: 37.5665, lng: 126.978 };
+
+// 분위기성 라벨 집합 — "분위기가 별로" 거절을 실제로 작동시키기 위한 목록.
+// 그룹에서는 집계에서 진 멤버의 분위기가 vibe가 아니라 keywords로 넘어오기 때문에(멤버 제출 시 대표 1개만
+// vibe_atmosphere, 나머지는 vibe_keywords에 라벨로 실린다), vibe만 낮추면 그 라벨들이
+// '1차 필수 키워드 ← 최우선'으로 살아남아 똑같은 분위기의 장소가 다시 나온다.
+// pref_*(주차·룸 등 편의시설)는 분위기가 아니라 하드 조건이므로 제외한다.
+const ATMOSPHERE_LABELS: ReadonlySet<string> = new Set(
+  Object.entries(VIBE_KEY_TO_LABEL).filter(([k]) => k.startsWith('atm_')).map(([, label]) => label),
+);
+
+// 그룹 링크 무효화를 서버에도 알린다 — 알리지 않으면 옛 링크가 계속 살아 있어서,
+// 그 링크로 들어온 게스트는 제출까지 마치고도 아무도 보지 않는 세션에서 영원히 결과를 기다린다.
+// 실패해도(구버전 서버·오프라인) 로컬 무효화는 그대로 진행해야 하므로 fire-and-forget.
+function cancelGroupSessionOnServer(id: string): void {
+  void fetch('/api/session', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: 'cancel', id }),
+  }).catch(() => { /* 서버가 cancel을 몰라도 로컬 무효화는 이미 끝났다 */ });
+}
+
 // 공유 투표용 ID (세션 아님 — 공유 클릭마다 새로 발급)
 const SHARE_ID_CHARS = 'abcdefghijkmnpqrstuvwxyz23456789';
 function newShareId(): string {
@@ -247,6 +272,9 @@ export default function Home({ onChromeChange }: { onChromeChange?: (showTabBar:
   const [view, setView] = useState<View>('steps');
   const [step, setStep] = useState<Step>(0);
   const [locations, setLocations] = useState<LocationEntry[]>([]);
+  // 그룹 전용: locations와 같은 순서의 '사람 이름' 목록. locations[].name은 지명(프롬프트·총무용)이라
+  // 이동시간 표에 쓸 label을 여기 따로 들고 있는다. 혼자 모드에서는 항상 null(= locations[].name 사용).
+  const [groupTravelLabels, setGroupTravelLabels] = useState<string[] | null>(null);
   const [purpose, setPurpose] = useState<PurposeValue | null>(null);
   const [vibe, setVibe] = useState<VibeState>({});
   const [budget, setBudget] = useState<string | null>(null);
@@ -392,10 +420,14 @@ export default function Home({ onChromeChange }: { onChromeChange?: (showTabBar:
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // 그룹 호스트 세션 복원 — 결과 스냅샷이 없을 때만 (결과 화면이 우선)
+  // 그룹 호스트 세션 복원 — 결과 스냅샷 유무와 무관하게 항상 복원한다.
+  // 예전에는 결과가 있으면 통째로 skip했는데, 그러면 혼자 모드로 먼저 써본 유저(광고 유입은 거의 전부)가
+  // 그룹 링크를 만들고 /app?grp=로 돌아왔을 때 24시간짜리 옛 결과 때문에 sessionId가 복원되지 않았다.
+  // → 폴링도 자동추천도 안 붙고, step 2에는 "링크 생성하기"가 다시 떠서 두 번째 세션을 만든다
+  //   (첫 링크로 제출한 친구들이 전원 고아가 된다). 결과 스냅샷은 'view를 결과로 열지'만 결정하고,
+  //   그룹 컨텍스트(sessionId·정원·코스·지역)는 별도로 살린다. TTL도 결과 24h / 그룹세션 6h로 각자 유지.
   useLayoutEffect(() => {
     try {
-      if (loadResultSnapshot()) return;
       const raw = localStorage.getItem(GROUP_SESSION_KEY);
       if (!raw) return;
       const g = JSON.parse(raw) as {
@@ -413,6 +445,10 @@ export default function Home({ onChromeChange }: { onChromeChange?: (showTabBar:
       if (g.meetingLocation) setMeetingLocation(g.meetingLocation); // 호스트가 정한 지역 복원
       setStep(2);                 // 공유·대기 화면(step 2)으로 되돌린다
       setAppMode('group');        // 폴링이 다시 붙어 멤버 현황을 서버에서 재수화한다
+      // 호스트가 ?grp= 링크를 눌러 돌아온 경우엔 옛 결과 화면을 걷어내고 대기 화면으로 보낸다.
+      // 폴링·자동추천 effect가 둘 다 view==='steps'/step===2를 요구하므로, 여기서 결과 뷰를 치우지 않으면
+      // 멤버 목록이 영영 채워지지 않아 자동 추천이 시작되지 않는다.
+      if (new URLSearchParams(window.location.search).has('grp')) setView('steps');
     } catch { /* 손상된 그룹 세션 무시 */ }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -727,6 +763,7 @@ export default function Home({ onChromeChange }: { onChromeChange?: (showTabBar:
   function confirmInvalidateGroupLink(): boolean {
     const ok = window.confirm('코스·지역을 바꾸려면 지금 링크를 취소하고 다시 설정해야 해요.\n계속할까요? (이미 공유한 링크는 무효가 됩니다)');
     if (!ok) return false;
+    if (sessionId) cancelGroupSessionOnServer(sessionId); // 서버에도 알려야 옛 링크가 실제로 죽는다
     setSessionId(null);
     setGroupMembers([]);
     try { localStorage.removeItem(GROUP_SESSION_KEY); } catch { /* ignore */ }
@@ -772,6 +809,7 @@ export default function Home({ onChromeChange }: { onChromeChange?: (showTabBar:
     setGroupMembers([]);
     setResultTravelTimes(null);
     setLocations([]);
+    setGroupTravelLabels(null);
     setPurpose(null);
     setOccasionChip(null);
     setEtcRelOpen(false);
@@ -792,16 +830,35 @@ export default function Home({ onChromeChange }: { onChromeChange?: (showTabBar:
   // 그룹 확정 진입 직전: 멤버들이 각자 낸 출발지·분위기·취향을 하나로 집계.
   // 코스·지역은 호스트가 정한 state(purpose·meetingLocation)를 그대로 쓴다(재집계하지 않음).
   function aggregateGroupMembers() {
-    const groupLocations: LocationEntry[] = groupMembers
-      .filter((m) => m.location_lat != null && m.location_lng != null)
-      .map((m) => ({ name: m.member_name, lat: m.location_lat!, lng: m.location_lng! }));
+    const withCoords = groupMembers.filter((m) => m.location_lat != null && m.location_lng != null);
+    // locations[].name은 '지명'으로 쓰인다 — AI 프롬프트의 "- 출발지: ○○"와 총무 발표("○○에서 출발하는 분")가
+    // 이 값을 그대로 읽는다. 사람 이름을 넣으면 "김철수에서 출발하는 분이 오늘의 총무 당첨!"이
+    // 결과·게스트 화면·카톡 공유 카드까지 그대로 나간다. 그래서 실제 출발지명(location_name)을 쓴다.
+    const groupLocations: LocationEntry[] = withCoords
+      .map((m) => ({ name: m.location_name || m.member_name, lat: m.location_lat!, lng: m.location_lng! }));
     setLocations(groupLocations);
+    // 반대로 이동시간 표("○○님 25분")의 label은 사람 이름이 맞다 — 같은 배열을 두 용도로 쓰던 걸 여기서 분리한다.
+    // groupLocations와 같은 순서·길이라 인덱스로 대응된다.
+    setGroupTravelLabels(withCoords.map((m) => m.member_name));
     setVibe(aggregateVibe(groupMembers));
     // 편식은 전원 합집합 — 한 명이라도 못 먹으면 그 음식은 제외. 키워드는 1차/2차 분리 집계.
     const { keywords: memberKeywords, excludeFoods: memberExcludes } = splitMemberKeywords(groupMembers);
     setKeywords(memberKeywords);
     setExcludeFoods(memberExcludes);
     setBudget(aggregateBudget(groupMembers));
+
+    // 혼자 모드 잔여 상태 청소 — 위 5개(locations/vibe/keywords/excludeFoods/budget)는 멤버 집계로 덮이지만,
+    // 아래 값들은 덮이지 않아 그대로 그룹 프롬프트에 실려 나간다. 그룹 플로우에는 이 값들을 묻는 화면이 아예 없어서
+    // (관계·조건·직접입력 키워드는 혼자 모드 step1/step3 전용) 유저는 자기도 모르게 붙은 조건을 볼 방법이 없다.
+    // 실제 사고: "혼자 정할게요 → 관계 '연인' 선택 → 다같이 정할게요"면 6명 모임에 "커플 분위기,
+    // 프라이빗하고 조용한 공간 선호"가 붙는다. 입력 초안(INPUT_DRAFT_KEY) 복원 탓에 세션을 넘어서도 살아남는다.
+    // 남기는 것: 코스(purpose.first/second/genre)·지역(meetingLocation)·정원 — 호스트가 그룹 화면에서 직접 고른 값이다.
+    setConditions([]);
+    setVibeCustom({});
+    setPurpose((prev) => (prev ? { ...prev, relation: null, occasion: null } : prev));
+    setOccasionChip(null);   // 관계·특별한날의 UI 표시도 함께 정리(다시 혼자 모드로 가면 빈 상태로 보이게)
+    setCustomOccasion('');
+    setEtcRelOpen(false);
   }
 
   function requestGroupRecommend() {
@@ -874,7 +931,7 @@ export default function Home({ onChromeChange }: { onChromeChange?: (showTabBar:
       } else {
         // 좌표 없는 텍스트만(구버전·자동완성 미선택) — 최후 폴백
         const coords = validLocs.map((l) => ({ lat: l.lat!, lng: l.lng! }));
-        const balanced = findBalancedAreas(coords.length >= 2 ? coords : [{ lat: 37.5665, lng: 126.978 }]);
+        const balanced = findBalancedAreas(coords.length >= 1 ? coords : [SEOUL_CENTER]);
         const nearestAreas = findNearestAreas(balanced.midpoint, 3);
         setMidpointData({ midpoint: balanced.midpoint, areaName: loc.area, nearestAreas });
         setResultTravelTimes(null);
@@ -894,7 +951,7 @@ export default function Home({ onChromeChange }: { onChromeChange?: (showTabBar:
       areaName = presetRegion.label;
     } else {
       const coords = validLocs.map((l) => ({ lat: l.lat!, lng: l.lng! }));
-      const balanced = findBalancedAreas(coords.length >= 2 ? coords : [{ lat: 37.5665, lng: 126.978 }]);
+      const balanced = findBalancedAreas(coords.length >= 1 ? coords : [SEOUL_CENTER]);
       midpoint = balanced.midpoint;
       areaName = balanced.areaName;
       applyCompromiseMessage(balanced.compromiseMessage);
@@ -954,7 +1011,17 @@ export default function Home({ onChromeChange }: { onChromeChange?: (showTabBar:
       const input: UserInput = {
         // 서버 검증 통과를 위해 이름 없는 항목 제외 (지역 직접 선택 시 빈 배열)
         locations: locations.filter((l) => l.name?.trim()),
-        groupSize: isGroup ? (expectedCount >= 5 ? '5명 이상' : expectedCount >= 3 ? '3~4명' : '2명') : groupSize,
+        // 그룹 인원은 '실제 제출한 멤버 수'다. expectedCount(호스트가 선언한 정원)를 쓰면
+        // 정원 6으로 링크를 만들고 2명만 모여 추천받았을 때 프롬프트에 "인원: 5명 (단체석 또는 넓은 공간 필수)"가
+        // 들어가고 검색어에도 단체석 프리픽스가 붙어, 두 명이 단체룸을 추천받는다(화면엔 '2명 참여'라 떠 있다).
+        // 다만 결과 화면에서 새로고침한 뒤의 재추천은 폴링이 멈춰 있어 멤버 목록이 비어 있다 —
+        // 그때는 인원을 2명으로 축소해버리지 않도록 호스트가 선언한 정원으로 되돌린다.
+        groupSize: isGroup
+          ? (() => {
+              const n = groupMembers.length >= 2 ? groupMembers.length : Math.max(2, expectedCount);
+              return n >= 5 ? '5명 이상' : n >= 3 ? '3~4명' : '2명';
+            })()
+          : groupSize,
         purpose: {
           first: purpose!.first!,
           second: purpose!.second ?? null,
@@ -972,8 +1039,12 @@ export default function Home({ onChromeChange }: { onChromeChange?: (showTabBar:
           : {}),
         ...(vibeWeights && Object.keys(vibeWeights).length > 0 ? { vibeWeights } : {}),
         ...((() => {
-          // 1차 키워드 — 서버 검증 한도(개수 10 · 항목당 30자)에 맞춰 잘라서 전송
+          // 1차 키워드 — 서버 검증 한도(개수 10 · 항목당 30자)에 맞춰 잘라서 전송.
+          // "분위기가 별로"(changeReason==='vibe') 재추천에서는 분위기성 라벨을 키워드에서도 빼야 한다.
+          // 가중치 1로 낮추기만 하면 서버 프롬프트의 '1차 필수 키워드 ← 최우선'과 네이버 검색어에 그대로 남아
+          // 방금 거절한 분위기의 장소가 다시 올라온다("바꿔달라고 했는데 왜 똑같지?").
           const allKw = [...keywords, ...Object.values(vibeCustom).filter(Boolean)]
+            .filter((k) => changeReason !== 'vibe' || !ATMOSPHERE_LABELS.has(k.trim()))
             .map((k) => k.trim().slice(0, 30))
             .filter(Boolean)
             .slice(0, 10);
@@ -1060,7 +1131,9 @@ export default function Home({ onChromeChange }: { onChromeChange?: (showTabBar:
         // 재추천 직후 이전 응답이 늦게 도착해 옛 장소의 소요시간이 표시되는 레이스 방지
         const reqId = ++travelReqRef.current;
         computeTravelTimes(
-          validLocs.map((l) => ({ lat: l.lat!, lng: l.lng!, label: l.name })),
+          // 이동시간 표의 label만 사람 이름을 쓴다 — locations[].name은 그룹에선 지명(출발지)이라
+          // "강남역 25분"처럼 누구 이동시간인지 알 수 없게 된다. 혼자 모드는 groupTravelLabels가 null이라 그대로.
+          validLocs.map((l, i) => ({ lat: l.lat!, lng: l.lng!, label: (isGroup ? groupTravelLabels?.[i] : null) || l.name })),
           { first: firstDest, ...(secondDest ? { second: secondDest } : {}) },
         )
           .then((data) => { if (reqId === travelReqRef.current) setResultTravelTimes(data); })
@@ -1152,6 +1225,10 @@ export default function Home({ onChromeChange }: { onChromeChange?: (showTabBar:
       Object.values(vibe).forEach((g) => {
         [...g.first, ...g.second].forEach((k) => { rejectWeights[VIBE_KEY_TO_LABEL[k] ?? k] = 1; });
       });
+      // 그룹에선 vibe에 집계 승자만 남고, 나머지 멤버의 분위기는 keywords로 넘어와 있다.
+      // vibe만 낮추면 거절이 절반만 작동하므로 keywords 쪽 분위기 라벨도 함께 내린다
+      // (전송 목록에서 빼는 건 handleRecommend가 changeReason==='vibe'로 처리한다).
+      keywords.forEach((k) => { if (ATMOSPHERE_LABELS.has(k.trim())) rejectWeights[k.trim()] = 1; });
       rejectWeights['새로운 분위기'] = 5;
     }
 
@@ -1554,7 +1631,9 @@ export default function Home({ onChromeChange }: { onChromeChange?: (showTabBar:
               {/* 혼자 / 그룹 선택 버튼 */}
               <div className="grid grid-cols-2 gap-3">
                 <button
-                  onClick={() => { setAppMode('solo'); setSessionId(null); setGroupMembers([]); setGroupError(null); try { localStorage.removeItem(GROUP_SESSION_KEY); } catch { /* ignore */ } }}
+                  // 혼자 모드로 전환하면 그룹 세션을 확인 없이 버린다 → 서버에도 알려 옛 링크를 죽인다.
+                  // (알리지 않으면 이미 공유된 링크가 계속 살아 있고, 그 링크로 제출한 게스트는 결과를 영원히 기다린다)
+                  onClick={() => { if (sessionId) cancelGroupSessionOnServer(sessionId); setAppMode('solo'); setSessionId(null); setGroupMembers([]); setGroupError(null); try { localStorage.removeItem(GROUP_SESSION_KEY); } catch { /* ignore */ } }}
                   aria-pressed={appMode === 'solo'}
                   className={`flex flex-col items-center justify-center gap-0.5 py-3 rounded-2xl border transition-all active:scale-[0.97] ${
                     appMode === 'solo'

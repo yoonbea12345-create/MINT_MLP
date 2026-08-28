@@ -122,6 +122,8 @@ export default function MemberInput() {
   // 개인 이동시간·길찾기·"내 취향 반영" 배너의 원천.
   const [guestCtx, setGuestCtx] = useState<GuestCtx | null>(null);
   const [placeChangedToast, setPlaceChangedToast] = useState(false); // 호스트가 장소를 바꾸면 알림
+  // 호스트가 링크를 무효화한 세션 — 계속 "다 모이면 추천해요"라고 기다리게 두면 안 된다
+  const [cancelled, setCancelled] = useState(false);
 
   const wrapperRef = useRef<HTMLDivElement | null>(null);
   const locInputRef = useRef<HTMLInputElement | null>(null);
@@ -129,19 +131,26 @@ export default function MemberInput() {
   const prevResultNameRef = useRef<string | null>(null); // 폴링 중 1차 상호 변경 감지용
 
   // 이미 제출했으면 done으로. 제출 시 저장한 게스트 컨텍스트도 복원(새로고침 대비).
+  // '제출했음' 플래그는 반드시 localStorage — 카톡 인앱브라우저를 닫으면 sessionStorage는 통째로 사라져서
+  // 결과 보러 링크를 다시 누른 게스트에게 입력 화면이 다시 뜨고, 채워 제출하면 정원을 하나 더 먹는 중복 멤버가 된다.
+  // (sessionStorage 조회는 배포 직전 버전으로 이미 제출한 탭을 위한 1회성 폴백)
   useEffect(() => {
     if (!sessionId) return;
-    if (sessionStorage.getItem(`mint_joined_${sessionId}`)) setPhase('done');
+    if (localStorage.getItem(`mint_joined_${sessionId}`) || sessionStorage.getItem(`mint_joined_${sessionId}`)) setPhase('done');
     try {
       const raw = localStorage.getItem(`mint_guest_ctx_${sessionId}`);
       if (raw) setGuestCtx(JSON.parse(raw) as GuestCtx);
     } catch { /* ignore */ }
   }, [sessionId]);
 
-  // done 화면 폴링 — 결과 도착 전 3초, 도착 후 10초(불필요한 폴링 낭비 완화).
+  // done 화면 폴링 — 결과 도착 전에만 3초 간격으로 돈다.
+  // 결과를 받으면 주기 폴링을 멈춘다(호스트 폴링도 결과 화면에선 멈춘다): 결과 화면을 켜둔 게스트마다
+  // 분당 6요청이 무기한 쌓였다. 대신 탭으로 돌아올 때만 1회 조회해, 호스트가 재추천으로 장소를 바꾼 경우의
+  // 변경 알림은 그대로 살린다.
+  // 호스트가 링크를 무효화하면(status==='cancelled') 대기 화면 대신 취소 안내를 띄우고 폴링도 멈춘다.
   const hasResult = !!groupResult;
   useEffect(() => {
-    if (phase !== 'done' || !sessionId) return;
+    if (phase !== 'done' || !sessionId || cancelled) return;
     let active = true;
 
     async function poll() {
@@ -151,6 +160,8 @@ export default function MemberInput() {
         if (!res.ok) return;
         const data = await res.json();
         if (!active) return;
+        // status는 신버전 서버에만 있다 — 없으면(구버전) 기존 동작 그대로.
+        if (data.status === 'cancelled') { setCancelled(true); return; }
         setExpectedCount(data.expected_count ?? null);
         setMembers(Array.isArray(data.members) ? data.members : []);
         // 호스트가 추천을 완료하면 결과가 실려온다 — 게스트 화면을 결과 뷰로 전환(협업 루프 완결)
@@ -168,11 +179,16 @@ export default function MemberInput() {
     }
 
     poll();
-    const interval = setInterval(poll, hasResult ? 10000 : 3000);
+    // 결과가 오면 주기 폴링 종료. 탭 복귀 시 1회 조회만 유지(장소 변경 감지용).
+    const interval = hasResult ? null : setInterval(poll, 3000);
     const onVisible = () => { if (!document.hidden) poll(); };
     document.addEventListener('visibilitychange', onVisible);
-    return () => { active = false; clearInterval(interval); document.removeEventListener('visibilitychange', onVisible); };
-  }, [phase, sessionId, hasResult]);
+    return () => {
+      active = false;
+      if (interval) clearInterval(interval);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
+  }, [phase, sessionId, hasResult, cancelled]);
 
   function handleLocChange(value: string) {
     setLocValue(value);
@@ -230,6 +246,9 @@ export default function MemberInput() {
           action: 'join',
           session_id: sessionId,
           member_name: name.trim(),
+          // 같은 기기가 다시 제출하면 새 멤버가 아니라 '수정'으로 처리되게 하는 열쇠.
+          // (서버가 device_id를 몰라도 그냥 무시되므로 구버전 서버에서도 안전하다)
+          device_id: getDeviceId(),
           // 출발지는 중간지점 모드에서만 전송 — 임의 지역 모드는 좌표 없이 참여
           ...(showLocation && locLat != null && locLng != null
             ? { location_name: locValue, location_lat: locLat, location_lng: locLng }
@@ -255,7 +274,7 @@ export default function MemberInput() {
         const data = await res.json().catch(() => ({}));
         throw new Error(data.error || '제출에 실패했어요. 다시 시도해주세요.');
       }
-      sessionStorage.setItem(`mint_joined_${sessionId}`, '1');
+      try { localStorage.setItem(`mint_joined_${sessionId}`, '1'); } catch { /* 저장 실패해도 제출은 끝났다 */ }
       // 제출 자체가 참석 확정 — events(그룹 실사용 조사 지표) + localStorage(재진입 시 복원)
       const rsvpValue = 'going';
       trackEvent('rsvp_submit', {
@@ -325,6 +344,19 @@ export default function MemberInput() {
         excludeFoods,
       };
       return <GroupResultView result={groupResult} guest={ctx} placeChanged={placeChangedToast} />;
+    }
+    // 호스트가 링크를 무효화했다 — 이미 받은 결과가 있으면 그건 그대로 보여주고(위 분기),
+    // 결과 없이 기다리는 중이었다면 여기서 끊어준다. 끝나지 않는 대기 화면이 최악이다.
+    if (cancelled) {
+      return (
+        <div className="min-h-[100dvh] flex flex-col items-center justify-center bg-[#F5FBF8] px-6 text-center">
+          <p className="text-3xl mb-3">🙏</p>
+          <p className="font-black text-gray-800 mb-1.5">호스트가 초대를 취소했어요</p>
+          <p className="text-sm text-gray-400 leading-relaxed">
+            코스나 지역이 바뀌었을 수 있어요.<br />호스트에게 새 링크를 받아주세요.
+          </p>
+        </div>
+      );
     }
     return (
       <div className="min-h-[100dvh] flex flex-col items-center bg-[#F5FBF8] px-6 pt-12 pb-10">

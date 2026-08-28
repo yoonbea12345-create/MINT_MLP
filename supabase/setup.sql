@@ -226,3 +226,17 @@ ALTER TABLE mint_share_snapshots ENABLE ROW LEVEL SECURITY;
 -- =============================================
 ALTER TABLE mint_sessions ADD COLUMN IF NOT EXISTS result_json JSONB;
 ALTER TABLE mint_sessions ADD COLUMN IF NOT EXISTS result_at TIMESTAMPTZ;
+
+-- =============================================
+-- 그룹 세션 재제출 방지 (같은 기기의 두 번째 제출은 새 자리가 아니라 갱신)
+-- 실행 전에는 서버가 42703을 보고 이 경로를 통째로 끄므로 기존과 동일하게 동작한다.
+-- 부분 인덱스(WHERE device_id IS NOT NULL)인 이유: 구 번들 게스트는 device_id를 보내지 않아
+-- NULL 행이 여럿 생기는데, 전체 유니크로 걸면 그들끼리 충돌해 제출이 막힌다.
+-- =============================================
+ALTER TABLE mint_session_members ADD COLUMN IF NOT EXISTS device_id TEXT;
+CREATE UNIQUE INDEX IF NOT EXISTS idx_session_member_device
+  ON mint_session_members(session_id, device_id) WHERE device_id IS NOT NULL;
+
+-- 정원 경합·초대 링크 취소 판정에 쓰는 조회 인덱스
+CREATE INDEX IF NOT EXISTS idx_session_members_order
+  ON mint_session_members(session_id, submitted_at, id);

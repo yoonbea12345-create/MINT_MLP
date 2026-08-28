@@ -801,6 +801,14 @@ async function handleEnrich(req: VercelRequest, res: VercelResponse) {
   return res.status(200).json({ enriched });
 }
 
+// '조용한 곳' 의도가 어느 통로로 들어왔는지 상관없이 하나로 판정한다.
+// 그룹 집계는 분위기 라벨을 승자 하나만 vibe.first에 남기고 나머지는 keywords로 흘려보내므로,
+// first만 보면 같은 의도가 통로에 따라 사라진다. 프롬프트가 정반대("활기찬")로 뒤집히는 항목이라
+// 판정은 넓게 잡는 쪽이 안전하다 — 조용한 곳을 원했는데 시끄러운 곳을 받는 실패가 훨씬 크다.
+function detectQuiet(...sources: (string[] | undefined)[]): boolean {
+  return sources.some((s) => Array.isArray(s) && s.some((v) => typeof v === 'string' && v.includes('조용')));
+}
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') return res.status(405).end();
 
@@ -861,7 +869,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const vibe = input.vibe as { first?: string[]; second?: string[] } | undefined;
     const vibeFirstStr = vibe?.first?.length ? vibe.first.join(', ') : '자유롭게';
     const vibeSecondStr = vibe?.second?.length ? vibe.second.join(', ') : '';
-    const isQuiet = vibe?.first?.includes('조용하게') ?? false;
     const groupSize: number = typeof input.groupSize === 'number' ? input.groupSize : parseInt(input.groupSize) || 2;
     const relation: string | null = input.relation ?? null;
     const occasion: string | null = input.occasion ?? null;
@@ -869,6 +876,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const keywords: string[] = Array.isArray(input.keywords) ? input.keywords : [];
     const keywordsSecond: string[] = Array.isArray(input.keywordsSecond) ? input.keywordsSecond : [];
+
+    // '조용하게'는 vibe.first에만 있는 게 아니다.
+    // 혼자 모드는 고른 분위기 라벨이 전부 vibe.first에 들어가지만, 그룹 모드는 집계가
+    // 최다 득표 라벨만 first에 남긴다 — 전원이 '아늑한 + 조용하게'를 골라도 승자가 '아늑한'이면
+    // first에 '조용하게'가 없고, 진 라벨은 vibe.second나 keywords로 흘러간다.
+    // 그래서 first만 보면 조용한 곳을 원한 팀에게 프롬프트가 "활기찬 분위기"를 넣어버렸다.
+    // 라벨이 어느 통로로 왔든 의도는 같으므로 세 곳을 모두 본다.
+    const isQuiet = detectQuiet(vibe?.first, vibe?.second, keywords);
 
     // 편식 필터 — 후보 사전 제거(아래 filterExcludedFoods) + 프롬프트 절대 제약 이중 적용
     const excludeFoods: string[] = Array.isArray(input.excludeFoods)
