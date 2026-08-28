@@ -146,6 +146,18 @@ export function IconBell({ className, strokeWidth }: IconProps) {
   );
 }
 
+// 피드백 — 말풍선 안에 스파클. "아이디어를 건네는 대화"다.
+// 이모지를 쓰지 않은 이유: OS마다 렌더링이 제각각이라 브랜드 컬러 원 위에서 통제가 안 되고,
+// 탭바 바로 위에 뜨는 버튼이라 같은 시각 언어가 아니면 이질감이 난다.
+export function IconFeedback({ className, strokeWidth }: IconProps) {
+  return (
+    <svg {...svgProps(className, strokeWidth)}>
+      <path d="M7 4.5h10a3 3 0 0 1 3 3v6a3 3 0 0 1-3 3h-6L7.2 19.6V16.5H7a3 3 0 0 1-3-3v-6a3 3 0 0 1 3-3Z" />
+      <path d="M12 7.3 12.8 9.7 15.2 10.5 12.8 11.3 12 13.7 11.2 11.3 8.8 10.5 11.2 9.7Z" />
+    </svg>
+  );
+}
+
 // 펼침 상태는 rotate-180 클래스로 처리한다(위 방향 아이콘을 따로 두지 않음).
 export function IconChevronDown({ className, strokeWidth }: IconProps) {
   return (

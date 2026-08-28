@@ -113,10 +113,24 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
         let eventsQuery = supabase.from('events').select('type, duration_seconds, created_at, payload');
         let reservationsQuery = supabase.from('reservations').select('*').order('created_at', { ascending: false });
-        if (from) { eventsQuery = eventsQuery.gte('created_at', from); reservationsQuery = reservationsQuery.gte('created_at', from); }
-        if (to) { eventsQuery = eventsQuery.lte('created_at', to); reservationsQuery = reservationsQuery.lte('created_at', to); }
+        // 상시 유저 피드백 — 원문을 매일 읽는 화면이 있어야 "빠르게 반영하겠다"는 약속이 지켜진다.
+        // 검색·상태관리는 만들지 않는다. 지금 규모에선 최신 200건 스크롤이면 충분하다.
+        let feedbackQuery = supabase.from('user_feedback').select('*')
+          .order('created_at', { ascending: false }).limit(200);
+        if (from) {
+          eventsQuery = eventsQuery.gte('created_at', from);
+          reservationsQuery = reservationsQuery.gte('created_at', from);
+          feedbackQuery = feedbackQuery.gte('created_at', from);
+        }
+        if (to) {
+          eventsQuery = eventsQuery.lte('created_at', to);
+          reservationsQuery = reservationsQuery.lte('created_at', to);
+          feedbackQuery = feedbackQuery.lte('created_at', to);
+        }
 
-        const [eventsRes, reservationsRes] = await Promise.all([eventsQuery, reservationsQuery]);
+        const [eventsRes, reservationsRes, feedbackRes] = await Promise.all([
+          eventsQuery, reservationsQuery, feedbackQuery,
+        ]);
 
         // payload 컬럼 마이그레이션 전이면 select가 통째로 실패한다 — 그때만(평상시 0회) 구 스키마로 1회 재조회.
         let eventsData = eventsRes.data;
@@ -200,6 +214,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           arrivalTime: r.arrival_time,
           createdAt: r.created_at,
         }));
+
+        // sql/user-feedback.sql 미실행이면 여기서 에러가 온다 — 빈 배열로 떨궈 전체 응답을 깨뜨리지 않는다
+        // (events legacy 재조회와 같은 사상). 그 사이 제출분은 API가 events로 폴백 저장해 두고 있다.
+        const userFeedback = (feedbackRes.data ?? []).map((r) => ({
+          id: r.id,
+          text: r.text,
+          category: r.category ?? null,
+          contact: r.contact ?? null,
+          route: r.route ?? null,
+          tab: r.tab ?? null,
+          viewport: r.viewport ?? null,
+          createdAt: r.created_at,
+        }));
+        if (feedbackRes.error) console.warn('[admin-data] user_feedback 조회 실패(테이블 미생성?)', feedbackRes.error.code);
 
         const analytics = {
           // 퍼널 핵심
@@ -291,7 +319,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           rsvpSubmitTotal: c('rsvp_submit'),
         };
 
-        return res.status(200).json({ analytics, reservations });
+        return res.status(200).json({ analytics, reservations, userFeedback });
       }
     }
   } catch (e) {

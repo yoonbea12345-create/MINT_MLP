@@ -6,8 +6,11 @@ import Discover from './tabs/Discover';
 import MintShop from './tabs/MintShop';
 import Profile from './tabs/Profile';
 import ResumeRecommendSheet from '../components/ResumeRecommendSheet';
+import FeedbackFab from '../components/FeedbackFab';
+import FeedbackSheet from '../components/FeedbackSheet';
 import { clearRecommendSession, loadResultSummary, type ResultSummary } from '../utils/history';
 import { trackEvent } from '../utils/analytics';
+import { flushOutbox } from '../utils/feedback';
 
 // /app 셸 — 홈 탭의 콘텐츠는 항상 추천 플로우(Home)다.
 // 탭바를 보여도 되는지는 각 탭이 onChromeChange로 보고한다(셸은 localStorage를 보지 않는다).
@@ -22,6 +25,12 @@ export default function AppShell() {
   // 카카오 로그인 복귀(/app?tab=profile)에서만 프로필 탭으로 연다.
   const [activeTab, setActiveTab] = useState<TabKey>(() => (isKakaoReturn() ? 'profile' : 'home'));
   const [showTabBar, setShowTabBar] = useState(true);
+  const [feedbackOpen, setFeedbackOpen] = useState(false);
+
+  // 지난번에 못 보낸 피드백을 앱 켤 때 한 번 조용히 재전송한다(서버가 멱등이라 중복 저장은 없다).
+  useEffect(() => {
+    flushOutbox();
+  }, []);
 
   // 카카오 로그인은 페이지를 통째로 떠났다가 이 셸로 돌아온다. 보던 추천이 아직 살아 있으면
   // 홈 탭을 직접 찾아 누르게 두지 말고 돌아갈지 물어본다.
@@ -71,6 +80,14 @@ export default function AppShell() {
         )}
       </div>
       {showTabBar && <BottomTabBar active={activeTab} onChange={changeTab} />}
+      {/* 피드백 FAB는 탭바와 운명을 같이한다 — 탭이 시트를 열거나(onChromeChange(false)) 홈이
+          입력 스텝·결과 화면에 들어가면 자동으로 함께 사라져 하단 CTA와 겹칠 일이 없다. */}
+      {showTabBar && (
+        <FeedbackFab hidden={feedbackOpen} onOpen={() => setFeedbackOpen(true)} />
+      )}
+      {feedbackOpen && (
+        <FeedbackSheet tab={activeTab} onClose={() => setFeedbackOpen(false)} />
+      )}
       {resumeSummary && (
         <ResumeRecommendSheet
           summary={resumeSummary}

@@ -42,7 +42,9 @@ type EventType = 'landing_view' | 'cta_click' | 'reservation_attempt' | 'session
   // G. 카카오 로그인 복귀 — 보던 추천 이어보기 제안(수락/새로 시작)
   | 'resume_prompt_shown' | 'resume_prompt_accept' | 'resume_prompt_discard'
   // H. 그룹 게스트 결과 화면 개인 유틸 — 길찾기·캘린더 저장(실제 이동 전환 관측)
-  | 'guest_directions_click' | 'guest_calendar_add';
+  | 'guest_directions_click' | 'guest_calendar_add'
+  // I. 상시 유저 피드백(우하단 FAB) — 원문은 user_feedback 테이블에만 남기고 여기엔 카운트만 싣는다
+  | 'feedback_open' | 'feedback_submit' | 'feedback_close' | 'feedback_send_fail';
 
 const PAUSE_KEY = 'mint_tracking_paused';
 
@@ -76,6 +78,12 @@ export function newSessionKey(): string {
 
 export function setSessionKey(key: string | null): void {
   currentSessionKey = key;
+}
+
+// events 바깥(user_feedback 등)에 같은 에피소드로 조인할 키를 실어야 할 때 쓴다.
+// 모듈 안에서만 알던 값이라 getter를 열었다 — 쓰기는 여전히 setSessionKey 하나뿐이다.
+export function getSessionKey(): string | null {
+  return currentSessionKey;
 }
 
 type EventPayload = Record<string, unknown>;

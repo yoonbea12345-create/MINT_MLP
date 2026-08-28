@@ -19,6 +19,27 @@ interface CouponNotifyRow {
   net: number;
 }
 
+// 상시 유저 피드백 한 건 — 원문은 user_feedback 테이블에만 있고 여기로만 흘러온다
+interface UserFeedbackRow {
+  id: string;
+  text: string;
+  category: string | null;
+  contact: string | null;
+  route: string | null;
+  tab: string | null;
+  viewport: string | null;
+  createdAt: string;
+}
+
+// 미분류(null)까지 한 자리를 준다 — 안 고르고 보낸 사람이 제일 많을 수 있다
+const FEEDBACK_CATEGORIES: { key: string; label: string; badge: string; color: string }[] = [
+  { key: 'bug', label: '🐞 버그', badge: 'bg-red-50 text-red-500', color: '#EF4444' },
+  { key: 'pain', label: '😣 불편', badge: 'bg-amber-50 text-amber-600', color: '#F59E0B' },
+  { key: 'idea', label: '💡 아이디어', badge: 'bg-blue-50 text-blue-500', color: '#3B82F6' },
+  { key: 'praise', label: '💚 칭찬', badge: 'bg-[#E8F8F5] text-[#2AB5A0]', color: '#36CFA0' },
+  { key: '', label: '미분류', badge: 'bg-gray-100 text-gray-400', color: '#94A3B8' },
+];
+
 interface AdminAnalytics {
   landingViews: number;
   ctaClicks: number;
@@ -169,6 +190,18 @@ function formatDate(iso: string) {
   return `${mm}/${dd} ${hh}:${min}`;
 }
 
+// 피드백은 "언제 왔나"보다 "얼마나 따끈한가"가 먼저다 — 하루 넘으면 날짜로 돌아간다.
+function formatRelative(iso: string): string {
+  const diff = Date.now() - new Date(iso).getTime();
+  if (!Number.isFinite(diff) || diff < 0) return formatDate(iso);
+  const min = Math.floor(diff / 60000);
+  if (min < 1) return '방금';
+  if (min < 60) return `${min}분 전`;
+  const hour = Math.floor(min / 60);
+  if (hour < 24) return `${hour}시간 전`;
+  return formatDate(iso);
+}
+
 function downloadCsv(filename: string, rows: (string | number | null | undefined)[][]) {
   const csv = rows
     .map((r) => r.map((cell) => `"${String(cell ?? '').replace(/"/g, '""')}"`).join(','))
@@ -254,6 +287,7 @@ export default function Admin() {
   const [gateError, setGateError] = useState<string | null>(null);
   const [verifying, setVerifying] = useState(false);
   const [records, setRecords] = useState<ReservationRecord[]>([]);
+  const [feedback, setFeedback] = useState<UserFeedbackRow[]>([]);
   const [analytics, setAnalytics] = useState<AdminAnalytics>(EMPTY_ANALYTICS);
   const [loading, setLoading] = useState(false);
   const [paused, setPaused] = useState(() => isTrackingPaused());
@@ -271,11 +305,20 @@ export default function Admin() {
   const shopFilterTotal = shopFilterEntries.reduce((sum, [, v]) => sum + v, 0);
   const couponTop = a.couponNotifyTop ?? [];
   const rsvpTotal = a.rsvpGoing + a.rsvpNotGoing + a.rsvpUndecided;
+  const feedbackCounts = FEEDBACK_CATEGORIES.map((cat) => ({
+    ...cat,
+    count: feedback.filter((f) => (f.category ?? '') === cat.key).length,
+  }));
 
-  function applyData(data: { analytics?: Partial<AdminAnalytics>; reservations?: ReservationRecord[] }) {
+  function applyData(data: {
+    analytics?: Partial<AdminAnalytics>;
+    reservations?: ReservationRecord[];
+    userFeedback?: UserFeedbackRow[];
+  }) {
     // 서버가 아직 새 필드를 안 보내는 배포 시점에도 기본값으로 안전하게 렌더된다.
     setAnalytics({ ...EMPTY_ANALYTICS, ...(data.analytics ?? {}) });
     setRecords(Array.isArray(data.reservations) ? data.reservations : []);
+    setFeedback(Array.isArray(data.userFeedback) ? data.userFeedback : []);
   }
 
   async function loadData(pw: string, r: RangeKey = range) {
@@ -768,6 +811,58 @@ export default function Admin() {
               </div>
             )}
           </div>
+        </section>
+
+        {/* ── 상시 유저 피드백 ── */}
+        <section className="mb-8">
+          <h2 className="text-sm font-black text-gray-600 mb-3">
+            💬 유저 피드백 <span className="text-[#2AB5A0]">{feedback.length}건</span>
+          </h2>
+          {feedback.length === 0 ? (
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
+              <p className="text-xs text-gray-400 text-center py-3">
+                이 기간에 남겨진 피드백이 없어요.
+              </p>
+              <p className="text-[11px] text-gray-300 text-center">
+                * 계속 비어 있다면 Supabase SQL Editor에서 sql/user-feedback.sql이 실행됐는지 확인해주세요
+                (그 전 제출분은 events 테이블에 feedback_submit으로 쌓입니다).
+              </p>
+            </div>
+          ) : (
+            <>
+              {/* 집계는 카드 하나로 족하다 — 검색·필터·상태관리는 만들지 않는다 */}
+              <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 mb-3 flex flex-col gap-2">
+                {feedbackCounts.map((cat) => (
+                  <BarRow key={cat.key || 'none'} label={cat.label} count={cat.count} total={feedback.length} color={cat.color} />
+                ))}
+              </div>
+              <div className="flex flex-col gap-2">
+                {feedback.map((f) => {
+                  const meta = FEEDBACK_CATEGORIES.find((c) => c.key === (f.category ?? '')) ?? FEEDBACK_CATEGORIES[4];
+                  return (
+                    <div key={f.id} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
+                      <div className="flex items-center justify-between gap-2 mb-2">
+                        <span className={`text-[11px] font-black px-2 py-0.5 rounded-full shrink-0 ${meta.badge}`}>
+                          {meta.label}
+                        </span>
+                        <span className="text-[11px] text-gray-300 shrink-0">{formatRelative(f.createdAt)}</span>
+                      </div>
+                      <p className="text-sm text-gray-800 leading-relaxed whitespace-pre-wrap break-keep">{f.text}</p>
+                      <div className="text-[11px] text-gray-400 mt-2 pt-2 border-t border-gray-50">
+                        {[f.tab, f.route, f.viewport].filter(Boolean).join(' · ') || '맥락 없음'}
+                      </div>
+                      {f.contact && (
+                        // 연락처를 남겼다는 건 답을 기다린다는 뜻이다 — 목록에서 눈에 띄어야 한다
+                        <div className="mt-1.5 text-xs font-bold text-[#2AB5A0] bg-[#E8F8F5] rounded-lg px-2.5 py-1.5">
+                          ✉️ 답장 대상 · {f.contact}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </>
+          )}
         </section>
 
         {/* ── 예약 목록 ── */}
