@@ -5,13 +5,7 @@
     "api/recommend.ts": {
       "maxDuration": 60
     },
-    "api/session-create.ts": {
-      "maxDuration": 10
-    },
-    "api/session-join.ts": {
-      "maxDuration": 10
-    },
-    "api/session-get.ts": {
+    "api/session.ts": {
       "maxDuration": 10
     },
     "api/admin-batch.ts": {
@@ -19,6 +13,18 @@
     }
   },
   "rewrites": [
+    {
+      "source": "/api/session-create",
+      "destination": "/api/session"
+    },
+    {
+      "source": "/api/session-join",
+      "destination": "/api/session"
+    },
+    {
+      "source": "/api/session-get",
+      "destination": "/api/session"
+    },
     {
       "source": "/(.*)",
       "destination": "/index.html"

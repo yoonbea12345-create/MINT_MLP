@@ -484,7 +484,7 @@ export default function Home({ onChromeChange }: { onChromeChange?: (showTabBar:
     if (view !== 'result' || !isGroup || !sessionId || !result || result.length === 0) return;
     const hasSecondCourse = !!(purpose?.second && purpose.second !== '없음');
     // v:2 — 게스트 화면을 호스트와 동등하게 만들기 위해 신뢰 요소(사진·적합도·영업·해시태그·혼잡도)를 함께 실어 보낸다.
-    // 이미지 URL이 길어 페이로드가 커지므로 session-get 상한(24KB)에 맞춰 vibeTags는 3개로 제한.
+    // 이미지 URL이 길어 페이로드가 커지므로 /api/session 결과 저장 상한(24KB)에 맞춰 vibeTags는 3개로 제한.
     const slim = (p: PlaceRecommendation) => ({
       placeName: p.placeName, category: p.category, description: p.description,
       priceRange: p.priceRange, address: p.address, area: p.area,
@@ -522,10 +522,10 @@ export default function Home({ onChromeChange }: { onChromeChange?: (showTabBar:
     }
     if (lastSessionResultRef.current === raw) return;
     lastSessionResultRef.current = raw;
-    fetch('/api/session-get', {
+    fetch('/api/session', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id: sessionId, result: payload }),
+      body: JSON.stringify({ action: 'result', id: sessionId, result: payload }),
     }).catch(() => { /* 실패 무해 */ });
   }, [view, isGroup, sessionId, result, resultThird, resultThirdLabel, purpose, midpointData, treasurer, resultWeather]);
 
@@ -596,7 +596,7 @@ export default function Home({ onChromeChange }: { onChromeChange?: (showTabBar:
     async function poll() {
       if (document.hidden) return; // 백그라운드 탭에서는 폴링 중지
       try {
-        const res = await fetch(`/api/session-get?id=${encodeURIComponent(sessionId!)}`);
+        const res = await fetch(`/api/session?id=${encodeURIComponent(sessionId!)}`);
         if (!res.ok) return;
         const data = await res.json();
         if (!active) return;
@@ -642,10 +642,10 @@ export default function Home({ onChromeChange }: { onChromeChange?: (showTabBar:
     setGroupError(null);
     try {
       const hasSecond = !!(purpose?.second && purpose.second !== '없음');
-      const res = await fetch('/api/session-create', {
+      const res = await fetch('/api/session', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ expected_count: expectedCount, has_second: hasSecond }),
+        body: JSON.stringify({ action: 'create', expected_count: expectedCount, has_second: hasSecond }),
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));

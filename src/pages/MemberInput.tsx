@@ -147,7 +147,7 @@ export default function MemberInput() {
     async function poll() {
       if (document.hidden) return;
       try {
-        const res = await fetch(`/api/session-get?id=${encodeURIComponent(sessionId!)}`);
+        const res = await fetch(`/api/session?id=${encodeURIComponent(sessionId!)}`);
         if (!res.ok) return;
         const data = await res.json();
         if (!active) return;
@@ -223,10 +223,11 @@ export default function MemberInput() {
       const extraVibeLabels = [...allFirstKeys.filter((k) => k !== primaryAtm), ...conditions]
         .map((k) => VIBE_KEY_TO_LABEL[k] ?? k);
 
-      const res = await fetch('/api/session-join', {
+      const res = await fetch('/api/session', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          action: 'join',
           session_id: sessionId,
           member_name: name.trim(),
           // 출발지는 중간지점 모드에서만 전송 — 임의 지역 모드는 좌표 없이 참여

@@ -15,9 +15,17 @@ async function mock(ctx) {
   // Playwright는 나중에 등록한 route가 우선 → 포괄 catch-all을 먼저 등록하고 구체 route를 뒤에 등록
   await ctx.route('**/api/**', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: '{}' }));
   await ctx.route('**/api/count**', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ count: 1284 }) }));
-  await ctx.route('**/api/session-create', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ id: 'demo1234' }) }));
-  await ctx.route('**/api/session-join', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true }) }));
-  await ctx.route('**/api/session-get**', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ expected_count: 4, has_second: true, members: MEMBERS }) }));
+  // 세션 API는 함수 3개가 /api/session 하나로 합쳐졌다 — 경로가 아니라 메서드+action으로 목킹을 분기한다.
+  await ctx.route('**/api/session**', (r) => {
+    const req = r.request();
+    if (req.method() === 'GET') {
+      return r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ expected_count: 4, has_second: true, members: MEMBERS }) });
+    }
+    let action = '';
+    try { action = JSON.parse(req.postData() ?? '{}').action ?? ''; } catch { /* 바디 파싱 실패는 ok 응답으로 */ }
+    const body = action === 'create' ? { id: 'demo1234' } : { ok: true };
+    return r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(body) });
+  });
 }
 
 async function save(page, name) {
