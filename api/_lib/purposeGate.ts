@@ -101,11 +101,16 @@ export function isGloballyExcludedStore(store: GateStore): boolean {
  *
  * @param purposeFirst 1차 목적('밥'|'술'|'카페' 프리셋, 그 외(기타·직접입력 메뉴)는 전역 제외만 적용)
  * @param customMenuTokens 사용자가 직접 입력한 메뉴 토큰(있으면 이름/업종명 겹침만으로 판정)
+ * @param allowUnclassified 분류 불능(사전에 없는 업종명)을 통과시킬지. 기본 false(보수적 탈락).
+ *   호출부가 엄격 모드로 후보를 전부 잃었을 때만 true로 재시도한다 — 사전이 실제 어휘를 못
+ *   맞히더라도 L0가 통째로 죽지 않게 하는 안전판. 이때도 '명시적 거절'(제과·카페 등 목적 밖
+ *   업종으로 판정된 곳)은 그대로 탈락하므로 빵집이 되살아나지는 않는다.
  */
 export function isStoreAllowedForPurpose(
   store: GateStore,
   purposeFirst: string | null | undefined,
   customMenuTokens?: string[],
+  allowUnclassified = false,
 ): boolean {
   if (isGloballyExcludedStore(store)) return false;
 
@@ -122,8 +127,9 @@ export function isStoreAllowedForPurpose(
     .filter((g): g is StoreGroup => g !== null);
 
   // 명시적 거절 우선 — 두 필드 중 하나라도 목적 밖 그룹이면 탈락.
+  // (이 판정은 allowUnclassified와 무관하게 항상 적용된다 — 빵집을 막는 건 여기다.)
   if (groups.some((g) => !allowed.includes(g))) return false;
-  // 분류 불능 → 보수적 탈락. L0는 "있으면 넛지, 없으면 조용히 스킵"이 원설계.
-  if (groups.length === 0) return false;
+  // 분류 불능 → 기본은 보수적 탈락. L0는 "있으면 넛지, 없으면 조용히 스킵"이 원설계.
+  if (groups.length === 0) return allowUnclassified;
   return true;
 }

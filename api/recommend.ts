@@ -972,7 +972,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       // 목적 대비 업종 게이트 — 공공데이터는 음식 대분류(I2) 전수라 제과점·구내식당까지 섞여 온다.
       // 이걸 거르지 않으면 '노포' 조건에 오래 버틴 빵집이 최상위로 올라온다(실제 발생 버그).
       // lookupYearsAlive(Supabase 왕복)를 태우기 전에 걸러 예산을 아낀다.
-      const gatedStores = unmatchedStores.filter((s) => isStoreAllowedForPurpose(s, purpose.first, gateCustomMenuTokens));
+      let gatedStores = unmatchedStores.filter((s) => isStoreAllowedForPurpose(s, purpose.first, gateCustomMenuTokens));
+      // 안전판: 업종 사전이 실제 어휘를 못 맞혀 후보가 통째로 사라지면, '분류 불능'만 통과시켜
+      // 재시도한다. 이때도 명시적 거절(제과·카페 등 목적 밖 업종)은 그대로 막히므로 빵집은
+      // 되살아나지 않는다. 사전이 틀려도 L0 발굴 기능이 조용히 죽지 않게 하는 장치.
+      let gateRelaxed = false;
+      if (gatedStores.length === 0 && unmatchedStores.length > 0) {
+        gatedStores = unmatchedStores.filter((s) => isStoreAllowedForPurpose(s, purpose.first, gateCustomMenuTokens, true));
+        gateRelaxed = gatedStores.length > 0;
+      }
       // 관측용: 어휘 사전이 실측 미검증이라, '분류 불능'으로 탈락한 실제 업종명을 소수만 남겨
       // 배포 후 로그를 보고 purposeGate 사전을 교정할 수 있게 한다(업종명이라 개인정보 아님).
       const gateUnknownSamples: string[] = [];
@@ -1008,7 +1016,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
       console.log(
         `[recommend] L0 publicStores=${publicStores.length} purpose=${purpose.first}`
-        + ` gateIn=${unmatchedStores.length} gateOut=${gatedStores.length} gemCandidates=${gemCandidates.length}`
+        + ` gateIn=${unmatchedStores.length} gateOut=${gatedStores.length}${gateRelaxed ? '(relaxed)' : ''} gemCandidates=${gemCandidates.length}`
         + (gateUnknownSamples.length ? ` gateUnknown=${gateUnknownSamples.join(' | ').slice(0, 200)}` : ''),
       );
     } catch (e) {

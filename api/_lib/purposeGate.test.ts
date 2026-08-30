@@ -67,6 +67,26 @@ describe('isStoreAllowedForPurpose (목적 대비 업종 게이트)', () => {
     expect(isStoreAllowedForPurpose(store('기관 구내식당'), '기타')).toBe(false);
   });
 
+  // 사전이 실제 어휘를 못 맞혀 후보가 0이 되면 호출부가 allowUnclassified=true로 재시도한다.
+  // 이 완화 모드에서도 빵집은 반드시 막혀야 한다 — 안 그러면 이번 버그가 그대로 되살아난다.
+  describe('완화 모드(allowUnclassified=true)', () => {
+    it('모르는 업종은 통과시킨다 — L0가 통째로 죽지 않게', () => {
+      expect(isStoreAllowedForPurpose(store('알수없는업태'), '밥', [], true)).toBe(true);
+      expect(isStoreAllowedForPurpose(store(''), '밥', [], true)).toBe(true);
+    });
+
+    it('완화 모드여도 제과점은 밥 목적에서 여전히 막힌다 (빵집 재발 방지)', () => {
+      expect(isStoreAllowedForPurpose(store('제과점'), '밥', [], true)).toBe(false);
+      expect(isStoreAllowedForPurpose(store('제과점', { mclsName: '기타 간이 음식점' }), '밥', [], true)).toBe(false);
+      expect(isStoreAllowedForPurpose(store('커피전문점/카페'), '밥', [], true)).toBe(false);
+    });
+
+    it('완화 모드여도 전역 제외는 그대로 막힌다', () => {
+      expect(isStoreAllowedForPurpose(store('기관 구내식당'), '밥', [], true)).toBe(false);
+      expect(isStoreAllowedForPurpose(store('일반유흥주점'), '술', [], true)).toBe(false);
+    });
+  });
+
   it('중분류명이 소분류명보다 우선한다', () => {
     expect(classifyStoreGroup(store('', { mclsName: '비알코올 음료점업' }))).toBe('카페');
     expect(classifyStoreGroup(store('', { mclsName: '주점업' }))).toBe('술');
