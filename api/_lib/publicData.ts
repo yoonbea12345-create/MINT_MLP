@@ -7,11 +7,14 @@ export interface PublicStore {
   lat: number;
   lng: number;
   regionCode: string; // 시군구코드 (signguCd)
+  mclsName?: string; // 상권업종 중분류명 (indsMclsNm) — 목적 대비 업종 게이트(purposeGate)가 소분류보다 우선해 본다
 }
 
 interface StoreListItem {
   bizesNm: string;
   indsSclsNm: string;
+  indsMclsCd?: string;
+  indsMclsNm?: string;
   rdnmAdr?: string;
   lnoAdr?: string;
   lon: number;
@@ -53,6 +56,7 @@ export async function fetchStoresInRadius(lat: number, lng: number, radiusM: num
         lat: it.lat,
         lng: it.lon,
         regionCode: it.signguCd,
+        mclsName: it.indsMclsNm,
       });
     }
   }

@@ -3,6 +3,7 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { clientIp, checkRateLimit, validateRecommendBody } from './_lib/guard.js';
 import { getBubbleScoresCacheOnly } from './_lib/blogBuzz.js';
 import { fetchStoresInRadius, matchStoreToPlace, lookupYearsAlive, computeLocalGem } from './_lib/publicData.js';
+import { isStoreAllowedForPurpose, isGloballyExcludedStore, classifyStoreGroup } from './_lib/purposeGate.js';
 import { getSupabaseAdmin } from './_lib/supabaseAdmin.js';
 import { placeKey } from './_lib/placeKey.js';
 import { computeFinalScores } from './_lib/scoring.js';
@@ -765,7 +766,7 @@ function extractPlaces(text: string): FinalistPlace[] | null {
 
 function formatNaverPlaces(places: (NaverPlace & { _isPublicGem?: boolean; _buzzHint?: string })[]): string {
   return places.map((p, i) => {
-    const tag = p._isPublicGem ? '[공공데이터 발굴 후보 — 정보 적음, 업종/연차 기반 보수적 평가, 배제 금지] ' : '';
+    const tag = p._isPublicGem ? '[공공데이터 발굴 후보 — 정보 적음, 업종/연차 기반 보수적 평가, 배제 금지(단, 목적 업종과 무관하면 제외 가능)] ' : '';
     const hint = p._buzzHint ? ` (참고: ${p._buzzHint})` : '';
     return `${i + 1}. ${tag}${p.name} | ${p.category} | ${p.address} | lat:${p.lat.toFixed(4)}, lng:${p.lng.toFixed(4)}${hint}`;
   }).join('\n');
@@ -953,15 +954,38 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       console.log(`[recommend] excludeFoods=${excludeFoods.join(',')} → first ${naverFirstPlaces.length}, second ${naverSecondPlaces.length}`);
     }
 
+    // '메뉴 콕'(기타·직접입력) 목적은 업종 그룹(밥/술/카페)으로 좁힐 수 없다 → 입력 메뉴 토큰으로 게이트.
+    // 밥/술/카페 프리셋은 장르가 직접입력이어도 그룹 판정이 더 안전하므로 토큰을 넘기지 않는다(과차단 방지).
+    const gateCustomMenuTokens: string[] = ['밥', '술', '카페'].includes(purpose.first)
+      ? []
+      : [purpose.first, ...(firstGenre ? [firstGenre] : [])]
+          .flatMap((s) => s.split(/[,&·]/))
+          .map((s) => s.trim())
+          .filter((s) => s.length >= 2 && s !== '기타');
+
     // L0: 네이버에 없는(=매칭 실패) 공공데이터 상가 중 localGem 상위 소수를 후보 풀에 추가.
     // yearsAlive는 license_cache(사전 배치 적재) 매칭 성공 시에만 채워지며, 실패하면 localGem 0
     // 처리되어 자연히 상위권에서 제외된다(정보 없음 = 배제, 임의 추정 안 함).
     try {
       const allKnownPlaces = [...naverFirstPlaces, ...naverSecondPlaces];
       const unmatchedStores = publicStores.filter((s) => !matchStoreToPlace(s, allKnownPlaces));
+      // 목적 대비 업종 게이트 — 공공데이터는 음식 대분류(I2) 전수라 제과점·구내식당까지 섞여 온다.
+      // 이걸 거르지 않으면 '노포' 조건에 오래 버틴 빵집이 최상위로 올라온다(실제 발생 버그).
+      // lookupYearsAlive(Supabase 왕복)를 태우기 전에 걸러 예산을 아낀다.
+      const gatedStores = unmatchedStores.filter((s) => isStoreAllowedForPurpose(s, purpose.first, gateCustomMenuTokens));
+      // 관측용: 어휘 사전이 실측 미검증이라, '분류 불능'으로 탈락한 실제 업종명을 소수만 남겨
+      // 배포 후 로그를 보고 purposeGate 사전을 교정할 수 있게 한다(업종명이라 개인정보 아님).
+      const gateUnknownSamples: string[] = [];
+      for (const s of unmatchedStores) {
+        if (gateUnknownSamples.length >= 5) break;
+        if (gatedStores.includes(s)) continue;
+        if (isGloballyExcludedStore(s) || classifyStoreGroup(s) !== null) continue; // 의도된 탈락은 제외
+        const label = `${s.mclsName ?? '-'}/${s.category ?? '-'}`.slice(0, 40);
+        if (!gateUnknownSamples.includes(label)) gateUnknownSamples.push(label);
+      }
       const gemCandidates = (
         await Promise.all(
-          unmatchedStores.slice(0, 30).map(async (store) => {
+          gatedStores.slice(0, 30).map(async (store) => {
             const yearsAlive = await lookupYearsAlive(store);
             const localGem = computeLocalGem(yearsAlive, 0);
             return { store, localGem };
@@ -982,7 +1006,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           lat: store.lat, lng: store.lng, _isPublicGem: true,
         });
       }
-      console.log(`[recommend] L0 publicStores=${publicStores.length} gemCandidates=${gemCandidates.length}`);
+      console.log(
+        `[recommend] L0 publicStores=${publicStores.length} purpose=${purpose.first}`
+        + ` gateIn=${unmatchedStores.length} gateOut=${gatedStores.length} gemCandidates=${gemCandidates.length}`
+        + (gateUnknownSamples.length ? ` gateUnknown=${gateUnknownSamples.join(' | ').slice(0, 200)}` : ''),
+      );
     } catch (e) {
       console.error('[recommend] L0 gem candidate injection failed', e);
     }
@@ -1105,6 +1133,7 @@ ${weatherSection}${weightsSection}
     // 기본(중립): 업력 자체엔 가산 금지 + 공간 완성도로 균형. 노포/레트로 명시 선택 시에만 노포 가산.
     const nopoTrustLine = wantsNopo
       ? `  · 오래된 가게(노포)·전문성 있는 단일 메뉴 위주 (+5~8점) ← 사용자가 노포/레트로 취향을 직접 선택함, 적극 반영
+    ※ 단, 이 노포 가산은 1차 목적("${purposeFirstLabel}") 업종에 부합하는 곳에만 적용한다. 주력 업종이 목적과 명백히 다른 곳(예: '밥' 목적에 빵집·디저트카페, '카페' 목적에 곱창집)은 업력이 아무리 길어도 가산하지 말고 선택 자체를 피하라. '명백히 다른' 경우만 해당하며, 브런치카페·베이커리카페·치킨호프처럼 목적에 걸치는 곳은 정상 후보로 평가한다.
   · 공간 완성도 — 일행 누구나 편하게 머물 수 있는 공간인가 (+2~3점)`
       : `  · 전문성 신호 — 시그니처 메뉴·좁고 깊은 메뉴 구성의 완성도. 노포든 신생·모던 가게든 동등하게 평가하고, 업력이 오래됐다는 사실 자체에는 가산점을 주지 말 것 (+3~5점)
   · 공간 완성도 — 인테리어·조명·좌석·청결 등 일행 누구나 편하게 머물고 대화할 수 있는 공간인가 (감성 카페·와인바·브런치 같은 유형도 이 신호로 동등 평가) (+3~5점)`;
