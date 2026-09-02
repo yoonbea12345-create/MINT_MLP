@@ -162,7 +162,7 @@ export default function MeetingLocationSelect({ value, onSelect }: Props) {
         <div className="text-2xl">🧭</div>
         <div className="flex-1">
           <div className="font-black text-white text-base">자동 중간지점 찾기</div>
-          <div className="text-xs text-white/80 mt-0.5">모든 출발지 기준 최적 중간 지점 계산</div>
+          <div className="text-xs text-white/80 mt-0.5">모두의 이동거리를 계산해 가장 공평한 곳으로</div>
         </div>
         <div className="text-xs font-bold text-[#3CDBC0] bg-white px-2.5 py-1 rounded-full flex-shrink-0">
           추천

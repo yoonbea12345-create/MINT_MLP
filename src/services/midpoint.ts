@@ -92,6 +92,34 @@ const ALL_AREAS = [...METRO_AREAS, ...NATIONAL_AREAS];
 // 서울 중심 기준점
 const SEOUL_CENTER: Coordinates = { lat: 37.5665, lng: 126.9780 };
 
+// 무게중심 스냅 임계값 —
+//  · SNAP_HUB_KM: 무게중심이 최근접 상권에서 이 거리를 넘으면 '빈 구간'으로 보고 상권으로 스냅.
+//  · EXPLAIN_HUB_KM: 스냅 사실을 토스트로 설명할 최소 거리(그 아래는 조용히 스냅만).
+//  · FAR_WARNING_KM: 수도권 밖 인원 섞임 경고(의정부↔수원 52km까지는 정상 범위라 60으로 둔다).
+const SNAP_HUB_KM = 3;
+const EXPLAIN_HUB_KM = 5;
+const FAR_WARNING_KM = 60;
+
+// 후보 상권 중 '가장 멀리 오는 사람의 거리(minimax)'가 최소인 곳을 고른다 — 한 명이 유난히 멀어지는
+// 걸 막는 게 '공평'의 핵심. 동률(±1km)이면 총 이동거리가 적은 곳으로 결정론적 타이브레이크(테스트 고정).
+function pickFairestHub<T extends { lat: number; lng: number }>(
+  candidates: T[],
+  departures: Coordinates[],
+): T {
+  let best = candidates[0];
+  let bestMax = Infinity;
+  let bestSum = Infinity;
+  for (const c of candidates) {
+    const ds = departures.map((d) => haversineKm(d.lat, d.lng, c.lat, c.lng));
+    const mx = Math.max(...ds);
+    const sum = ds.reduce((s, v) => s + v, 0);
+    if (mx < bestMax - 1 || (Math.abs(mx - bestMax) <= 1 && sum < bestSum)) {
+      best = c; bestMax = mx; bestSum = sum;
+    }
+  }
+  return best;
+}
+
 
 /**
  * 출발지들의 인원 산술평균을 중간지점으로 쓴다.
@@ -105,6 +133,11 @@ const SEOUL_CENTER: Coordinates = { lat: 37.5665, lng: 126.9780 };
  *
  * n이 3 이하면 두 방식의 결과가 원래 같다(2점은 중점, 삼각형은 무게중심=꼭짓점 평균).
  * 즉 이건 새로운 철학이 아니라, n이 4 이상일 때만 어긋나던 것을 원래 규칙에 맞춘 것이다.
+ *
+ * 추가 규칙(상권 스냅): 산술평균이 상권에서 SNAP_HUB_KM(3km) 넘게 떨어지면 — 즉 정중앙이 상권 없는
+ * 빈 구간이면(예: 서울·소래·안산의 정중앙인 광명·시흥 부근) — 최근접 상권 5곳 중 minimax(가장 먼
+ * 사람의 거리 최소)로 중간지점을 옮긴다. 안 그러면 서버가 그 빈 좌표 기준 거리순으로만 정렬해 결과가
+ * 세 동네로 흩어지고, 화면에 뜬 지역명과도 어긋난다(부천으로 나온 사고의 원인). 출발지 1곳이면 스냅 안 함.
  */
 export function findBalancedAreas(
   departures: Coordinates[],
@@ -114,7 +147,7 @@ export function findBalancedAreas(
   if (departures.length === 0) return fallback;
 
   // 모든 출발지가 똑같이 한 표씩 — 안쪽에 있다는 이유로 빠지는 사람이 없어야 한다.
-  const midpoint = {
+  const centroid = {
     lat: departures.reduce((s, p) => s + p.lat, 0) / departures.length,
     lng: departures.reduce((s, p) => s + p.lng, 0) / departures.length,
   };
@@ -128,21 +161,40 @@ export function findBalancedAreas(
     }
   }
 
-  // 중심점에서 가장 가까운 지역 순으로 정렬
-  const nearest = ALL_AREAS
-    .map((area) => ({ ...area, dist: haversineKm(midpoint.lat, midpoint.lng, area.lat, area.lng) }))
+  // 무게중심에서 가장 가까운 상권 순으로 정렬
+  const nearestToCentroid = ALL_AREAS
+    .map((area) => ({ ...area, dist: haversineKm(centroid.lat, centroid.lng, area.lat, area.lng) }))
     .sort((a, b) => a.dist - b.dist);
 
-  const areas = nearest.slice(0, count).map((a) => a.name);
-  const areaName = nearest[0]?.name ?? '알 수 없는 지역';
+  // 무게중심 ↔ 최근접 상권 거리. 크면 "산술 중앙이 상권 없는 빈 구간에 찍혔다"는 뜻 —
+  // 그 좌표를 그대로 서버에 보내면 결과가 여러 동네로 흩어지고 화면 지역명과도 어긋난다.
+  const hubGap = nearestToCentroid[0]?.dist ?? Infinity;
 
-  // 임계값이 150km였을 땐 서울↔대전(140km)이 아무 말 없이 통과했다. 그러면 서울 사람 다섯에
-  // 지방 사람 하나가 섞였을 때 중간지점이 청주·대전으로 가는데도 화면엔 설명이 한 줄도 없다.
-  // 좌표 검증(위도 33~39·경도 124~132)이 남한 전역이라 실제로 입력 가능한 상황이다.
-  // 수도권 안이면 최대 페어 거리가 60km를 넘기 어려우므로, 넘었다면 "먼 사람이 섞였다"는 뜻이다.
-  const compromiseMessage = maxPairDist > 60
-    ? `출발지가 서로 ${Math.round(maxPairDist)}km 떨어져 있어요. 모두의 중간인 ${areaName} 근처로 찾았는데, 다들 멀다면 지역을 직접 골라주세요 📍`
-    : undefined;
+  // 빈 구간이면 무게중심을 '가장 공평한 실제 상권'(minimax)으로 스냅한다 — 유저는 아무것도 더 안 한다.
+  // 출발지 1곳이면 스냅하지 않는다(혼자인데 10km 밖 상권으로 끌려가면 안 된다).
+  let midpoint: Coordinates = centroid;
+  let hub = nearestToCentroid[0];
+  if (departures.length >= 2 && hubGap > SNAP_HUB_KM && hub) {
+    hub = pickFairestHub(nearestToCentroid.slice(0, 5), departures);
+    midpoint = { lat: hub.lat, lng: hub.lng };
+  }
+
+  // 표시 지역명·검색 지역을 '스냅된' 중간지점 기준으로 산출 → 헤더 지역명 = 검색 지역 = 결과가 일치.
+  const ranked = ALL_AREAS
+    .map((area) => ({ ...area, dist: haversineKm(midpoint.lat, midpoint.lng, area.lat, area.lng) }))
+    .sort((a, b) => a.dist - b.dist);
+  const areas = ranked.slice(0, count).map((a) => a.name);
+  const areaName = hub?.name ?? ranked[0]?.name ?? '알 수 없는 지역';
+
+  // 두 종류의 안내(1곳일 땐 '공평'이 성립하지 않으므로 둘 다 뜨지 않는다):
+  //  · maxPairDist > 60km — 수도권 밖 인원 섞임. 지역 직접 선택을 권함.
+  //  · hubGap > 5km — 중앙에 상권이 없어 공평한 곳으로 옮겼다는 사실을 설명(부천/안양이 왜 나왔는지).
+  //    3~5km는 체감 차이가 없어 조용히 스냅만 한다.
+  const compromiseMessage = maxPairDist > FAR_WARNING_KM
+    ? `출발지가 서로 ${Math.round(maxPairDist)}km나 떨어져 있어요. 그나마 공평한 ${areaName} 근처로 찾았는데, 다들 멀다면 지역을 직접 골라도 좋아요 📍`
+    : (departures.length >= 2 && hubGap > EXPLAIN_HUB_KM)
+      ? `딱 중간엔 마땅한 상권이 없어서, 모두에게 가장 공평한 ${areaName} 근처로 찾았어요 🧭`
+      : undefined;
 
   return { areas, midpoint, areaName, compromiseMessage };
 }

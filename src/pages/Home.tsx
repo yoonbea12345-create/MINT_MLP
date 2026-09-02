@@ -891,12 +891,20 @@ export default function Home({ onChromeChange }: { onChromeChange?: (showTabBar:
   }
 
   function applyCompromiseMessage(msg?: string) {
-    if (msg) {
-      setCompromiseMessage(msg);
-      setShowCompromiseToast(true);
-      setTimeout(() => setShowCompromiseToast(false), 5000);
-    }
+    // 토스트 표시는 결과 화면 진입 시점의 effect가 맡는다(아래 useEffect).
+    // 여기서 켜면 15~30초 로딩 동안 타이머가 만료돼 유저가 한 번도 못 본다(기존 버그).
+    // 메시지가 없으면 명시적으로 지워 이전 추천의 안내가 남지 않게 한다(stale 방지).
+    setCompromiseMessage(msg ?? null);
+    setShowCompromiseToast(false);
   }
+
+  // 중간지점 보완 토스트는 결과가 '보일 때' 떠야 한다 — 추천 요청(로딩) 시점에 켜면 못 본다.
+  useEffect(() => {
+    if (view !== 'result' || !compromiseMessage) return;
+    setShowCompromiseToast(true);
+    const t = setTimeout(() => setShowCompromiseToast(false), 7000);
+    return () => clearTimeout(t);
+  }, [view, compromiseMessage]);
 
   function handleConfirmMeetingLocation(loc: MeetingLocation) {
     if (loc.type === 'auto') {
@@ -919,6 +927,7 @@ export default function Home({ onChromeChange }: { onChromeChange?: (showTabBar:
         };
         setMidpointData({ midpoint, areaName: loc.area, nearestAreas: loc.scope.searchAreas, scope });
         setResultTravelTimes(null);
+        applyCompromiseMessage(undefined); // 직접 검색 지역은 중간지점 안내 대상이 아님 — stale 제거
         handleRecommend(midpoint, loc.scope.searchAreas, validLocs, undefined, [], undefined, scope);
       } else if (loc.lat != null && loc.lng != null) {
         // (구버전 폴백) 스코프 없이 좌표만 있는 경우 — 검색한 지역명을 검색어 1순위로.
@@ -927,6 +936,7 @@ export default function Home({ onChromeChange }: { onChromeChange?: (showTabBar:
         const searchAreas = [loc.area, ...nearby].slice(0, 3);
         setMidpointData({ midpoint, areaName: loc.area, nearestAreas: searchAreas });
         setResultTravelTimes(null);
+        applyCompromiseMessage(undefined); // 직접 검색 지역은 중간지점 안내 대상이 아님 — stale 제거
         handleRecommend(midpoint, searchAreas, validLocs);
       } else {
         // 좌표 없는 텍스트만(구버전·자동완성 미선택) — 최후 폴백
@@ -949,6 +959,7 @@ export default function Home({ onChromeChange }: { onChromeChange?: (showTabBar:
     if (presetRegion) {
       midpoint = presetRegion.midpoint;
       areaName = presetRegion.label;
+      applyCompromiseMessage(undefined); // 프리셋 지역은 중간지점 계산이 아니므로 이전 안내를 지운다
     } else {
       const coords = validLocs.map((l) => ({ lat: l.lat!, lng: l.lng! }));
       const balanced = findBalancedAreas(coords.length >= 1 ? coords : [SEOUL_CENTER]);
