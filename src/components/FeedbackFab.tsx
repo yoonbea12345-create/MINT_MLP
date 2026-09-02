@@ -1,14 +1,22 @@
 import { useEffect, useState } from 'react';
 import { IconFeedback } from './icons';
+import { trackEvent } from '../utils/analytics';
+import { getDeviceId } from '../utils/points';
 
 interface Props {
   hidden: boolean;      // 피드백 시트가 열려 있는 동안엔 비운다(언마운트는 하지 않는다 — 아래 주석)
   onOpen: () => void;
 }
 
-const HINT_KEY = 'mint_feedback_hint_shown';
-const HINT_DELAY_MS = 1200;   // 화면이 자리를 잡은 뒤에 말을 건다
-const HINT_LIFE_MS = 4000;    // 읽고 흘려보낼 만큼만
+// 한 번이라도 피드백을 연 유저 → 유도 말풍선을 영구 중단한다(AppShell이 열 때 심는다).
+export const FEEDBACK_OPENED_KEY = 'mint_feedback_opened';
+// 유도 말풍선 정책 — '평생 1회'로는 약해서(피드백 열람이 2건뿐이었다) 참여할 때까지 조른다.
+// 단 매번은 구걸이라: 세션당 1회 + 누적 NUDGE_MAX회까지만. 참여하면 즉시 멈춘다.
+const NUDGE_COUNT_KEY = 'mint_feedback_nudge_count';       // 누적 노출 횟수(세션 무관)
+const NUDGE_SESSION_KEY = 'mint_feedback_nudge_session';   // 이번 세션에 이미 띄웠는지
+const NUDGE_MAX = 5;                                       // 이 횟수까지만 조른다(이후 조용히)
+const NUDGE_DELAY_MS = 1400;   // 화면이 자리를 잡은 뒤에 말을 건다
+const NUDGE_LIFE_MS = 6500;    // 읽고 결정할 만큼 넉넉히
 
 // 우하단 피드백 진입점. AppShell이 탭바를 보여줄 때만 마운트되므로
 // 입력 스텝 중·결과 화면·바텀시트가 열린 동안은 규칙 하나로 알아서 사라진다.
@@ -19,7 +27,7 @@ const HINT_LIFE_MS = 4000;    // 읽고 흘려보낼 만큼만
 // 데스크톱에서 혼자 화면 끝으로 떨어져 나간다.
 export default function FeedbackFab({ hidden, onOpen }: Props) {
   const [scrolling, setScrolling] = useState(false);
-  const [hint, setHint] = useState(false);
+  const [nudge, setNudge] = useState(false);
 
   // 스크롤 중에는 살짝 물러난다. 치우지는 않되 읽기를 방해하지 않는 최소한의 예의.
   useEffect(() => {
@@ -36,32 +44,37 @@ export default function FeedbackFab({ hidden, onOpen }: Props) {
     };
   }, []);
 
-  // 최초 힌트 툴팁 — 평생 1회. 반복 노출은 구걸처럼 보인다.
-  // 자동 소멸이든 화면 터치든, 사라지는 순간 기록한다(본 적 있다는 사실이 중요하지 방법은 상관없다).
+  // 유도 말풍선 — "MINT의 첫 번째 유저가 되어주세요". 참여(피드백 열기) 전까지, 세션당 1회·누적 NUDGE_MAX회.
+  // 소멸이 아니라 '노출 시점'에 기록한다: 이 FAB은 탭바와 함께 조건부 마운트라, 말풍선이 떠 있는 동안
+  // 입력 스텝으로 들어가면 언마운트되며 dismiss가 안 불린다(소멸 시 기록하면 매번 다시 뜬다).
   useEffect(() => {
     try {
-      if (localStorage.getItem(HINT_KEY)) return;
+      if (localStorage.getItem(FEEDBACK_OPENED_KEY)) return;   // 이미 참여 → 끝
+      if (sessionStorage.getItem(NUDGE_SESSION_KEY)) return;   // 이번 세션 이미 노출
+      if (Number(localStorage.getItem(NUDGE_COUNT_KEY) || '0') >= NUDGE_MAX) return; // 충분히 졸랐음
     } catch {
-      return; // localStorage를 못 쓰는 환경이면 힌트도 포기한다(매번 뜨는 게 더 나쁘다)
+      return; // localStorage를 못 쓰는 환경이면 넛지도 포기한다(매번 뜨는 게 더 나쁘다)
     }
 
     let alive = false;
     const dismiss = () => {
       if (!alive) return;
       alive = false;
-      setHint(false);
+      setNudge(false);
       window.removeEventListener('pointerdown', dismiss);
     };
     const showTimer = setTimeout(() => {
       alive = true;
-      setHint(true);
-      // "봤다"는 기록은 소멸이 아니라 노출 시점에 남긴다. 이 FAB은 탭바와 함께 조건부로
-      // 마운트돼서, 힌트가 떠 있는 동안 입력 스텝으로 들어가면 언마운트되며 dismiss가 안 불린다.
-      // 소멸 시점에 기록했더니 그때마다 키가 안 남아 툴팁이 계속 다시 떴다.
-      try { localStorage.setItem(HINT_KEY, '1'); } catch { /* ignore */ }
+      setNudge(true);
+      try {
+        sessionStorage.setItem(NUDGE_SESSION_KEY, '1');
+        localStorage.setItem(NUDGE_COUNT_KEY, String(Number(localStorage.getItem(NUDGE_COUNT_KEY) || '0') + 1));
+      } catch { /* ignore */ }
+      trackEvent('feedback_hint_shown', { device_id: getDeviceId() });
+      // 바깥 아무 곳이나 누르면 닫는다. 말풍선/버튼 자체 탭은 각자 pointerdown에서 stopPropagation.
       window.addEventListener('pointerdown', dismiss);
-    }, HINT_DELAY_MS);
-    const hideTimer = setTimeout(dismiss, HINT_DELAY_MS + HINT_LIFE_MS);
+    }, NUDGE_DELAY_MS);
+    const hideTimer = setTimeout(dismiss, NUDGE_DELAY_MS + NUDGE_LIFE_MS);
 
     return () => {
       clearTimeout(showTimer);
@@ -77,31 +90,41 @@ export default function FeedbackFab({ hidden, onOpen }: Props) {
       className="pointer-events-none fixed inset-x-0 z-40"
       style={{ bottom: 'calc(5.5rem + env(safe-area-inset-bottom))' }}
     >
-      {/* 힌트가 버튼 왼쪽에 서고 둘이 오른쪽 끝으로 정렬된다 — 꼬리도 따라서 오른쪽을 본다. */}
+      {/* 말풍선이 버튼 왼쪽에 서고 둘이 오른쪽 끝으로 정렬된다 — 꼬리도 따라서 오른쪽을 본다. */}
       <div className="mx-auto flex max-w-md items-center justify-end gap-2 px-4">
-        {hint && !hidden && (
-          <span
-            role="status"
-            className="relative animate-fade-in-up rounded-2xl bg-[#1A7A6E] px-3.5 py-2 text-xs font-bold text-white shadow-lg"
+        {nudge && !hidden && (
+          // 말풍선 자체가 버튼 — 탭하면 바로 피드백 시트가 열린다(학습 비용 0).
+          <button
+            onClick={() => { trackEvent('feedback_hint_click', { device_id: getDeviceId() }); onOpen(); }}
+            onPointerDown={(e) => e.stopPropagation()}
+            className="pointer-events-auto relative max-w-[15.5rem] animate-fade-in-up rounded-2xl bg-[#1A7A6E] px-3.5 py-2.5 text-left shadow-xl shadow-[#1A7A6E]/25 active:scale-95"
           >
-            어떤 피드백이든 남겨주세요!
+            <span className="block text-xs font-black leading-snug text-white">🌱 MINT의 첫 번째 유저가 되어주세요</span>
+            <span className="mt-0.5 block text-[11px] font-medium text-white/85">소중한 의견 꼭 반영할게요 · 톡 남기기 →</span>
             <span
               aria-hidden
               className="absolute -right-1 top-1/2 h-2.5 w-2.5 -translate-y-1/2 rotate-45 bg-[#1A7A6E]"
             />
-          </span>
+          </button>
         )}
 
-        <button
-          onClick={onOpen}
-          aria-label="피드백 남기기"
-          tabIndex={hidden ? -1 : 0}
-          className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#3CDBC0] to-[#2AB5A0] text-white shadow-lg shadow-[#2AB5A0]/30 transition-[opacity,transform] duration-200 ${
-            hidden ? 'opacity-0' : 'pointer-events-auto'
-          } ${!hidden && scrolling ? 'scale-90 opacity-50' : ''} active:scale-95`}
-        >
-          <IconFeedback className="h-[22px] w-[22px]" strokeWidth={2} />
-        </button>
+        {/* 버튼 + 시선 유도용 펄스 링(말풍선이 떠 있는 동안만) */}
+        <div className="pointer-events-none relative shrink-0">
+          {nudge && !hidden && (
+            <span aria-hidden className="absolute inset-0 rounded-full bg-[#3CDBC0] opacity-60 animate-ping" />
+          )}
+          <button
+            onClick={onOpen}
+            onPointerDown={(e) => e.stopPropagation()}
+            aria-label="피드백 남기기"
+            tabIndex={hidden ? -1 : 0}
+            className={`relative flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-[#3CDBC0] to-[#2AB5A0] text-white shadow-lg shadow-[#2AB5A0]/30 transition-[opacity,transform] duration-200 ${
+              hidden ? 'opacity-0' : 'pointer-events-auto'
+            } ${!hidden && scrolling ? 'scale-90 opacity-50' : ''} active:scale-95`}
+          >
+            <IconFeedback className="h-[22px] w-[22px]" strokeWidth={2} />
+          </button>
+        </div>
       </div>
     </div>
   );

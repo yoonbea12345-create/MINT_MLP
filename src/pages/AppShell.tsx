@@ -6,7 +6,7 @@ import Discover from './tabs/Discover';
 import MintShop from './tabs/MintShop';
 import Profile from './tabs/Profile';
 import ResumeRecommendSheet from '../components/ResumeRecommendSheet';
-import FeedbackFab from '../components/FeedbackFab';
+import FeedbackFab, { FEEDBACK_OPENED_KEY } from '../components/FeedbackFab';
 import FeedbackSheet from '../components/FeedbackSheet';
 import { clearRecommendSession, loadResultSummary, type ResultSummary } from '../utils/history';
 import { trackEvent } from '../utils/analytics';
@@ -86,7 +86,14 @@ export default function AppShell() {
       {/* 피드백 FAB는 탭바와 운명을 같이한다 — 탭이 시트를 열거나(onChromeChange(false)) 홈이
           입력 스텝·결과 화면에 들어가면 자동으로 함께 사라져 하단 CTA와 겹칠 일이 없다. */}
       {showTabBar && (
-        <FeedbackFab hidden={feedbackOpen} onOpen={() => setFeedbackOpen(true)} />
+        <FeedbackFab
+          hidden={feedbackOpen}
+          onOpen={() => {
+            // 한 번이라도 열었으면 유도 말풍선은 영구 중단(참여한 유저를 더 조르지 않는다)
+            try { localStorage.setItem(FEEDBACK_OPENED_KEY, '1'); } catch { /* ignore */ }
+            setFeedbackOpen(true);
+          }}
+        />
       )}
       {feedbackOpen && (
         <FeedbackSheet tab={activeTab} onClose={() => setFeedbackOpen(false)} />

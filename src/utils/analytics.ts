@@ -45,7 +45,9 @@ type EventType = 'landing_view' | 'cta_click' | 'reservation_attempt' | 'session
   // H. 그룹 게스트 결과 화면 개인 유틸 — 길찾기·캘린더 저장(실제 이동 전환 관측)
   | 'guest_directions_click' | 'guest_calendar_add'
   // I. 상시 유저 피드백(우하단 FAB) — 원문은 user_feedback 테이블에만 남기고 여기엔 카운트만 싣는다
+  // feedback_hint_shown/click: 피드백 유도 말풍선의 노출→탭 전환율(넛지 효과 측정)
   | 'feedback_open' | 'feedback_submit' | 'feedback_close' | 'feedback_send_fail'
+  | 'feedback_hint_shown' | 'feedback_hint_click'
   // J. 탭 세션당 1회(새 광고 클릭으로 터치가 갱신되면 재발화) — 소스별 유입수의 분모.
   //    광고가 /app·/join으로 직행하면 landing_view가 안 쏘여
   //    "이 소재로 몇 명이 들어왔나"를 셀 방법이 아예 없다.
