@@ -100,24 +100,20 @@ const SNAP_HUB_KM = 3;
 const EXPLAIN_HUB_KM = 5;
 const FAR_WARNING_KM = 60;
 
-// 후보 상권 중 '가장 멀리 오는 사람의 거리(minimax)'가 최소인 곳을 고른다 — 한 명이 유난히 멀어지는
-// 걸 막는 게 '공평'의 핵심. 동률(±1km)이면 총 이동거리가 적은 곳으로 결정론적 타이브레이크(테스트 고정).
-function pickFairestHub<T extends { lat: number; lng: number }>(
+// 후보 상권을 '공평함' 순으로 정렬 — 1순위는 '가장 멀리 오는 사람의 거리(minimax)'가 최소인 곳.
+// 한 명이 유난히 멀어지는 걸 막는 게 핵심. 동률이면 총 이동거리로 결정론적 타이브레이크(테스트 고정).
+// 상위 2곳을 호출부가 실측 대중교통 시간으로 다시 비교하므로(하이브리드), 단일 선택이 아니라 랭킹을 준다.
+function rankHubsByFairness<T extends { lat: number; lng: number }>(
   candidates: T[],
   departures: Coordinates[],
-): T {
-  let best = candidates[0];
-  let bestMax = Infinity;
-  let bestSum = Infinity;
-  for (const c of candidates) {
-    const ds = departures.map((d) => haversineKm(d.lat, d.lng, c.lat, c.lng));
-    const mx = Math.max(...ds);
-    const sum = ds.reduce((s, v) => s + v, 0);
-    if (mx < bestMax - 1 || (Math.abs(mx - bestMax) <= 1 && sum < bestSum)) {
-      best = c; bestMax = mx; bestSum = sum;
-    }
-  }
-  return best;
+): T[] {
+  return candidates
+    .map((c) => {
+      const ds = departures.map((d) => haversineKm(d.lat, d.lng, c.lat, c.lng));
+      return { c, mx: Math.max(...ds), sum: ds.reduce((s, v) => s + v, 0) };
+    })
+    .sort((a, b) => (a.mx !== b.mx ? a.mx - b.mx : a.sum - b.sum))
+    .map((x) => x.c);
 }
 
 
@@ -142,7 +138,14 @@ function pickFairestHub<T extends { lat: number; lng: number }>(
 export function findBalancedAreas(
   departures: Coordinates[],
   count = 3,
-): { areas: string[]; midpoint: Coordinates; areaName: string; compromiseMessage?: string } {
+): {
+  areas: string[];
+  midpoint: Coordinates;
+  areaName: string;
+  compromiseMessage?: string;
+  // 스냅이 일어났을 때만: 거리로 좁힌 상위 2개 상권 후보(호출부가 실측 대중교통 시간으로 최종 결정).
+  snapHubs?: { name: string; lat: number; lng: number }[];
+} {
   const fallback = { areas: ['명동', '홍대입구역', '강남역'], midpoint: SEOUL_CENTER, areaName: '서울 중심부' };
   if (departures.length === 0) return fallback;
 
@@ -174,9 +177,13 @@ export function findBalancedAreas(
   // 출발지 1곳이면 스냅하지 않는다(혼자인데 10km 밖 상권으로 끌려가면 안 된다).
   let midpoint: Coordinates = centroid;
   let hub = nearestToCentroid[0];
+  let snapHubs: { name: string; lat: number; lng: number }[] | undefined;
   if (departures.length >= 2 && hubGap > SNAP_HUB_KM && hub) {
-    hub = pickFairestHub(nearestToCentroid.slice(0, 5), departures);
+    const ranked = rankHubsByFairness(nearestToCentroid.slice(0, 5), departures);
+    hub = ranked[0];
     midpoint = { lat: hub.lat, lng: hub.lng };
+    // 거리 기준 상위 2곳을 노출 → 호출부가 실측 대중교통 시간으로 타이브레이크(하이브리드).
+    snapHubs = ranked.slice(0, 2).map((h) => ({ name: h.name, lat: h.lat, lng: h.lng }));
   }
 
   // 표시 지역명·검색 지역을 '스냅된' 중간지점 기준으로 산출 → 헤더 지역명 = 검색 지역 = 결과가 일치.
@@ -196,7 +203,7 @@ export function findBalancedAreas(
       ? `딱 중간엔 마땅한 상권이 없어서, 모두에게 가장 공평한 ${areaName} 근처로 찾았어요 🧭`
       : undefined;
 
-  return { areas, midpoint, areaName, compromiseMessage };
+  return { areas, midpoint, areaName, compromiseMessage, snapHubs };
 }
 
 // 특정 좌표 근처 지역명 반환 — 전국 목록 사용

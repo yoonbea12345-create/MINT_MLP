@@ -67,6 +67,12 @@ async function odsayTransitMin(origin: Point, dest: Point): Promise<number | nul
   }
 }
 
+// 여러 출발지 → 한 목적지의 대중교통 실측 시간(분) 배열. 실패/미설정 항목은 null(호출부가 폴백 판단).
+// 중간지점 상권 '하이브리드' 선택에서, 거리로 좁힌 후보 2곳을 실측 시간으로 타이브레이크할 때 쓴다.
+export async function transitMinutesTo(dest: Point, origins: Point[]): Promise<(number | null)[]> {
+  return Promise.all(origins.map((o) => odsayTransitMin(o, dest)));
+}
+
 async function transitTimes(origins: Origin[], dest: Point): Promise<TravelResult[]> {
   return Promise.all(origins.map(async (o) => {
     const real = await odsayTransitMin(o, dest);

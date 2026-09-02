@@ -18,7 +18,7 @@ import type { PresetRegion, Coordinates } from '../services/midpoint';
 import { getAIRecommendation, enrichPlaces } from '../services/ai';
 import type { PlaceRecommendation, UserInput, WeatherSummary, RegionScope } from '../services/ai';
 import { saveResultSnapshot, loadResultSnapshot, clearResultSnapshot, saveHistory, INPUT_DRAFT_KEY, GROUP_SESSION_KEY } from '../utils/history';
-import { computeTravelTimes } from '../services/travelTime';
+import { computeTravelTimes, transitMinutesTo } from '../services/travelTime';
 import { trackSessionDuration, trackEvent, setSessionKey, newSessionKey } from '../utils/analytics';
 import { savePilotHandoff, buildCoursePicks } from '../utils/pilotHandoff';
 import { aggregateVibe, aggregateBudget, splitMemberKeywords } from '../utils/groupAggregate';
@@ -220,6 +220,33 @@ function distMeters(aLat: number, aLng: number, bLat: number, bLng: number): num
   const h = Math.sin(dLat / 2) ** 2 +
     Math.cos(aLat * Math.PI / 180) * Math.cos(bLat * Math.PI / 180) * Math.sin(dLng / 2) ** 2;
   return Math.round(R * 2 * Math.atan2(Math.sqrt(h), Math.sqrt(1 - h)));
+}
+
+// 하이브리드 상권 선택 — 거리로 좁힌 후보 2곳을 '실측 대중교통 시간'으로 최종 결정한다.
+// 기준은 거리 때와 동일한 minimax: '가장 멀리 오는 사람의 시간'이 더 작은 후보. 직선거리로는 비슷해도
+// 지하철 연결성에 따라 실제 체감이 갈리는 걸 반영. 단, 한 명이라도 실측이 안 되면(ODsay 실패·미설정)
+// 공정한 비교가 불가하므로 거리 1순위(candidates[0])를 그대로 쓴다 — 반쪽 데이터로 뒤집지 않는다.
+async function refineHubByTransit(
+  candidates: { name: string; lat: number; lng: number }[],
+  departures: Coordinates[],
+): Promise<{ name: string; lat: number; lng: number }> {
+  if (candidates.length < 2 || departures.length === 0) return candidates[0];
+  try {
+    const worstTransit = await Promise.all(
+      candidates.map(async (h) => {
+        const mins = await transitMinutesTo(h, departures);
+        return mins.some((m) => m == null) ? null : Math.max(...(mins as number[]));
+      }),
+    );
+    if (worstTransit.some((m) => m == null)) return candidates[0]; // 실측 불완전 → 거리 결과 유지
+    let best = 0;
+    for (let i = 1; i < worstTransit.length; i++) {
+      if ((worstTransit[i] as number) < (worstTransit[best] as number)) best = i;
+    }
+    return candidates[best];
+  } catch {
+    return candidates[0];
+  }
 }
 
 type ChangeReason = 'retry' | 'adjust' | 'expensive' | 'far' | 'vibe';
@@ -898,22 +925,24 @@ export default function Home({ onChromeChange }: { onChromeChange?: (showTabBar:
     setShowCompromiseToast(false);
   }
 
-  // 중간지점 보완 토스트는 결과가 '보일 때' 떠야 한다 — 추천 요청(로딩) 시점에 켜면 못 본다.
+  // 중간지점 보완 토스트는 결과가 '보일 때' 떠야 한다 — 추천 요청(로딩) 시점에 켜면 15~30초 로딩 중
+  // 타이머가 만료돼 못 본다(기존 버그). setState는 타이머 콜백 안에서만 호출해 이펙트 본문 동기
+  // setState(cascading render)를 피하고, 50ms 지연 마운트로 페이드인 트랜지션도 자연스럽게 만든다.
   useEffect(() => {
     if (view !== 'result' || !compromiseMessage) return;
-    setShowCompromiseToast(true);
-    const t = setTimeout(() => setShowCompromiseToast(false), 7000);
-    return () => clearTimeout(t);
+    const showT = setTimeout(() => setShowCompromiseToast(true), 50);
+    const hideT = setTimeout(() => setShowCompromiseToast(false), 7050);
+    return () => { clearTimeout(showT); clearTimeout(hideT); };
   }, [view, compromiseMessage]);
 
   function handleConfirmMeetingLocation(loc: MeetingLocation) {
     if (loc.type === 'auto') {
-      handleMidpointSelect();
+      void handleMidpointSelect();
     } else {
       const region = PRESET_REGIONS.find((r) => r.id === loc.regionId);
       const validLocs = locations.filter((l) => l.lat != null && l.lng != null);
       if (region) {
-        handleMidpointSelect(region);
+        void handleMidpointSelect(region);
       } else if (loc.scope && loc.lat != null && loc.lng != null) {
         // 시/구/동 단위로 검색·확정된 지역 — 그 행정단위 범위 안에서만 추천.
         // searchAreas(시=유명상권 여러 곳, 구/동=그 자체)로 네이버를 검색하고,
@@ -951,7 +980,7 @@ export default function Home({ onChromeChange }: { onChromeChange?: (showTabBar:
     }
   }
 
-  function handleMidpointSelect(presetRegion?: PresetRegion) {
+  async function handleMidpointSelect(presetRegion?: PresetRegion) {
     let midpoint: Coordinates;
     let areaName: string;
     const validLocs = locations.filter((l) => l.lat != null && l.lng != null);
@@ -966,6 +995,14 @@ export default function Home({ onChromeChange }: { onChromeChange?: (showTabBar:
       midpoint = balanced.midpoint;
       areaName = balanced.areaName;
       applyCompromiseMessage(balanced.compromiseMessage);
+      // 하이브리드: 빈 구간 스냅이 일어났으면 거리로 좁힌 후보 2곳을 실측 대중교통 시간으로 최종 결정.
+      // 실측 왕복이 붙으므로 먼저 로딩 화면을 띄워 빈 대기(1~2초)를 없앤다. 실패 시 거리 결과 그대로.
+      if (balanced.snapHubs && balanced.snapHubs.length >= 2 && coords.length >= 1) {
+        setLoading(true);
+        const chosen = await refineHubByTransit(balanced.snapHubs, coords);
+        midpoint = { lat: chosen.lat, lng: chosen.lng };
+        areaName = chosen.name;
+      }
     }
 
     const nearestAreas = findNearestAreas(midpoint, 3);
