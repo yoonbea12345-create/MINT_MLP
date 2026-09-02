@@ -94,16 +94,27 @@ export default function FeedbackFab({ hidden, onOpen }: Props) {
       <div className="mx-auto flex max-w-md items-center justify-end gap-2 px-4">
         {nudge && !hidden && (
           // 말풍선 자체가 버튼 — 탭하면 바로 피드백 시트가 열린다(학습 비용 0).
+          // MINT가 말 거는 카드톤: 흰 배경 + 민트 그라데이션 아바타 + 민트 액센트(결과·정보 카드와 동일 언어).
           <button
             onClick={() => { trackEvent('feedback_hint_click', { device_id: getDeviceId() }); onOpen(); }}
             onPointerDown={(e) => e.stopPropagation()}
-            className="pointer-events-auto relative max-w-[15.5rem] animate-fade-in-up rounded-2xl bg-[#1A7A6E] px-3.5 py-2.5 text-left shadow-xl shadow-[#1A7A6E]/25 active:scale-95"
+            className="group pointer-events-auto relative flex max-w-[16.5rem] items-center gap-2.5 rounded-[1.25rem] bg-white py-2 pl-2 pr-3.5 text-left shadow-xl shadow-[#2AB5A0]/20 ring-1 ring-[#3CDBC0]/25 animate-fade-in-up active:scale-[0.97]"
           >
-            <span className="block text-xs font-black leading-snug text-white">🌱 MINT의 첫 번째 유저가 되어주세요</span>
-            <span className="mt-0.5 block text-[11px] font-medium text-white/85">소중한 의견 꼭 반영할게요 · 톡 남기기 →</span>
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#3CDBC0] to-[#2AB5A0] text-base shadow-sm shadow-[#2AB5A0]/40">
+              🍀
+            </span>
+            <span className="min-w-0">
+              <span className="block text-[13px] font-black leading-tight text-gray-800">MINT의 첫 유저가 되어주세요</span>
+              <span className="mt-0.5 flex items-center gap-1 text-[11px] font-bold text-[#2AB5A0]">
+                소중한 의견 꼭 반영할게요
+                <span className="transition-transform group-active:translate-x-0.5">→</span>
+              </span>
+            </span>
+            {/* 꼬리 — 카드와 같은 흰색이 오른쪽 FAB을 향해 뾰족하게 나온다.
+                카드 본문(흰색) 위에 겹쳐 그려져 안쪽 이음새는 보이지 않고 바깥 모서리만 point가 된다. */}
             <span
               aria-hidden
-              className="absolute -right-1 top-1/2 h-2.5 w-2.5 -translate-y-1/2 rotate-45 bg-[#1A7A6E]"
+              className="absolute -right-[5px] top-1/2 h-3 w-3 -translate-y-1/2 rotate-45 rounded-[3px] bg-white"
             />
           </button>
         )}
@@ -111,7 +122,7 @@ export default function FeedbackFab({ hidden, onOpen }: Props) {
         {/* 버튼 + 시선 유도용 펄스 링(말풍선이 떠 있는 동안만) */}
         <div className="pointer-events-none relative shrink-0">
           {nudge && !hidden && (
-            <span aria-hidden className="absolute inset-0 rounded-full bg-[#3CDBC0] opacity-60 animate-ping" />
+            <span aria-hidden className="absolute inset-0 rounded-full bg-[#3CDBC0] opacity-50 animate-ping" />
           )}
           <button
             onClick={onOpen}
