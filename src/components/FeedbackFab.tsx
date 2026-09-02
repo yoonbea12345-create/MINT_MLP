@@ -98,23 +98,24 @@ export default function FeedbackFab({ hidden, onOpen }: Props) {
           <button
             onClick={() => { trackEvent('feedback_hint_click', { device_id: getDeviceId() }); onOpen(); }}
             onPointerDown={(e) => e.stopPropagation()}
-            className="group pointer-events-auto relative flex max-w-[16.5rem] items-center gap-2.5 rounded-[1.25rem] bg-white py-2 pl-2 pr-3.5 text-left shadow-xl shadow-[#2AB5A0]/20 ring-1 ring-[#3CDBC0]/25 animate-fade-in-up active:scale-[0.97]"
+            className="group pointer-events-auto relative flex max-w-[16.5rem] items-center gap-2.5 rounded-[1.25rem] bg-[#E8F8F5] py-2 pl-2 pr-3.5 text-left shadow-xl shadow-[#2AB5A0]/20 ring-1 ring-[#3CDBC0]/35 animate-fade-in-up active:scale-[0.97]"
           >
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#3CDBC0] to-[#2AB5A0] text-base shadow-sm shadow-[#2AB5A0]/40">
-              🍀
+            {/* 우리 마스코트(민트 병아리) — 옅은 민트 카드 위에서 묻히지 않게 흰 원 위에 얹는다 */}
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white shadow-sm shadow-[#2AB5A0]/25 ring-1 ring-[#3CDBC0]/20">
+              <img src="/image/mascot-bird.webp" alt="" aria-hidden="true" className="h-7 w-7 select-none" />
             </span>
             <span className="min-w-0">
               <span className="block text-[13px] font-black leading-tight text-gray-800">MINT의 첫 유저가 되어주세요</span>
-              <span className="mt-0.5 flex items-center gap-1 text-[11px] font-bold text-[#2AB5A0]">
+              <span className="mt-0.5 flex items-center gap-1 text-[11px] font-bold text-[#1A7A6E]">
                 소중한 의견 꼭 반영할게요
                 <span className="transition-transform group-active:translate-x-0.5">→</span>
               </span>
             </span>
-            {/* 꼬리 — 카드와 같은 흰색이 오른쪽 FAB을 향해 뾰족하게 나온다.
-                카드 본문(흰색) 위에 겹쳐 그려져 안쪽 이음새는 보이지 않고 바깥 모서리만 point가 된다. */}
+            {/* 꼬리 — 카드와 같은 옅은 민트가 오른쪽 FAB을 향해 뾰족하게 나온다.
+                카드 본문 위에 겹쳐 그려져 안쪽 이음새는 보이지 않고 바깥 모서리만 point가 된다. */}
             <span
               aria-hidden
-              className="absolute -right-[5px] top-1/2 h-3 w-3 -translate-y-1/2 rotate-45 rounded-[3px] bg-white"
+              className="absolute -right-[5px] top-1/2 h-3 w-3 -translate-y-1/2 rotate-45 rounded-[3px] bg-[#E8F8F5]"
             />
           </button>
         )}
