@@ -105,9 +105,9 @@ export default function FeedbackFab({ hidden, onOpen }: Props) {
               <img src="/image/mascot-bird.webp" alt="" aria-hidden="true" className="h-7 w-7 select-none" />
             </span>
             <span className="min-w-0">
-              <span className="block text-[13px] font-black leading-tight text-gray-800">MINT의 첫 유저가 되어주세요</span>
+              <span className="block text-[13px] font-black leading-tight text-gray-800">어떤 피드백이든 남겨주세요!</span>
               <span className="mt-0.5 flex items-center gap-1 text-[11px] font-bold text-[#1A7A6E]">
-                소중한 의견 꼭 반영할게요
+                짧은 한마디도 큰 힘이 돼요
                 <span className="transition-transform group-active:translate-x-0.5">→</span>
               </span>
             </span>
